@@ -22,12 +22,6 @@ from typing import Any
 from hexkit.custom_types import JsonObject
 from mass.core import models
 
-SORT_ORDER_CONVERSION: JsonObject = {
-    "ascending": 1,
-    "descending": -1,
-    "relevance": {"$meta": "textScore"},
-}
-
 
 def name_from_key(key: str) -> str:
     """Auto generate a suitable name from a key"""
@@ -169,7 +163,7 @@ def build_pipeline(  # noqa: PLR0913
     selected_fields: list[models.FieldLabel],
     query: str,
     filters: list[models.Filter],
-    sorting_parameters: list[models.SortingParameter],
+    sort: list[str],
     skip: int = 0,
     limit: int | None = None,
 ) -> list[JsonObject]:
@@ -203,13 +197,17 @@ def build_pipeline(  # noqa: PLR0913
         else None
     )
 
-    # turn the sorting parameters into a formatted pipeline $sort
-    sort: dict[str, Any] = {
-        param.field
-        if param.field == "id_"
-        else f"content.{param.field}": SORT_ORDER_CONVERSION[param.order.value]
-        for param in sorting_parameters
-    }
+    # turn the sort specification into a formatted pipeline $sort
+    mongodb_sort: dict[str, Any] = {}
+    for spec in sort:
+        field = spec.removeprefix("-")
+        if field == models.RELEVANCE:
+            # MongoDB ignores the field name when sorting by text score
+            mongodb_sort["score"] = {"$meta": "textScore"}
+        else:
+            # the ID has been renamed to id_, everything else lives under content
+            key = field if field == "id_" else f"content.{field}"
+            mongodb_sort[key] = 1 if field == spec else -1
 
     # define facets from preliminary results and reshape data
     pipeline.append(
@@ -218,7 +216,7 @@ def build_pipeline(  # noqa: PLR0913
             skip=skip,
             limit=limit,
             project=project,
-            sort=sort,
+            sort=mongodb_sort,
         )
     )
 

@@ -29,45 +29,6 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# the reserved name in the sort parameter that stands for sorting by relevance
-RELEVANCE = "relevance"
-
-
-def parse_sort(sort: str | None) -> list[models.SortingParameter]:
-    """Parse a comma-separated sort specification into sorting parameters.
-
-    A leading dash marks a field as descending, and the reserved name `relevance`
-    sorts by text score, which has only one direction.
-
-    Raises:
-        ValueError: if a field is empty, repeated, or `relevance` is negated.
-    """
-    if not sort:
-        return []
-    sorting_parameters: list[models.SortingParameter] = []
-    seen: set[str] = set()
-    for spec in sort.split(","):
-        field = spec.strip()
-        descending = field.startswith("-")
-        field = field.removeprefix("-")
-        if not field:
-            raise ValueError("Fields to sort by must not be empty")
-        if field in seen:
-            raise ValueError("Fields to sort by must be unique")
-        seen.add(field)
-        if field == RELEVANCE:
-            if descending:
-                raise ValueError("Sorting by relevance cannot be reversed")
-            order = models.SortOrder.RELEVANCE
-        else:
-            order = (
-                models.SortOrder.DESCENDING
-                if descending
-                else models.SortOrder.ASCENDING
-            )
-        sorting_parameters.append(models.SortingParameter(field=field, order=order))
-    return sorting_parameters
-
 
 @router.get(
     "/health",
@@ -153,17 +114,13 @@ async def search(  # noqa: PLR0913
         detail = "Number of fields to filter by must match number of values"
         raise HTTPException(status_code=422, detail=detail) from err
     try:
-        sorting_parameters = parse_sort(sort)
-    except ValueError as err:
-        raise HTTPException(status_code=422, detail=str(err)) from err
-    try:
         results = await query_handler.handle_query(
             class_name=class_name,
             query=query,
             filters=filters,
             skip=skip,
             limit=limit,
-            sorting_parameters=sorting_parameters,
+            sort=[spec.strip() for spec in sort.split(",")] if sort else None,
         )
     except query_handler.ClassNotConfiguredError as err:
         raise HTTPException(
@@ -171,7 +128,7 @@ async def search(  # noqa: PLR0913
             detail="The specified class name is invalid."
             + " See /search-options for a list of valid class names.",
         ) from err
-    except query_handler.RelevanceSortingWithoutQueryError as err:
+    except query_handler.SortError as err:
         raise HTTPException(status_code=422, detail=str(err)) from err
     except (query_handler.SearchError, query_handler.ValidationError) as err:
         log.error(err, exc_info=True)

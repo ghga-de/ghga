@@ -23,52 +23,36 @@ from tests.fixtures.joint import JointFixture, QueryParams
 pytestmark = pytest.mark.asyncio()
 
 CLASS_NAME: str = "RelevanceTests"
-RELEVANCE_SORT = models.SortingParameter(
-    field="score", order=models.SortOrder.RELEVANCE
-)
-ID_ASC = models.SortingParameter(field="_id", order=models.SortOrder.ASCENDING)
-ID_DESC = models.SortingParameter(field="_id", order=models.SortOrder.DESCENDING)
-FIELD_ASC = models.SortingParameter(field="field", order=models.SortOrder.ASCENDING)
 
 
-def multi_column_sort(
-    results: list[dict], sorts: list[models.SortingParameter]
-) -> list[dict]:
+def multi_column_sort(results: list[dict], sort: list[str]) -> list[dict]:
     """This is equivalent to nested sorted() calls.
 
     This uses the same approach as the sorting function in test_sorting, but the
     difference is that this function uses the raw dicts returned by the MongoClient and
     is meant to work with the textScore attribute.
 
-    The sorting parameters are supplied in order of most significant to least significant,
-    so we take them off the front and apply sorted(). If there are more parameters to
-    apply (more sorts), we recurse until we apply the final parameter. The sorted lists
-    are passed back up the call chain.
+    The sort specification is the one the query handler takes, in order of most
+    significant to least significant field, so we take the first field off the front,
+    recurse to sort by the remaining fields, and then apply sorted() for the first one.
     """
-    sorted_list = results.copy()
-    parameter = sorts[0]
-    del sorts[0]
+    spec, *remaining = sort
+    field = spec.removeprefix("-")
+    # the best score comes first when sorting by relevance
+    reverse = field != spec or field == models.RELEVANCE
 
-    if parameter.order == models.SortOrder.RELEVANCE.value:
-        parameter.field = "score"
+    if remaining:
+        results = multi_column_sort(results, remaining)
 
-    # sort descending for DESCENDING and RELEVANCE
-    reverse = parameter.order != models.SortOrder.ASCENDING
+    def sort_key(result: dict):
+        # the only top-level fields are "_id" and "score" -- all else is in "content"
+        if field == models.RELEVANCE:
+            return result["score"]
+        if field == "id_":
+            return result["_id"]
+        return result["content"][field]
 
-    if len(sorts) > 0:
-        # if there are more sorting parameters, recurse to nest the sorts
-        sorted_list = multi_column_sort(sorted_list, sorts)
-
-    if parameter.field in ("_id", "score"):
-        return sorted(
-            sorted_list, key=lambda result: result[parameter.field], reverse=reverse
-        )
-    # the only top-level fields are "_id" and "score" -- all else is in "content"
-    return sorted(
-        sorted_list,
-        key=lambda result: result["content"][parameter.field],
-        reverse=reverse,
-    )
+    return sorted(results, key=sort_key, reverse=reverse)
 
 
 def sorted_reference_results(
@@ -76,11 +60,11 @@ def sorted_reference_results(
     *,
     query: str = "",
     filters: list[models.Filter] | None = None,
-    sorts: list[models.SortingParameter] | None = None,
+    sort: list[str] | None = None,
 ) -> list[str]:
     """Used to independently retrieve and sort results by relevance and then id"""
-    if not sorts:
-        sorts = [RELEVANCE_SORT, ID_ASC]
+    if not sort:
+        sort = [models.RELEVANCE, "id_"]
 
     results = joint_fixture.mongodb_client[joint_fixture.config.db_name][
         CLASS_NAME
@@ -94,7 +78,7 @@ def sorted_reference_results(
         else:
             results = [x for x in results if x["content"][f.key] == f.value]  # type: ignore
 
-    sorted_results = multi_column_sort(results, sorts)  # type: ignore
+    sorted_results = multi_column_sort(results, sort)  # type: ignore
 
     return [result["_id"] for result in sorted_results]
 
@@ -128,7 +112,7 @@ async def test_happy_relevance_descending_id(joint_fixture: JointFixture):
     assert results.total_count == 5
 
     reference_ids = sorted_reference_results(
-        joint_fixture, query=query, sorts=[RELEVANCE_SORT, ID_DESC]
+        joint_fixture, query=query, sort=["relevance", "-id_"]
     )
 
     assert [hit.id_ for hit in results.items] == reference_ids
@@ -209,7 +193,7 @@ async def test_with_filters_and_sorts(joint_fixture: JointFixture):
         joint_fixture,
         query=query,
         filters=filters,
-        sorts=[FIELD_ASC, ID_DESC],
+        sort=["field", "-id_"],
     )
 
     assert [hit.id_ for hit in results.items] == reference_ids

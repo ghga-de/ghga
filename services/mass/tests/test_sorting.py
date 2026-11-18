@@ -160,14 +160,28 @@ async def test_sort_with_duplicate_field(joint_fixture: JointFixture, sort: str)
     assert response.json()["detail"] == "Fields to sort by must be unique"
 
 
-@pytest.mark.parametrize("sort", [",", "field,", "-", "field,-,id_"])
-async def test_sort_with_empty_field(joint_fixture: JointFixture, sort: str):
-    """Supply a sort specification with an empty field name."""
+@pytest.mark.parametrize(
+    "sort, field",
+    [
+        (",", ""),
+        ("field,", ""),
+        ("-", ""),
+        ("field,-,id_", ""),
+        ("$field", "$field"),
+        ("-field.$sub", "field.$sub"),
+        ("field.", "field."),
+        ("field..sub", "field..sub"),
+    ],
+)
+async def test_sort_with_malformed_field(
+    joint_fixture: JointFixture, sort: str, field: str
+):
+    """Supply a sort specification with a field name that MongoDB cannot sort by."""
     params: QueryParams = {"class_name": CLASS_NAME, "sort": sort}
 
     response = await joint_fixture.rest_client.get(url="/search", params=params)
     assert response.status_code == 422
-    assert response.json()["detail"] == "Fields to sort by must not be empty"
+    assert response.json()["detail"] == f"Cannot sort by field '{field}'"
 
 
 @pytest.mark.parametrize("reverse", [False, True], ids=["normal", "reversed"])

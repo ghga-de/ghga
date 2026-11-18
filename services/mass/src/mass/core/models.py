@@ -15,11 +15,12 @@
 
 """Defines dataclasses for holding business-logic data"""
 
-from enum import Enum
-
 from pydantic import BaseModel, Field
 
 from hexkit.custom_types import JsonObject
+
+# the reserved name in a sort specification that stands for the relevance of a result
+RELEVANCE = "relevance"
 
 
 class FieldLabel(BaseModel):
@@ -88,24 +89,4 @@ class QueryResults(BaseModel):
     )
     total_count: int = Field(
         default=0, description="The number of results found, ignoring skip and limit"
-    )
-
-
-class SortOrder(Enum):
-    """Represents the possible sorting orders"""
-
-    ASCENDING = "ascending"
-    DESCENDING = "descending"
-    RELEVANCE = "relevance"
-
-
-class SortingParameter(BaseModel):
-    """Represents a combination of a field to sort and the sort order"""
-
-    field: str = Field(
-        ...,
-        description=("Which field to sort results by."),
-    )
-    order: SortOrder = Field(
-        default=SortOrder.ASCENDING, description="Sort order to apply to sort_field"
     )
