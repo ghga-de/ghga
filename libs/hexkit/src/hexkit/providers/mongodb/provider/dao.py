@@ -181,7 +181,8 @@ def _errors_from_bulk_write(
     the bulk write, and must be distinct, which the batch methods ensure before they
     write. MongoDB names a failure by its index in that list, whether the batch is
     ordered or not. `duplicate_key` returns the error that the operation's
-    single-resource method raises for a duplicate key.
+    single-resource method raises for a duplicate key. The error names the failed
+    resources in the order of `ids`.
 
     A write concern error does not undo the writes: each attempted resource without a
     write error of its own is named with the write concern's error, as its single
@@ -199,12 +200,23 @@ def _errors_from_bulk_write(
             "The batch stopped at a write concern error, so which writes were applied"
             + f" is unknown: {concern_errors[-1].get('errmsg')}"
         ) from error
-    errors: dict[ID, DaoError] = {}
     write_errors = error.details["writeErrors"]
+    failures = {ids[failure["index"]]: failure for failure in write_errors}
+    # An ordered batch stops at its first failure and skips the rest
+    not_attempted: Sequence[ID] = ()
+    if ordered and write_errors:
+        not_attempted = ids[write_errors[0]["index"] + 1 :]
+    concern_error = _write_concern_error(error)
+    errors: dict[ID, DaoError] = {}
     # Each failure gets the error that the single-resource method raises for it
-    for failure in write_errors:
-        id_ = ids[failure["index"]]
-        if failure["code"] == MAX_TIME_MS_EXPIRED:
+    for id_ in ids[: len(ids) - len(not_attempted)]:
+        failure = failures.get(id_)
+        if failure is None:
+            # An attempted write without an error of its own is applied but not
+            # confirmed, which its single method reports with this error
+            if concern_error:
+                errors[id_] = concern_error
+        elif failure["code"] == MAX_TIME_MS_EXPIRED:
             errors[id_] = DbTimeoutError(failure["errmsg"])
         elif failure["code"] in DUPLICATE_KEY_ERRORS:
             errors[id_] = duplicate_key(id_, failure.get("keyValue"))
@@ -212,16 +224,6 @@ def _errors_from_bulk_write(
             # Any other failure, such as a failed document validation or a document
             # over the size limit, has no error of its own
             errors[id_] = DaoError(failure["errmsg"])
-    # An ordered batch stops at its first failure and skips the rest
-    not_attempted: Sequence[ID] = ()
-    if ordered and write_errors:
-        not_attempted = ids[write_errors[0]["index"] + 1 :]
-    concern_error = _write_concern_error(error)
-    if concern_error:
-        # An attempted write without an error of its own is applied but not
-        # confirmed, which its single method reports with this error
-        attempted = ids[: len(ids) - len(not_attempted)]
-        errors |= {id_: concern_error for id_ in attempted if id_ not in errors}
     return BatchOperationError(errors=errors, not_attempted=not_attempted)
 
 

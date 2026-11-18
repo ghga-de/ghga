@@ -185,6 +185,7 @@ def test_write_concern_error_names_unconfirmed_resources(
         duplicate_key=_insert_duplicate_error,
     )
 
+    assert list(error.errors) == IDS
     assert type(error.errors["b"]) is ResourceAlreadyExistsError
     for id_ in ["a", "c", "d"]:
         assert type(error.errors[id_]) is expected
@@ -194,7 +195,7 @@ def test_write_concern_error_names_unconfirmed_resources(
 
 def test_write_concern_error_in_ordered_batch():
     """Test that an ordered batch names only the attempted resources with the write
-    concern error and still lists the skipped ones.
+    concern error, in input order, and still lists the skipped ones.
     """
     error = _errors_from_bulk_write(
         bulk_write_error(duplicate_key(1, {"_id": "b"}), concern=WRITE_CONCERN_TIMEOUT),
@@ -203,7 +204,7 @@ def test_write_concern_error_in_ordered_batch():
         duplicate_key=_insert_duplicate_error,
     )
 
-    assert list(error.errors) == ["b", "a"]
+    assert list(error.errors) == ["a", "b"]
     assert type(error.errors["a"]) is DbTimeoutError
     assert error.not_attempted == ("c", "d")
 
