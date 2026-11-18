@@ -652,6 +652,16 @@ class BaseInMemDao(Generic[DTO]):
         """
         await self._write_each(dtos, self.insert, ordered=ordered)
 
+    async def update_many(
+        self, dtos: Collection[DTO], *, ordered: bool = False
+    ) -> None:
+        """Update resources one by one, collecting failures as MongoDB does.
+
+        A missing resource never stops a batch, not even an ordered one, but any other
+        failure stops an ordered batch.
+        """
+        await self._write_each(dtos, self.update, ordered=ordered)
+
     async def upsert_many(
         self, dtos: Collection[DTO], *, ordered: bool = False
     ) -> None:

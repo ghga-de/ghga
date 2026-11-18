@@ -21,7 +21,11 @@ from dataclasses import dataclass
 
 import pytest
 from pydantic import UUID4, BaseModel
-from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
+from pymongo.errors import (
+    DocumentTooLarge,
+    PyMongoError,
+    ServerSelectionTimeoutError,
+)
 
 from hexkit.protocols.dao import (
     Dao,
@@ -182,3 +186,15 @@ async def test_db_timeout_error_translator():
     with pytest.raises(ValueError):
         with translate_pymongo_errors():
             raise ValueError()
+
+
+async def test_document_too_large_translator():
+    """Test that DocumentTooLarge, which is no PyMongoError, becomes a DaoError."""
+    too_large = DocumentTooLarge("BSON document too large")
+
+    with pytest.raises(DaoError) as caught:
+        with translate_pymongo_errors():
+            raise too_large
+
+    assert not isinstance(caught.value, DbTimeoutError)
+    assert caught.value.__cause__ is too_large

@@ -690,6 +690,80 @@ class MongoDbDao(Generic[Dto]):
         if failures:
             raise failures
 
+    async def _existing_ids(
+        self, ids: Collection[ID], extra: Mapping[str, Any]
+    ) -> set[ID]:
+        """Return which of the IDs belong to stored documents that also match `extra`."""
+        with translate_pymongo_errors():
+            # Every ID goes into one filter; chunks can follow if a caller needs more
+            cursor = self._collection.find(
+                {"_id": {"$in": list(ids)}, **extra}, projection={"_id": True}
+            )
+            return {document["_id"] async for document in cursor}
+
+    async def _replace_existing(
+        self,
+        documents: list[dict[str, Any]],
+        ids: list[ID],
+        extra: Mapping[str, Any],
+        *,
+        ordered: bool,
+    ) -> None:
+        """Replace the documents that exist and match `extra`, and name the others.
+
+        `ids` holds the documents' IDs, in the same order.
+
+        A replacement that matches nothing is no write error, and the bulk result only
+        counts matches, so a lookup after the write names the IDs missing at that time.
+        A resource created in between is therefore not reported, although it was not
+        replaced, and one deleted in between is reported, although it was replaced.
+
+        Raises:
+            BatchOperationError: when some documents were missing or failed.
+            DaoError: when the lookup failed; a note names the batch's own failures.
+        """
+        if not documents:
+            return
+        matched, failures = await self._bulk_replace(
+            documents, ids, extra, upsert=False, ordered=ordered
+        )
+        errors = dict(failures.errors) if failures else {}
+        skipped = failures.not_attempted if failures else ()
+        unattempted = set(errors) | set(skipped)
+        attempted = [id_ for id_ in ids if id_ not in unattempted]
+        if matched < len(attempted):
+            try:
+                existing = await self._existing_ids(attempted, extra)
+            except DaoError as lookup_error:
+                # Raised alone, the lookup's error would hide the batch's own failures
+                if errors:
+                    named = ", ".join(
+                        f"{id_!r}: {type(error).__name__}"
+                        for id_, error in errors.items()
+                    )
+                    lookup_error.add_note(f"The batch had failed for {named}")
+                raise
+            errors |= {
+                id_: ResourceNotFoundError(id_=id_)
+                for id_ in attempted
+                if id_ not in existing
+            }
+        if errors:
+            cause = failures.__cause__ if failures else None
+            raise BatchOperationError(errors=errors, not_attempted=skipped) from cause
+
+    async def update_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Replace several existing resources in one call, matched by their IDs.
+
+        Please see the `Dao` protocol for the arguments and the errors.
+        """
+        if not dtos:
+            return
+        documents, ids = self._batch_documents(dtos)
+        await self._replace_existing(documents, ids, {}, ordered=ordered)
+
 
 class MongoDbDaoFactory(DaoFactoryProtocol[MongoDbIndex]):
     """A MongoDB-based provider implementing the DaoFactoryProtocol."""
