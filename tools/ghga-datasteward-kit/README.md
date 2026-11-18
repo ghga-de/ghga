@@ -159,7 +159,8 @@ ghga-datasteward-kit metadata submit-pending \
 
 The study gets the reserved PID and the datasets get PIDs derived from it, as with `metadata submit`.
 The title and description replace the internal name, and the submission is stored as completed.
-The command prints `Submission <id> ('<internal name>') submitted.` as its last line, so you can see which reservation was filled.
+The command prints `Submission <id> ('<title>') submitted.` as its last line.
+The title is the one the submission had before this run: the internal name, which shows which reservation was filled, or the real title when a failed run is repeated.
 
 The command refuses, before writing anything:
 
