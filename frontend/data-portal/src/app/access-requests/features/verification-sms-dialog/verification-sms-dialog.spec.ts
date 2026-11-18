@@ -57,9 +57,17 @@ describe('VerificationSmsDialog', () => {
     const { code, text } = fields();
     expect(code.value).toMatch(/^[2-9A-HJ-NP-Z]{6}$/);
     expect(text.value).toBe(verificationSmsText(TEST_REQUEST, code.value));
-    expect(text.value).toContain(TEST_REQUEST.full_user_name);
-    expect(text.value).toContain(TEST_REQUEST.dataset_id);
-    expect(text.value).toContain('quoting ticket T-1234');
+    expect(text.value).toBe(
+      `GHGA: Please enter verification code ${code.value} in helpdesk ticket T-1234` +
+        ` to confirm DAC approval of the access request for dataset ${TEST_REQUEST.dataset_id}`,
+    );
+  });
+
+  it('should refer to the helpdesk ticket without an ID if there is none', () => {
+    const text = verificationSmsText({ ...TEST_REQUEST, ticket_id: null }, 'ABC123');
+    expect(text).toContain(
+      'verification code ABC123 in the helpdesk ticket to confirm',
+    );
   });
 
   it('should let the message follow a changed code', async () => {

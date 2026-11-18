@@ -39,23 +39,28 @@ export const MAX_SMS_LENGTH = 480;
 
 /**
  * Build the default text of the verification SMS.
+ *
+ * The text could also name the requester and their IVA, but for GDPR and
+ * security reasons it carries only what the DAC needs to find the request.
  * @param ar - the access request to be confirmed
  * @param code - the verification code
  * @returns the text of the SMS
  */
 export function verificationSmsText(ar: AccessRequest, code: string): string {
-  const ticket = ar.ticket_id ? `, quoting ticket ${ar.ticket_id}` : '';
+  const ticket = ar.ticket_id
+    ? `helpdesk ticket ${ar.ticket_id}`
+    : 'the helpdesk ticket';
   return (
-    `GHGA: To confirm the DAC approval of the access request of ${ar.full_user_name}` +
-    ` for dataset ${ar.dataset_id}, please send the code ${code}` +
-    ` to helpdesk@ghga.de${ticket}.`
+    `GHGA: Please enter verification code ${code} in ${ticket}` +
+    ` to confirm DAC approval of the access request for dataset ${ar.dataset_id}`
   );
 }
 
 /**
  * Dialog that lets a data steward send an SMS with a verification code to a person
- * authorized to act for the DAC, who confirms the approval of the access request
- * by sending the code back to the helpdesk.
+ * authorized to act for the DAC. That person confirms the approval of the access
+ * request by entering the code in the helpdesk ticket, where the data steward
+ * compares it with the code recorded in the internal note.
  *
  * The code is generated, but can be changed. The text follows the code until it
  * is edited by hand. The dialog closes with the new internal note of the request,
