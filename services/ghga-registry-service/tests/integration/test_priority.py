@@ -62,6 +62,7 @@ async def test_box_changes_publish_priority(joint_fixture: JointFixture):
     priority = UploadBoxPriority.model_validate(event.payload)
     assert priority.version == 2
     assert priority.changed_by == data_steward_id
+    assert priority.reordered_by is None
     assert [entry.research_data_upload_box_id for entry in priority.entries] == box_ids
     assert [
         entry.file_upload_box_id for entry in priority.entries
@@ -97,4 +98,5 @@ async def test_repair_publishes_priority(joint_fixture: JointFixture):
     priority = UploadBoxPriority.model_validate(recorder.recorded_events[0].payload)
     assert priority.version == 1
     assert priority.changed_by is None
+    assert priority.reordered_by is None
     assert [entry.research_data_upload_box_id for entry in priority.entries] == [box_id]

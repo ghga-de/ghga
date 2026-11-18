@@ -107,12 +107,15 @@ def _entries(
 def _make_priority(
     *, version: int, entries: list[models.UploadBoxPriorityEntry]
 ) -> models.UploadBoxPriority:
-    """Make a priority list that a data steward changed a day ago."""
+    """Make a priority list that a data steward reordered a day ago."""
+    reordered_at = now_utc_ms_prec() - timedelta(days=1)
     return models.UploadBoxPriority(
         id=BOX_PRIORITY_EVENT_KEY,
         version=version,
         changed_by=TEST_DS_ID,
-        last_changed=now_utc_ms_prec() - timedelta(days=1),
+        last_changed=reordered_at,
+        reordered_by=TEST_DS_ID,
+        reordered_at=reordered_at,
         entries=entries,
     )
 
@@ -142,6 +145,8 @@ async def test_repair_fills_new_list(rig: PriorityRig):
     assert priority.version == 1
     assert priority.changed_by is None
     assert priority.last_changed >= started
+    assert priority.reordered_by is None
+    assert priority.reordered_at is None
     assert priority.entries == _entries(older, newer)
     rig.audit_repository.log_box_priority_updated.assert_awaited_once_with(
         priority=priority, old_box_ids=[], user_id=None
@@ -158,15 +163,19 @@ async def test_repair_heals_list(rig: PriorityRig):
     archived = _make_box(days_ago=2, state="archived")
     deleted = _make_box(days_ago=1)  # never stored
     await _store_boxes(rig, first, second, missing, archived)
-    await rig.priority_dao.insert(
-        _make_priority(version=3, entries=_entries(second, deleted, archived, first))
+    stored = _make_priority(
+        version=3, entries=_entries(second, deleted, archived, first)
     )
+    await rig.priority_dao.insert(stored)
 
     await rig.priority_manager.repair()
 
     priority = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
     assert priority.version == 4
     assert priority.changed_by is None
+    # The repair keeps the order of the listed boxes, so it keeps who chose it
+    assert priority.reordered_by == TEST_DS_ID
+    assert priority.reordered_at == stored.reordered_at
     assert priority.entries == _entries(second, first, missing)
     rig.audit_repository.log_box_priority_updated.assert_awaited_once_with(
         priority=priority,
@@ -190,34 +199,40 @@ async def test_repair_of_complete_list(rig: PriorityRig):
 
 async def test_repair_on_behalf_of_user(rig: PriorityRig):
     """Test that a repair after a box change adds a new box to the end of the list
-    and drops a deleted one, each on behalf of the given user.
+    and drops a deleted one, each on behalf of the given user, and keeps the data
+    steward who last reordered the boxes.
     """
     listed = _make_box(days_ago=2)
     new = _make_box(days_ago=0)
     await _store_boxes(rig, listed, new)
-    await rig.priority_dao.insert(_make_priority(version=1, entries=_entries(listed)))
+    stored = _make_priority(version=1, entries=_entries(listed))
+    await rig.priority_dao.insert(stored)
     audit = rig.audit_repository.log_box_priority_updated
+    box_steward_id = uuid4()
 
-    await rig.priority_manager.repair(user_id=TEST_DS_ID)
+    await rig.priority_manager.repair(user_id=box_steward_id)
 
     priority = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
     assert priority.version == 2
-    assert priority.changed_by == TEST_DS_ID
+    assert priority.changed_by == box_steward_id
+    assert priority.reordered_by == TEST_DS_ID
+    assert priority.reordered_at == stored.reordered_at
     assert priority.entries == _entries(listed, new)
     audit.assert_awaited_once_with(
-        priority=priority, old_box_ids=[listed.id], user_id=TEST_DS_ID
+        priority=priority, old_box_ids=[listed.id], user_id=box_steward_id
     )
 
     await rig.box_dao.delete(listed.id)
-    await rig.priority_manager.repair(user_id=TEST_DS_ID)
+    await rig.priority_manager.repair(user_id=box_steward_id)
 
     priority = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
     assert priority.version == 3
-    assert priority.changed_by == TEST_DS_ID
+    assert priority.changed_by == box_steward_id
+    assert priority.reordered_by == TEST_DS_ID
     assert priority.entries == _entries(new)
     assert audit.await_count == 2
     audit.assert_awaited_with(
-        priority=priority, old_box_ids=[listed.id, new.id], user_id=TEST_DS_ID
+        priority=priority, old_box_ids=[listed.id, new.id], user_id=box_steward_id
     )
 
 
@@ -245,6 +260,8 @@ async def test_change_by_user(rig: PriorityRig):
     assert priority == await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
     assert priority.version == 2
     assert priority.changed_by == TEST_DS_ID
+    assert priority.reordered_by == TEST_DS_ID
+    assert priority.reordered_at == priority.last_changed
     assert priority.entries == _entries(missing, listed)
 
 
@@ -356,6 +373,8 @@ async def test_get_priority(rig: PriorityRig):
         version=1,
         changed_by=TEST_DS_ID,
         last_changed=stored.last_changed,
+        reordered_by=TEST_DS_ID,
+        reordered_at=stored.reordered_at,
         entries=_entries(boxes["A"], boxes["B"]),
     )
 
@@ -365,27 +384,35 @@ async def test_get_priority_without_list(rig: PriorityRig):
     priority = await rig.priority_manager.get_priority()
 
     assert priority == models.UploadBoxPriorityResponse(
-        version=0, changed_by=None, last_changed=None, entries=[]
+        version=0,
+        changed_by=None,
+        last_changed=None,
+        reordered_by=None,
+        reordered_at=None,
+        entries=[],
     )
 
 
 async def test_set_order(rig: PriorityRig):
     """Test that a new order replaces the stored one, and that the saving data
-    steward is recorded.
+    steward is recorded as the one who changed and reordered the list.
     """
     boxes = await _store_lettered_boxes(rig, "ABC")
+    saving_steward_id = uuid4()
 
     priority = await rig.priority_manager.set_order(
-        version=1, box_ids=_ids(boxes, "CAB"), user_id=TEST_DS_ID
+        version=1, box_ids=_ids(boxes, "CAB"), user_id=saving_steward_id
     )
 
     stored = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
     assert stored.entries == _entries(*(boxes[letter] for letter in "CAB"))
     assert stored.version == 2
-    assert stored.changed_by == TEST_DS_ID
+    assert stored.changed_by == saving_steward_id
+    assert stored.reordered_by == saving_steward_id
+    assert stored.reordered_at == stored.last_changed
     assert priority == models.UploadBoxPriorityResponse.from_priority(stored)
     rig.audit_repository.log_box_priority_updated.assert_awaited_once_with(
-        priority=stored, old_box_ids=_ids(boxes, "ABC"), user_id=TEST_DS_ID
+        priority=stored, old_box_ids=_ids(boxes, "ABC"), user_id=saving_steward_id
     )
 
 

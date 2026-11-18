@@ -195,6 +195,9 @@ async def test_create_research_data_upload_box(rig: JointRig):
     assert await _priority_box_ids(rig) == [box_id]
     assert priority.changed_by == TEST_DS_ID
     assert now_utc_ms_prec() - priority.last_changed < timedelta(seconds=5)
+    # Creating a box doesn't reorder the boxes
+    assert priority.reordered_by is None
+    assert priority.reordered_at is None
     rig.audit_repository.log_box_priority_updated.assert_awaited_once_with(
         priority=priority, old_box_ids=[], user_id=TEST_DS_ID
     )
