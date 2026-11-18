@@ -573,6 +573,16 @@ class UploadBoxPriority(BaseModel):
         + " system made it",
     )
     last_changed: UTCDatetime = Field(..., description="Timestamp of the latest change")
+    reordered_by: UUID4 | None = Field(
+        ...,
+        description="ID of the data steward who last saved a new order, or None if"
+        + " none has yet",
+    )
+    reordered_at: UTCDatetime | None = Field(
+        ...,
+        description="When a data steward last saved a new order, or None if none has"
+        + " yet",
+    )
     entries: list[UploadBoxPriorityEntry] = Field(
         ...,
         description="The boxes in priority order. Index 0 is the highest priority.",

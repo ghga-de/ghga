@@ -99,11 +99,15 @@ async def test_upload_box_priority_changed(kafka: KafkaFixture):
         )
         for _ in range(2)
     ]
+    steward_id = uuid4()
+    changed = now_utc_ms_prec()
     priority = event_schemas.UploadBoxPriority(
         id="global",
         version=7,
-        changed_by=uuid4(),
-        last_changed=now_utc_ms_prec(),
+        changed_by=steward_id,
+        last_changed=changed,
+        reordered_by=steward_id,
+        reordered_at=changed,
         entries=entries,
     )
     await kafka.publish_event(

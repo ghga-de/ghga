@@ -477,6 +477,14 @@ class UploadBoxPriorityResponse(BaseModel):
     last_changed: UTCDatetime | None = Field(
         description="Timestamp of the latest change, or None if no list is stored yet",
     )
+    reordered_by: UUID4 | None = Field(
+        description="ID of the data steward who last saved a new order, or None if"
+        + " none has yet",
+    )
+    reordered_at: UTCDatetime | None = Field(
+        description="When a data steward last saved a new order, or None if none has"
+        + " yet",
+    )
     entries: list[UploadBoxPriorityEntry] = Field(
         description="The boxes in priority order. Index 0 is the highest priority.",
     )
@@ -485,7 +493,14 @@ class UploadBoxPriorityResponse(BaseModel):
     def from_priority(cls, priority: UploadBoxPriority | None) -> Self:
         """Make the response for the stored list, or for no list if None."""
         if priority is None:
-            return cls(version=0, changed_by=None, last_changed=None, entries=[])
+            return cls(
+                version=0,
+                changed_by=None,
+                last_changed=None,
+                reordered_by=None,
+                reordered_at=None,
+                entries=[],
+            )
         return cls(**priority.model_dump(exclude={"id"}))
 
 

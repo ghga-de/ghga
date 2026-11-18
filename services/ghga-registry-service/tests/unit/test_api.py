@@ -1967,6 +1967,8 @@ async def test_get_upload_box_priority(
             "version": 0,
             "changed_by": None,
             "last_changed": None,
+            "reordered_by": None,
+            "reordered_at": None,
             "entries": [],
         }
 
@@ -2003,10 +2005,13 @@ async def test_set_upload_box_priority(
         registry.priority_manager.set_order.assert_not_called()
 
         # normal response with data steward role
+        saved_at = now_utc_ms_prec()
         priority = UploadBoxPriorityResponse(
             version=8,
             changed_by=TEST_DS_ID,
-            last_changed=now_utc_ms_prec(),
+            last_changed=saved_at,
+            reordered_by=TEST_DS_ID,
+            reordered_at=saved_at,
             entries=[
                 UploadBoxPriorityEntry(
                     research_data_upload_box_id=box_id, file_upload_box_id=uuid4()

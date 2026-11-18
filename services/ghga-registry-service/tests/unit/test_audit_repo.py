@@ -292,6 +292,8 @@ async def test_log_box_priority_updated():
         version=8,
         changed_by=None,
         last_changed=now_utc_ms_prec(),
+        reordered_by=None,
+        reordered_at=None,
         entries=[
             UploadBoxPriorityEntry(
                 research_data_upload_box_id=old_box_ids[1], file_upload_box_id=uuid4()
