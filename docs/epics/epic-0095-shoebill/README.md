@@ -526,7 +526,7 @@ API, in a new feature, e.g. `204_upload_box_priority.feature`, with its own boxe
 
 Additions and removals, in the existing features, which already create, archive and delete boxes:
 
-- `200_upload_initiated.feature`: assert that the box is in the list after it is created, and that it leaves the list after the deletion scenario.
+- `200_upload_initiated.feature`: assert that each new box is last in the list after it is created, and that the deleted box leaves the list.
 - `203_upload_completed.feature`: assert that the box leaves the list after the archival scenario.
 
 Data Portal, in `502_data_portal_uploads.feature`, before the scenario that maps and archives the box:
@@ -541,11 +541,14 @@ Audit records are covered by the RS tests; the testbed has no access to them so 
 Interrogation order, in feature 204:
 
 - DHFS polls on its own schedule and interrogates a file soon after upload, so files of two boxes are rarely waiting at the same time.
-  The scenario therefore uploads all its files while DHFS is idle, for example by setting a long `min_run_interval_seconds` for the run.
-- It uses two boxes in one storage, moves the second box before the first, and uploads two files to each.
+  The test bed polls every 2 s, and a longer `min_run_interval_seconds` would slow every other upload feature without making the timing certain.
+  The scenario therefore pauses the DHFS of the primary storage while it uploads, by scaling its Deployment to no pod with `kubectl`, and resumes it once FIS holds all files.
+  A fixture resumes DHFS at the end of the scenario even if a step fails.
+- It uses two boxes in one storage, moves the second box before the first, and uploads two files to each, the first box's files first, so an order by upload time fails the check.
+- Before DHFS resumes, FIS holds each file with its file upload box as `box_id`.
 - DHFS interrogates both files of the second box first, then both files of the first box.
 - Within each box, the files are interrogated in ascending `_id` order.
-- The order is read from `state_updated` of the files in FIS's MongoDB, because DHFS processes one file at a time.
+- The order is read from `state_updated` of the files in FIS's MongoDB, which FIS takes from the report's `interrogated_at`, because DHFS processes one file at a time.
 
 ## Human Resource/Time Estimation
 
