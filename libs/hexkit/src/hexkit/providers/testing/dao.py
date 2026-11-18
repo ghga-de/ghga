@@ -15,7 +15,7 @@
 
 """A mock (in-memory) DAO"""
 
-from collections.abc import AsyncIterator, Callable, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Mapping
 from contextlib import AbstractAsyncContextManager, suppress
 from copy import deepcopy
 from functools import partial
@@ -26,12 +26,16 @@ from pydantic import BaseModel
 
 from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
+    BatchOperationError,
+    DaoError,
+    DaoFactoryBase,
     FindResult,
     MultipleHitsFoundError,
     NoHitsFoundError,
     PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
+    ensure_distinct_ids,
 )
 from hexkit.providers.mongodb.provider import (
     document_to_dto,
@@ -422,6 +426,7 @@ class BaseInMemDao(Generic[DTO]):
         raise NotImplementedError()
 
     def __init__(self) -> None:
+        # Keyed by each document's _id, the ID as the DTO serializes it, as in MongoDB
         self.resources: dict[ID, Document] = {}
 
     @property
@@ -525,9 +530,8 @@ class BaseInMemDao(Generic[DTO]):
             desc = spec.startswith("-")
             field = spec.removeprefix("-")
             # Only the exact ID field is translated to the internal "_id" field, matching
-            # the MongoDB provider. Other fields (including nested sub-fields of the ID,
-            # which MongoDB cannot sort by) are looked up as-is and resolve to None when
-            # absent, sorting consistently rather than raising - again like MongoDB.
+            # the MongoDB provider. Other fields are looked up as-is and resolve to None
+            # when absent, sorting consistently rather than raising - again like MongoDB.
             doc_field = "_id" if field == self._id_field else field
             matching.sort(key=partial(_sort_key, field_path=doc_field), reverse=desc)
 
@@ -561,10 +565,11 @@ class BaseInMemDao(Generic[DTO]):
 
         Raises a ResourceAlreadyExistsError if a resource with a matching ID exists already.
         """
-        dto_id = getattr(dto, self._id_field)
+        document = self._serialize(dto)
+        dto_id = document["_id"]
         if dto_id in self.resources:
             raise ResourceAlreadyExistsError(id_=dto_id)
-        self.resources[dto_id] = self._serialize(dto)
+        self.resources[dto_id] = document
 
     async def update(
         self, dto: DTO, *, precondition: Mapping[str, Any] | None = None
@@ -575,7 +580,8 @@ class BaseInMemDao(Generic[DTO]):
         ResourceNotFoundError if no resource with a matching ID is found, and a
         PreconditionFailedError if the resource doesn't match `precondition`.
         """
-        dto_id = getattr(dto, self._id_field)
+        document = self._serialize(dto)
+        dto_id = document["_id"]
 
         # Validated before the existence check, so an invalid filter produces the same
         # error here as it does in the MongoDB provider
@@ -591,7 +597,7 @@ class BaseInMemDao(Generic[DTO]):
             if not self._resource_matches(self.resources[dto_id], criteria, predicates):
                 raise PreconditionFailedError(id_=dto_id, precondition=precondition)
 
-        self.resources[dto_id] = self._serialize(dto)
+        self.resources[dto_id] = document
 
     async def delete(self, id_: ID) -> None:
         """Delete a resource by ID.
@@ -604,8 +610,47 @@ class BaseInMemDao(Generic[DTO]):
 
     async def upsert(self, dto: DTO) -> None:
         """Upsert a resource."""
-        dto_id = getattr(dto, self._id_field)
-        self.resources[dto_id] = self._serialize(dto)
+        document = self._serialize(dto)
+        self.resources[document["_id"]] = document
+
+    async def _write_each(
+        self,
+        dtos: Collection[DTO],
+        write: Callable[[DTO], Awaitable[None]],
+        *,
+        ordered: bool,
+    ) -> None:
+        """Write the DTOs one by one, collecting each DaoError per ID.
+
+        Ordered, the batch ends at its first error other than a missing resource, like
+        an ordered MongoDB bulk write, which ends at its first write error and does not
+        count a missing resource as one.
+        """
+        dtos = list(dtos)
+        ids = [self._serialize(dto)["_id"] for dto in dtos]
+        ensure_distinct_ids(ids)
+        errors: dict[ID, DaoError] = {}
+        for position, dto in enumerate(dtos):
+            try:
+                await write(dto)
+            except DaoError as error:
+                errors[ids[position]] = error
+                if ordered and not isinstance(error, ResourceNotFoundError):
+                    skipped = ids[position + 1 :]
+                    raise BatchOperationError(
+                        errors=errors, not_attempted=skipped
+                    ) from error
+        if errors:
+            raise BatchOperationError(errors=errors)
+
+    async def insert_many(
+        self, dtos: Collection[DTO], *, ordered: bool = False
+    ) -> None:
+        """Insert resources one by one, collecting failures as MongoDB does.
+
+        This DAO has no unique indexes, so the only failure is an existing ID.
+        """
+        await self._write_each(dtos, self.insert, ordered=ordered)
 
 
 def new_mock_dao_class(
@@ -623,7 +668,15 @@ def new_mock_dao_class(
     simple to match, such as comparing against null or missing fields. Other edge cases,
     like ordering values of different types, may raise or match differently than
     MongoDB. Cover those with integration tests against MongoDB instead.
+
+    Raises:
+        DaoFactoryBase.IdFieldNotFoundError: If `dto_model` has no field `id_field`.
+        DaoFactoryBase.IdTypeNotSupportedError: If the ID field is neither a string nor
+            an integer, which the DAO factories reject as well.
+        PydanticInvalidForJsonSchema: If `dto_model` has no JSON schema, from which
+            the check reads the ID field's type, as the DAO factories do.
     """
+    DaoFactoryBase._validate_dto_model_id(dto_model=dto_model, id_field=id_field)
 
     class MockDao(BaseInMemDao[DTO]):
         """Mock dao that stores data in memory"""

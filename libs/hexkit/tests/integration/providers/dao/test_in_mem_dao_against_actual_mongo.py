@@ -15,15 +15,15 @@
 
 """Tests meant to verify the reliability of the InMemDao"""
 
-from collections.abc import AsyncGenerator, Mapping
+from collections.abc import AsyncGenerator, Awaitable, Callable, Mapping
 from datetime import datetime, timedelta
 from typing import Any
 
 import pytest
 import pytest_asyncio
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
-from hexkit.protocols.dao import Dao
+from hexkit.protocols.dao import BatchOperationError, Dao, DaoError
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import (
     MongoDbFixture,
@@ -355,3 +355,114 @@ async def test_also_on_non_mql(
     await dao.insert(BIKE_PARTS)
     nomql_results = [x.title async for x in dao.find_all(filter_=filter_)]
     assert nomql_results == inmem_results, "Non-MQL Mock DAO results not as expected"
+
+
+NEW_ITEM = InventoryItem(
+    title="new",
+    count=1,
+    other_data=OtherData(sold_last_week=0, next_restock=DATE1),
+)
+
+
+async def batch_outcome(dao, method: str, args: list, kwargs: dict[str, Any]):
+    """Run a batch method and return its failures and the stored items afterwards."""
+    failures = None
+    try:
+        await getattr(dao, method)(*args, **kwargs)
+    except BatchOperationError as error:
+        failures = (
+            {id_: type(err) for id_, err in error.errors.items()},
+            error.not_attempted,
+        )
+    stored = [item.model_dump() async for item in dao.find_all(filter_={})]
+    return failures, sorted(stored, key=lambda item: item["title"])
+
+
+@pytest.mark.parametrize(
+    "method, args, kwargs",
+    [
+        ("insert_many", [[NEW_ITEM, APPLES]], {}),
+        ("insert_many", [[APPLES, NEW_ITEM]], {"ordered": True}),
+        ("insert_many", [[]], {}),
+    ],
+)
+async def test_batch_methods(
+    method: str,
+    args: list,
+    kwargs: dict[str, Any],
+    mock_item_dao: BaseInMemDao[InventoryItem],
+    real_item_dao: InventoryItemDao,
+):
+    """Test that a batch method fails and writes the same in memory as in MongoDB."""
+    expected = await batch_outcome(real_item_dao, method, args, kwargs)
+    observed = await batch_outcome(mock_item_dao, method, args, kwargs)
+
+    assert observed == expected
+
+
+class ShoutedItem(BaseModel):
+    """A model whose ID is stored in another form than the DTO holds it"""
+
+    title: str
+    count: int = 0
+
+    @field_serializer("title")
+    def _shout(self, title: str) -> str:
+        return title.upper()
+
+
+MockShoutedDaoClass = new_mock_dao_class(dto_model=ShoutedItem, id_field="title")
+
+
+async def serialized_id_outcome(dao, call: Callable[[Any], Awaitable[Any]]):
+    """Run a call on a DAO holding one item and return its outcome and the stored IDs."""
+    await dao.insert(ShoutedItem(title="apples"))
+    try:
+        outcome = await call(dao)
+    except BatchOperationError as error:
+        outcome = {id_: str(err) for id_, err in error.errors.items()}
+    except (DaoError, ValueError) as error:
+        outcome = (type(error), str(error))
+    stored = [item.title async for item in dao.find_all(filter_={})]
+    return outcome, sorted(stored)
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        pytest.param(lambda dao: dao.get_by_id("apples"), id="get_by_id-dto-id"),
+        pytest.param(lambda dao: dao.get_by_id("APPLES"), id="get_by_id-stored-id"),
+        pytest.param(
+            lambda dao: dao.update(ShoutedItem(title="apples", count=1)), id="update"
+        ),
+        pytest.param(lambda dao: dao.delete("apples"), id="delete-dto-id"),
+        pytest.param(lambda dao: dao.delete("APPLES"), id="delete-stored-id"),
+        pytest.param(
+            lambda dao: dao.insert(ShoutedItem(title="apples")), id="insert-existing"
+        ),
+        pytest.param(
+            lambda dao: dao.insert_many(
+                [ShoutedItem(title="apples"), ShoutedItem(title="pears")]
+            ),
+            id="insert_many-existing",
+        ),
+        pytest.param(
+            lambda dao: dao.insert_many(
+                [ShoutedItem(title="pears"), ShoutedItem(title="PEARS")]
+            ),
+            id="insert_many-same-stored-id",
+        ),
+    ],
+)
+async def test_serialized_id(
+    call: Callable[[Any], Awaitable[Any]], mongodb: MongoDbFixture
+):
+    """Test that a DTO's ID is stored and found as it serializes, as in MongoDB."""
+    async with MongoDbDaoFactory.construct(config=mongodb.config) as dao_factory:
+        real_dao = await dao_factory.get_dao(
+            name="shouted", dto_model=ShoutedItem, id_field="title"
+        )
+        expected = await serialized_id_outcome(real_dao, call)
+    observed = await serialized_id_outcome(MockShoutedDaoClass(), call)
+
+    assert observed == expected

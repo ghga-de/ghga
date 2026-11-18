@@ -19,13 +19,17 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, PydanticInvalidForJsonSchema
 
 from hexkit.protocols.dao import (
+    BatchOperationError,
+    DaoFactoryBase,
     InvalidFilterError,
     NoHitsFoundError,
     PreconditionFailedError,
+    ResourceAlreadyExistsError,
     ResourceNotFoundError,
+    UniqueConstraintViolationError,
 )
 from hexkit.providers.testing import MockDAOEmptyError, new_mock_dao_class
 from hexkit.providers.testing.dao import (
@@ -921,37 +925,135 @@ async def test_sort_with_missing_values_matches_mongodb():
     assert desc == [1, 3, 2, 4]
 
 
-async def test_nested_id_sort_matches_mongodb():
-    """The in-mem DAO matches MongoDB's (limited) behavior: it cannot sort by a nested
-    sub-field of the ID field, because the ID is stored under "_id". Such a sort is a
-    no-op that preserves the existing order rather than raising or secretly resolving
-    the value - exactly as MongoDB would silently fail to sort by "inner.x".
-    """
+class ModelId(BaseModel):
+    """An ID that is a model itself, which the DAO factories reject"""
 
-    class InnerDto(BaseModel):
-        def __hash__(self) -> int:
-            return self.x
+    x: int
 
-        x: int
 
-    class OuterDto(BaseModel):
-        inner: InnerDto
-        label: int
+class ModelIdDto(BaseModel):
+    """A DTO whose `inner` field holds a model"""
 
-    OuterDtoDao = new_mock_dao_class(dto_model=OuterDto, id_field="inner")  # noqa: N806
-    dao = OuterDtoDao()
+    inner: ModelId
+    label: int
 
-    dtos = [
-        OuterDto(inner=InnerDto(x=3), label=1),
-        OuterDto(inner=InnerDto(x=1), label=2),
-        OuterDto(inner=InnerDto(x=7), label=3),
-    ]
-    for dto in dtos:
-        await dao.insert(dto)
 
-    # Sorting by a nested sub-field of the ID field is a no-op (insertion order kept)
-    assert [x.label async for x in dao.find_all(filter_={}, sort=["inner.x"])] == [
-        1,
-        2,
-        3,
-    ]
+class Opaque:
+    """A type that Pydantic cannot describe in a JSON schema"""
+
+
+class OpaqueDto(BaseModel):
+    """A DTO without a JSON schema, which the DAO factories reject"""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    id: str
+    opaque: Opaque
+
+
+@pytest.mark.parametrize(
+    "dto_model, id_field, error",
+    [
+        (ModelIdDto, "missing", DaoFactoryBase.IdFieldNotFoundError),
+        (ModelIdDto, "inner", DaoFactoryBase.IdTypeNotSupportedError),
+        (OpaqueDto, "id", PydanticInvalidForJsonSchema),
+    ],
+)
+async def test_rejected_id_field(
+    dto_model: type[BaseModel], id_field: str, error: type[Exception]
+):
+    """Test that the mock DAO rejects the DTO models the DAO factories reject."""
+    with pytest.raises(error):
+        new_mock_dao_class(dto_model=dto_model, id_field=id_field)
+
+
+WRENCH = InventoryItem(title="Wrench", count=12)
+CANDLE = InventoryItem(title="Candle", count=100)
+HAMMER = InventoryItem(title="Hammer", count=3)
+
+
+async def stored_titles(dao) -> list[str]:
+    """Return the titles of all stored items, in insertion order."""
+    return [item.title async for item in dao.find_all(filter_={})]
+
+
+async def test_insert_many():
+    """Test that insert_many creates the new items and collects the existing IDs."""
+    dao = DaoClass()
+    await dao.insert(CANDLE)
+
+    with pytest.raises(BatchOperationError) as caught:
+        await dao.insert_many([WRENCH, CANDLE, HAMMER])
+
+    assert list(caught.value.errors) == ["Candle"]
+    assert isinstance(caught.value.errors["Candle"], ResourceAlreadyExistsError)
+    assert caught.value.not_attempted == ()
+    assert await stored_titles(dao) == ["Candle", "Wrench", "Hammer"]
+
+
+async def test_insert_many_ordered():
+    """Test that an ordered insert_many stops at the first existing ID."""
+    dao = DaoClass()
+    await dao.insert(CANDLE)
+
+    with pytest.raises(BatchOperationError) as caught:
+        await dao.insert_many([WRENCH, CANDLE, HAMMER], ordered=True)
+
+    assert list(caught.value.errors) == ["Candle"]
+    assert caught.value.not_attempted == ("Hammer",)
+    assert await stored_titles(dao) == ["Candle", "Wrench"]
+
+
+@pytest.mark.parametrize(
+    ("ordered", "not_attempted", "stored"),
+    [(False, (), ["Wrench", "Hammer"]), (True, ("Hammer",), ["Wrench"])],
+)
+async def test_insert_many_with_other_dao_error(
+    monkeypatch: pytest.MonkeyPatch,
+    ordered: bool,
+    not_attempted: tuple[str, ...],
+    stored: list[str],
+):
+    """Test that a batch fails only the DTO whose write raised another DaoError."""
+    dao = DaoClass()
+    insert = dao.insert
+
+    async def insert_without_candle(dto: InventoryItem) -> None:
+        if dto.title == "Candle":
+            raise UniqueConstraintViolationError(unique_fields={"count": dto.count})
+        await insert(dto)
+
+    monkeypatch.setattr(dao, "insert", insert_without_candle)
+
+    with pytest.raises(BatchOperationError) as caught:
+        await dao.insert_many([WRENCH, CANDLE, HAMMER], ordered=ordered)
+
+    assert list(caught.value.errors) == ["Candle"]
+    assert isinstance(caught.value.errors["Candle"], UniqueConstraintViolationError)
+    assert caught.value.not_attempted == not_attempted
+    assert await stored_titles(dao) == stored
+
+
+@pytest.mark.parametrize("method", ["insert_many"])
+async def test_batch_rejects_duplicate_ids(method: str):
+    """Test that a batch with a repeated ID is rejected before anything is written."""
+    dao = DaoClass()
+    await dao.insert(WRENCH)
+    changed = WRENCH.model_copy(update={"count": 1})
+
+    with pytest.raises(ValueError, match="Hammer"):
+        await getattr(dao, method)([HAMMER, changed, HAMMER])
+
+    assert await stored_titles(dao) == ["Wrench"]
+    assert (await dao.get_by_id("Wrench")).count == 12
+
+
+@pytest.mark.parametrize("method", ["insert_many"])
+async def test_batch_with_empty_input(method: str):
+    """Test that an empty batch changes nothing and raises nothing."""
+    dao = DaoClass()
+    await dao.insert(WRENCH)
+
+    await getattr(dao, method)([])
+
+    assert await stored_titles(dao) == ["Wrench"]
