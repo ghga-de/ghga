@@ -164,8 +164,8 @@ def _write_concern_error(error: BulkWriteError) -> DaoError | None:
         return None
     last, info = concern_errors[-1], concern_errors[-1].get("errInfo", {})
     if last.get("code") == MAX_TIME_MS_EXPIRED or info.get("wtimeout"):
-        return DbTimeoutError(last["errmsg"])
-    return DaoError(last["errmsg"])
+        return DbTimeoutError(last.get("errmsg"))
+    return DaoError(last.get("errmsg"))
 
 
 def _errors_from_bulk_write(

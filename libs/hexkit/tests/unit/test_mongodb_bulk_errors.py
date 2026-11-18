@@ -264,6 +264,19 @@ def test_last_write_concern_error_decides(
     assert all(type(failure) is expected for failure in error.errors.values())
 
 
+def test_write_concern_error_without_message():
+    """Test that a write concern error without `errmsg` still names each resource."""
+    error = _errors_from_bulk_write(
+        bulk_write_error(concern={"code": 64}),
+        IDS,
+        ordered=False,
+        duplicate_key=_insert_duplicate_error,
+    )
+
+    assert list(error.errors) == IDS
+    assert all(type(failure) is DaoError for failure in error.errors.values())
+
+
 @pytest.mark.parametrize("ordered", [False, True])
 def test_retryable_write_concern_error_leaves_the_outcome_unknown(ordered: bool):
     """Test that a write concern error at which pymongo stops the bulk write raises a
