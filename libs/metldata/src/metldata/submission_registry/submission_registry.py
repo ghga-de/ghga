@@ -21,13 +21,13 @@ from metldata.accession_registry.accession_registry import AccessionRegistry
 from metldata.custom_types import SubmissionContent
 from metldata.model_utils.anchors import get_anchors_points_by_target
 from metldata.model_utils.config import MetadataModelConfig
-from metldata.model_utils.essentials import STUDY_ANCHOR
 from metldata.model_utils.metadata_validator import MetadataValidator
 from metldata.submission_registry import models
 from metldata.submission_registry.event_publisher import SourceEventPublisher
 from metldata.submission_registry.identifiers import (
     generate_accession_map,
     generate_submission_id,
+    lookup_study_pid,
 )
 from metldata.submission_registry.submission_store import SubmissionStore
 
@@ -65,6 +65,16 @@ class SubmissionRegistry:
             )
             super().__init__(message)
 
+    class StudyPidMismatchError(RuntimeError):
+        """Raised when a submission does not hold the study PID it is expected to."""
+
+        def __init__(self, *, submission_id: str, study_pid: str):
+            message = (
+                f"The submission '{submission_id}' does not hold the study PID"
+                + f" '{study_pid}'."
+            )
+            super().__init__(message)
+
     def __init__(
         self,
         *,
@@ -81,6 +91,9 @@ class SubmissionRegistry:
         self._anchor_points_by_target = get_anchors_points_by_target(
             model=config.metadata_model
         )
+        self._study_anchor = self._anchor_points_by_target[
+            config.study_class_name
+        ].root_slot
 
     def _get_submission_with_status(
         self, *, id_: str, expected_status: models.SubmissionStatus
@@ -136,7 +149,7 @@ class SubmissionRegistry:
         submission_creation = models.Submission(
             id=generate_submission_id(),
             **header.model_dump(),
-            accession_map={STUDY_ANCHOR: {study_pid: study_pid}},
+            accession_map={self._study_anchor: {study_pid: study_pid}},
         )
         self._submission_store.insert_new(submission=submission_creation)
 
@@ -150,6 +163,25 @@ class SubmissionRegistry:
                 when no submission with the specified ID exists.
         """
         return self._submission_store.get_by_id(id_)
+
+    def check_study_pid(self, *, submission_id: str, study_pid: str) -> None:
+        """Check that the existing submission with the specified id holds the provided
+        study PID, so that content meant for one study is not added to another.
+
+        Raises:
+            SubmissionRegistry.SubmissionDoesNotExistError:
+                when no submission with the specified ID exists.
+            SubmissionRegistry.StudyPidMismatchError:
+                when the submission does not hold the provided study PID.
+        """
+        submission = self._submission_store.get_by_id(submission_id)
+        held_study_pid = lookup_study_pid(
+            anchor=self._study_anchor, accession_map=submission.accession_map
+        )
+        if held_study_pid != study_pid:
+            raise self.StudyPidMismatchError(
+                submission_id=submission_id, study_pid=study_pid
+            )
 
     def upsert_submission_content(
         self, *, submission_id: str, content: SubmissionContent

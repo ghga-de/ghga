@@ -28,20 +28,7 @@ import yaml
 from ghga_datasteward_kit.metadata import MetadataConfig, build_submission_registry
 from ghga_datasteward_kit.utils import load_config_yaml
 from metldata.custom_types import Json
-from metldata.model_utils.essentials import STUDY_ANCHOR
 from metldata.submission_registry.models import SubmissionHeader
-
-
-class StudyPidMismatchError(Exception):
-    """Raised when the study PID given for a pending submission is not the one the
-    submission holds.
-    """
-
-    def __init__(self, *, submission_id: str, study_pid: str):
-        super().__init__(
-            f"The submission '{submission_id}' does not hold the study PID"
-            f" '{study_pid}'. Nothing was submitted."
-        )
 
 
 def reserve_study_pid(
@@ -83,7 +70,7 @@ def submit_pending_metadata(  # noqa: PLR0913
     Raises:
         SubmissionRegistry.SubmissionDoesNotExistError:
             when no submission with the given ID exists.
-        StudyPidMismatchError:
+        SubmissionRegistry.StudyPidMismatchError:
             when the submission does not hold the given study PID.
         SubmissionRegistry.StatusError:
             when the submission is not pending.
@@ -94,11 +81,10 @@ def submit_pending_metadata(  # noqa: PLR0913
     """
     submission_registry = build_submission_registry(config=config)
 
-    submission = submission_registry.get_submission(id_=submission_id)
-    # the first PID is the one the registry keeps for the study
-    stored_pids = submission.accession_map.get(STUDY_ANCHOR, {})
-    if next(iter(stored_pids.values()), None) != study_pid:
-        raise StudyPidMismatchError(submission_id=submission_id, study_pid=study_pid)
+    submission_registry.check_study_pid(
+        submission_id=submission_id, study_pid=study_pid
+    )
+    reserved_title = submission_registry.get_submission(id_=submission_id).title
 
     # refuses a submission that is not pending before validating or minting anything
     submission_registry.upsert_submission_content(
@@ -113,7 +99,7 @@ def submit_pending_metadata(  # noqa: PLR0913
     )
     submission_registry.complete_submission(id_=submission_id)
 
-    return submission.title
+    return reserved_title
 
 
 def reserve_study_pid_from_path(

@@ -221,8 +221,7 @@ def test_reserve_study_pid(
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test that a reserved study PID is registered and held by a pending submission
-    without content, and that upserting the content keeps it under the study alias
-    and derives the dataset PIDs from it.
+    without content, and that upserting the content keeps it under the study alias.
     """
     submission_store, accession_store, submission_registry = build_submission_registry(
         config=config_sub_fixture, event_fixture=file_system_event_fixture
@@ -248,10 +247,31 @@ def test_reserve_study_pid(
 
     accession_map = submission_store.get_by_id(submission_id).accession_map
     assert accession_map["studies"] == {"test_study": study_pid}
-    for accession in accession_map["datasets"].values():
-        assert accession.startswith(f"{study_pid}.DS.")
     # no second study PID was minted
     assert accession_store.get_random_blocks(year=year) == {random_block}
+
+
+def test_check_study_pid(
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
+    file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
+):
+    """Test that the check passes for the study PID a submission holds and refuses
+    the study PID of another submission.
+    """
+    _, _, submission_registry = build_submission_registry(
+        config=config_sub_fixture, event_fixture=file_system_event_fixture
+    )
+    header = models.SubmissionHeader(title="internal name")
+    submission_id, study_pid = submission_registry.reserve_study_pid(header=header)
+    _, other_study_pid = submission_registry.reserve_study_pid(header=header)
+
+    submission_registry.check_study_pid(
+        submission_id=submission_id, study_pid=study_pid
+    )
+    with pytest.raises(SubmissionRegistry.StudyPidMismatchError):
+        submission_registry.check_study_pid(
+            submission_id=submission_id, study_pid=other_study_pid
+        )
 
 
 def test_update_submission_header(

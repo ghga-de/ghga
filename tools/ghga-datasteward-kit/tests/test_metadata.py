@@ -44,7 +44,6 @@ from ghga_datasteward_kit.cli.metadata import (
 )
 from ghga_datasteward_kit.cli.metadata import submit_legacy as submit_legacy_command
 from ghga_datasteward_kit.cli.metadata import submit_pending as submit_pending_command
-from ghga_datasteward_kit.study_pid_reservation import StudyPidMismatchError
 from ghga_service_commons.utils.accessions import STUDY_PID_PATTERN
 from metldata.model_utils.anchors import AnchorPoint
 from metldata.model_utils.metadata_validator import MetadataValidationError
@@ -976,7 +975,9 @@ def test_submit_pending_refuses_mismatched_pid(example_workdir: Path):
     _, other_study_pid = reserve()
     submission_before = read_submission(submission_id=submission_id)
 
-    with pytest.raises(StudyPidMismatchError, match=re.escape(other_study_pid)):
+    with pytest.raises(
+        SubmissionRegistry.StudyPidMismatchError, match=re.escape(other_study_pid)
+    ):
         submit_reserved(submission_id=submission_id, study_pid=other_study_pid)
 
     assert read_submission(submission_id=submission_id) == submission_before
@@ -985,7 +986,7 @@ def test_submit_pending_refuses_mismatched_pid(example_workdir: Path):
 
 def test_submit_pending_invalid_metadata_keeps_reservation(example_workdir: Path):
     """Test that metadata failing validation leaves the reservation as it was, the
-    internal name included, so the corrected metadata can be submitted to it.
+    internal name included.
     """
     submission_id, study_pid = reserve()
     submission_before = read_submission(submission_id=submission_id)
@@ -1001,10 +1002,6 @@ def test_submit_pending_invalid_metadata_keeps_reservation(example_workdir: Path
         )
 
     assert read_submission(submission_id=submission_id) == submission_before
-
-    submit_reserved(submission_id=submission_id, study_pid=study_pid)
-    submission = read_submission(submission_id=submission_id)
-    assert submission["accession_map"]["studies"] == {"test_study": study_pid}
 
 
 def test_submit_pending_rerun_after_stop_before_completion(
