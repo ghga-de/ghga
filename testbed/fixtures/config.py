@@ -186,14 +186,6 @@ class Config(BaseSettings):
     fis_reports_collection: str = "reports"
     fis_priority_collection: str = "uploadBoxPriority"
 
-    # datahub-file-service, one Deployment per storage, which a test can pause so
-    # that the files it uploads wait for DHFS together
-    kube_context: str = "kind-ghga"
-    dhfs_deployments: dict[str, str] = {
-        "primary": "ghga-dhfs-primary",
-        "secondary": "ghga-dhfs-secondary",
-    }
-
     # metldata
     metldata_db_name: str = "metldata"
     metldata_url: str = "metldata"

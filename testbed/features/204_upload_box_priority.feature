@@ -68,17 +68,17 @@ Feature: 204 Upload Box Priority
 
   Scenario: The Data Hub re-encrypts the files of the second box first
 
-    # DHFS asks FIS for waiting files every few seconds, so it is paused until all
+    # DHFS asks FIS for waiting files every few seconds, so it is held up until all
     # four files wait together. The first box gets its files first, so an order by
     # upload time would fail the check.
     Given I have an empty working directory for the GHGA connector
     And my Crypt4GH key pair has been stored in two key files
-    And the DHFS of the "primary" storage is paused
+    And DHFS is held up by files it cannot find in the "second" upload box
 
     When two files are uploaded to the "first" upload box
     And two files are uploaded to the "second" upload box
     Then FIS stores the box of each file uploaded to the two boxes
 
-    When the DHFS of the "primary" storage resumes
+    When the files that hold up DHFS are removed
     Then the files of the "second" upload box are interrogated before those of the "first"
     And the files of each of the two boxes are interrogated in the order of their IDs

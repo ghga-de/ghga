@@ -58,7 +58,6 @@ When running the tests against a Kubernetes cluster, please ensure that names of
 
 - Relevant settings include `auth_basic`, `upload_token`, and `fis_pubkey`.
   Bucket names (`*_bucket`) and URLs (`*_url`) must also be consistent.
-- Feature 204 pauses the DHFS of a storage with `kubectl`, so `kube_context` and `dhfs_deployments` must name the cluster's context and its DHFS Deployments.
 
 ## License
 

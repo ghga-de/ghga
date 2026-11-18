@@ -16,8 +16,6 @@
 
 """Step definitions for the upload box priority list and the interrogation order"""
 
-import json
-import subprocess
 from collections.abc import Generator
 from datetime import datetime
 from typing import Any
@@ -28,7 +26,6 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest import fixture
 
 from .conftest import (
-    Config,
     JointFixture,
     Response,
     given,
@@ -41,8 +38,18 @@ from .conftest_2x import _session_headers, run_batch_upload
 
 scenarios("../features/204_upload_box_priority.feature")
 
+STORAGE_NAME = "primary"
 BOX_NAMES = ("first", "second")
 FILES_PER_BOX = 2
+MAX_FILES_PER_REQUEST = 5  # FIS returns at most this many waiting files to DHFS
+
+# The files that hold up DHFS (see `BlockingFiles`). Their IDs sort before any other
+# file ID, and they share an object ID that no object has.
+BLOCKING_FILE_IDS = [
+    f"00000000-0000-4000-8000-{number:012d}"
+    for number in range(1, MAX_FILES_PER_REQUEST + 1)
+]
+BLOCKING_OBJECT_ID = "00000000-0000-4000-8000-000000000000"
 
 
 def _box(fixtures: JointFixture, box_name: str) -> dict[str, Any]:
@@ -98,7 +105,7 @@ def create_upload_box(
 ) -> Response:
     """Create an upload box in the primary storage and store it in the state."""
     assert box_name in BOX_NAMES, f"Unknown upload box: {box_name}"
-    storage_alias = fixtures.s3.get_storage_config("primary").storage_alias
+    storage_alias = fixtures.s3.get_storage_config(STORAGE_NAME).storage_alias
     headers = _session_headers(fixtures, full_name)
     url = f"{fixtures.config.rs_url}/upload-boxes"
     payload = {
@@ -331,86 +338,71 @@ def store_upload_token(box_name: str, fixtures: JointFixture, response: Response
     )
 
 
-class PausedDhfs:
-    """Pause the DHFS of a storage by scaling its Deployment down to no pod."""
+class BlockingFiles:
+    """Hold up DHFS with waiting files in FIS whose objects are missing from the inbox.
 
-    def __init__(self, config: Config):
-        self._kubectl = ["kubectl", "--context", config.kube_context]
-        self._deployments = config.dhfs_deployments
-        self._paused: dict[str, int] = {}  # replicas by deployment
-
-    def _run(self, *args: str, accept: str | None = None) -> str:
-        """Run kubectl with the given arguments and return its output. A failure
-        whose message holds `accept` counts as success.
-        """
-        completed = subprocess.run(  # nosec B603
-            [*self._kubectl, *args],
-            capture_output=True,
-            check=False,
-            encoding="utf-8",
-            timeout=300,
-        )
-        accepted = accept is not None and accept in completed.stderr
-        assert completed.returncode == 0 or accepted, (
-            f"kubectl {' '.join(args)} failed: {completed.stderr}"
-        )
-        return completed.stdout.strip()
-
-    def pause(self, storage_name: str) -> None:
-        """Scale the DHFS of the storage down and wait until its pods are gone."""
-        deployment = self._deployments[storage_name]
-        replicas = self._run(
-            "get", "deployment", deployment, "-o", "jsonpath={.spec.replicas}"
-        )
-        labels = json.loads(
-            self._run(
-                "get",
-                "deployment",
-                deployment,
-                "-o",
-                "jsonpath={.spec.selector.matchLabels}",
-            )
-        )
-        selector = ",".join(f"{key}={value}" for key, value in labels.items())
-        self._run("scale", "deployment", deployment, "--replicas=0")
-        self._paused[deployment] = int(replicas)
-        # A pod that is shutting down could still fetch a file. kubectl wait fails
-        # if no pod matches, but then there is nothing to wait for either.
-        self._run(
-            "wait",
-            "--for=delete",
-            "pod",
-            f"--selector={selector}",
-            "--timeout=120s",
-            accept="no matching resources found",
-        )
-
-    def resume(self) -> None:
-        """Scale every paused DHFS back up and wait until it is ready."""
-        while self._paused:
-            deployment, replicas = self._paused.popitem()
-            self._run("scale", "deployment", deployment, f"--replicas={replicas}")
-            self._run("rollout", "status", "deployment", deployment, "--timeout=180s")
-
-
-@fixture(name="paused_dhfs")
-def paused_dhfs_fixture(config: Config) -> Generator[PausedDhfs]:
-    """Pause DHFS on request, and resume it at the end of the scenario at the latest,
-    so that a failed step does not leave it paused for the following features.
+    DHFS cannot interrogate such a file, so it leaves the file waiting and asks again.
+    While FIS ranks these files first, they fill every batch, and DHFS gets no other
+    file of their storage.
     """
-    paused_dhfs = PausedDhfs(config)
-    yield paused_dhfs
-    paused_dhfs.resume()
+
+    def __init__(self, fixtures: JointFixture):
+        self._fixtures = fixtures
+
+    def add(self, *, box: dict[str, Any]) -> None:
+        """Add the files to the upload box in FIS, where they come first in the box."""
+        fixtures = self._fixtures
+        inbox_bucket = fixtures.s3.get_storage_config(STORAGE_NAME).buckets.inbox
+        for file_id in BLOCKING_FILE_IDS:
+            fixtures.mongo.upsert_document(
+                db_name=fixtures.config.fis_db_name,
+                collection_name=fixtures.config.fis_files_collection,
+                document={
+                    "_id": file_id,
+                    "storage_alias": box["storage_alias"],
+                    "bucket_id": inbox_bucket,
+                    "object_id": {"$uuid": BLOCKING_OBJECT_ID},
+                    "decrypted_sha256": "0" * 64,
+                    "decrypted_size": 1,
+                    "encrypted_size": 1,
+                    "part_size": 1,
+                    "box_id": {"$uuid": box["file_upload_box_id"]},
+                    "state": "inbox",
+                    "state_updated": {"$date": now_as_utc().isoformat()},
+                    "interrogated": False,
+                    "can_remove": False,
+                },
+            )
+
+    def remove(self) -> None:
+        """Remove the files from FIS, if they are there."""
+        fixtures = self._fixtures
+        fixtures.mongo.remove_documents(
+            db_name=fixtures.config.fis_db_name,
+            collection_name=fixtures.config.fis_files_collection,
+            query={"object_id": {"$uuid": BLOCKING_OBJECT_ID}},
+        )
 
 
-@given(parse('the DHFS of the "{storage_name}" storage is paused'))
-def pause_dhfs(storage_name: str, paused_dhfs: PausedDhfs):
-    paused_dhfs.pause(storage_name)
+@fixture(name="blocking_files")
+def blocking_files_fixture(fixtures: JointFixture) -> Generator[BlockingFiles]:
+    """Add the blocking files on request, and remove them at the end of the scenario at
+    the latest, so that a failed step does not leave DHFS held up for the following
+    features.
+    """
+    blocking_files = BlockingFiles(fixtures)
+    yield blocking_files
+    blocking_files.remove()
 
 
-@when(parse('the DHFS of the "{storage_name}" storage resumes'))
-def resume_dhfs(paused_dhfs: PausedDhfs):
-    paused_dhfs.resume()
+@given(parse('DHFS is held up by files it cannot find in the "{box_name}" upload box'))
+def hold_up_dhfs(box_name: str, fixtures: JointFixture, blocking_files: BlockingFiles):
+    blocking_files.add(box=_box(fixtures, box_name))
+
+
+@when("the files that hold up DHFS are removed")
+def release_dhfs(blocking_files: BlockingFiles):
+    blocking_files.remove()
 
 
 @when(parse('two files are uploaded to the "{box_name}" upload box'))

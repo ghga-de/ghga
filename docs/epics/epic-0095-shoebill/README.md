@@ -542,10 +542,11 @@ Interrogation order, in feature 204:
 
 - DHFS polls on its own schedule and interrogates a file soon after upload, so files of two boxes are rarely waiting at the same time.
   The test bed polls every 2 s, and a longer `min_run_interval_seconds` would slow every other upload feature without making the timing certain.
-  The scenario therefore pauses the DHFS of the primary storage while it uploads, by scaling its Deployment to no pod with `kubectl`, and resumes it once FIS holds all files.
-  A fixture resumes DHFS at the end of the scenario even if a step fails.
+  The scenario therefore writes five waiting files of the second box to FIS's MongoDB, whose objects are missing from the inbox.
+  Their IDs sort first, so they fill every batch, and DHFS leaves each of them waiting, as described in [DHFS loop](#dhfs-loop).
+  Once FIS holds all files, the scenario removes them; a fixture also removes them at the end of the scenario if a step fails.
 - It uses two boxes in one storage, moves the second box before the first, and uploads two files to each, the first box's files first, so an order by upload time fails the check.
-- Before DHFS resumes, FIS holds each file with its file upload box as `box_id`.
+- Before the scenario removes the five files, FIS holds each uploaded file with its file upload box as `box_id`.
 - DHFS interrogates both files of the second box first, then both files of the first box.
 - Within each box, the files are interrogated in ascending `_id` order.
 - The order is read from `state_updated` of the files in FIS's MongoDB, which FIS takes from the report's `interrogated_at`, because DHFS processes one file at a time.
