@@ -644,6 +644,7 @@ class MongoDbDao(Generic[Dto]):
     async def _bulk_replace(
         self,
         documents: list[dict[str, Any]],
+        ids: list[ID],
         extra: Mapping[str, Any],
         *,
         upsert: bool,
@@ -651,10 +652,10 @@ class MongoDbDao(Generic[Dto]):
     ) -> tuple[int, BatchOperationError | None]:
         """Replace each document by its ID where `extra` also matches, in one write.
 
-        Returns the number of matched documents and the failures, if any, instead of
-        raising them, because `update_many` needs both.
+        `ids` holds the documents' IDs, in the same order. Returns the number of matched
+        documents and the failures, if any, instead of raising them, because
+        `update_many` needs both.
         """
-        ids = [document["_id"] for document in documents]
         operations = [
             ReplaceOne({"_id": id_, **extra}, document, upsert=upsert)
             for id_, document in zip(ids, documents, strict=True)
@@ -680,11 +681,11 @@ class MongoDbDao(Generic[Dto]):
         """
         if not dtos:
             return
-        documents = self._batch_documents(dtos)
+        documents, ids = self._batch_documents(dtos)
         # No criteria besides the ID ({}), so each document replaces whatever is
         # stored under its ID, or is inserted where nothing is
         _, failures = await self._bulk_replace(
-            documents, {}, upsert=True, ordered=ordered
+            documents, ids, {}, upsert=True, ordered=ordered
         )
         if failures:
             raise failures
