@@ -93,7 +93,7 @@ class QueryHandler(QueryHandlerPort):
             if query:
                 sorting_parameters = [
                     models.SortingParameter(
-                        field="query", order=models.SortOrder.RELEVANCE
+                        field="relevance", order=models.SortOrder.RELEVANCE
                     )
                 ]
             else:
@@ -113,7 +113,7 @@ class QueryHandler(QueryHandlerPort):
         except KeyError as err:
             raise self.ClassNotConfiguredError(class_name=class_name) from err
 
-        # run the aggregation. Results will have {facets, count, hits} format
+        # run the aggregation. Results will have {facets, items, total_count} format
         aggregator = self._aggregator_collection.get_aggregator(class_name=class_name)
         for attempt in range(2):
             try:

@@ -714,8 +714,8 @@ export const searchResults: SearchResults = {
       ],
     },
   ],
-  count: 26, // just to test the paginator
-  hits: [
+  total_count: 26, // just to test the paginator
+  items: [
     {
       id_: 'GHGAD12345678901234',
       content: {

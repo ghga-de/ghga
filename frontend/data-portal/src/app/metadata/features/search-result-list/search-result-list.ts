@@ -32,9 +32,9 @@ const NUM_STENCILS = 3;
 export class SearchResultList {
   #metadataSearch = inject(MetadataSearchService);
   #searchResults = this.#metadataSearch.searchResults;
-  hits = computed(() => this.#searchResults()?.hits ?? []);
+  hits = computed(() => this.#searchResults()?.items ?? []);
   isLoading = this.#metadataSearch.isLoading;
-  numResults = computed(() => this.#searchResults()?.count);
+  numResults = computed(() => this.#searchResults()?.total_count);
 
   pageSize = this.#metadataSearch.searchResultsLimit;
   pageIndex = computed(() => {

@@ -68,13 +68,9 @@ components:
       title: HTTPValidationError
       type: object
     QueryResults:
-      description: Contains the facets, hit count, and hits
+      description: Contains the facets, one page of search results, and their total
+        count
       properties:
-        count:
-          default: 0
-          description: The number of results found
-          title: Count
-          type: integer
         facets:
           default: []
           description: Contains the faceted fields
@@ -82,13 +78,18 @@ components:
             $ref: '#/components/schemas/Facet'
           title: Facets
           type: array
-        hits:
+        items:
           default: []
-          description: The search results
+          description: The search results on the requested page
           items:
             $ref: '#/components/schemas/Resource'
-          title: Hits
+          title: Items
           type: array
+        total_count:
+          default: 0
+          description: The number of results found, ignoring skip and limit
+          title: Total Count
+          type: integer
       title: QueryResults
       type: object
     Resource:
@@ -152,14 +153,6 @@ components:
       - description
       title: SearchableClass
       type: object
-    SortOrder:
-      description: Represents the possible sorting orders
-      enum:
-      - ascending
-      - descending
-      - relevance
-      title: SortOrder
-      type: string
     ValidationError:
       properties:
         ctx:
@@ -276,29 +269,25 @@ paths:
           minimum: 1
           title: Limit
           type: integer
-      - description: Field(s) that shall be used for sorting results
-        in: query
-        name: order_by
-        required: false
-        schema:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          description: Field(s) that shall be used for sorting results
-          title: Order By
-      - description: Sort order(s) that shall be used when sorting results
+      - description: A comma-separated list of field names defining the sort order,
+          where field names prefixed with '-' indicate descending order (e.g. 'type,-title').
+          The reserved name 'relevance' sorts by how well the results match the query,
+          best first. Defaults to sorting by relevance if a query is given. If 'id_'
+          is not referenced, it is appended as an ascending tiebreaker to guarantee
+          a stable order.
         in: query
         name: sort
         required: false
         schema:
           anyOf:
-          - items:
-              $ref: '#/components/schemas/SortOrder'
-            type: array
+          - type: string
           - type: 'null'
-          description: Sort order(s) that shall be used when sorting results
+          description: A comma-separated list of field names defining the sort order,
+            where field names prefixed with '-' indicate descending order (e.g. 'type,-title').
+            The reserved name 'relevance' sorts by how well the results match the
+            query, best first. Defaults to sorting by relevance if a query is given.
+            If 'id_' is not referenced, it is appended as an ascending tiebreaker
+            to guarantee a stable order.
           title: Sort
       responses:
         '200':

@@ -29,6 +29,45 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# the reserved name in the sort parameter that stands for sorting by relevance
+RELEVANCE = "relevance"
+
+
+def parse_sort(sort: str | None) -> list[models.SortingParameter]:
+    """Parse a comma-separated sort specification into sorting parameters.
+
+    A leading dash marks a field as descending, and the reserved name `relevance`
+    sorts by text score, which has only one direction.
+
+    Raises:
+        ValueError: if a field is empty, repeated, or `relevance` is negated.
+    """
+    if not sort:
+        return []
+    sorting_parameters: list[models.SortingParameter] = []
+    seen: set[str] = set()
+    for spec in sort.split(","):
+        field = spec.strip()
+        descending = field.startswith("-")
+        field = field.removeprefix("-")
+        if not field:
+            raise ValueError("Fields to sort by must not be empty")
+        if field in seen:
+            raise ValueError("Fields to sort by must be unique")
+        seen.add(field)
+        if field == RELEVANCE:
+            if descending:
+                raise ValueError("Sorting by relevance cannot be reversed")
+            order = models.SortOrder.RELEVANCE
+        else:
+            order = (
+                models.SortOrder.DESCENDING
+                if descending
+                else models.SortOrder.ASCENDING
+            )
+        sorting_parameters.append(models.SortingParameter(field=field, order=order))
+    return sorting_parameters
+
 
 @router.get(
     "/health",
@@ -89,13 +128,17 @@ async def search(  # noqa: PLR0913
         int,
         Query(ge=1, le=1000, description="Limit the results to this number"),
     ] = 100,
-    order_by: Annotated[
-        list[str] | None,
-        Query(description="Field(s) that shall be used for sorting results"),
-    ] = None,
     sort: Annotated[
-        list[models.SortOrder] | None,
-        Query(description="Sort order(s) that shall be used when sorting results"),
+        str | None,
+        Query(
+            description="A comma-separated list of field names defining the sort"
+            + " order, where field names prefixed with '-' indicate descending order"
+            + " (e.g. 'type,-title'). The reserved name 'relevance' sorts by how well"
+            + " the results match the query, best first."
+            + " Defaults to sorting by relevance if a query is given."
+            + " If 'id_' is not referenced, it is appended as an ascending"
+            + " tiebreaker to guarantee a stable order."
+        ),
     ] = None,
 ) -> models.QueryResults | None:
     """Perform search query"""
@@ -109,17 +152,10 @@ async def search(  # noqa: PLR0913
     except ValueError as err:
         detail = "Number of fields to filter by must match number of values"
         raise HTTPException(status_code=422, detail=detail) from err
-    if order_by and len(set(order_by)) < len(order_by):
-        detail = "Fields to order by must be unique"
-        raise HTTPException(status_code=422, detail=detail)
     try:
-        sorting_parameters = [
-            models.SortingParameter(field=field, order=order)
-            for field, order in zip(order_by or [], sort or [], strict=True)
-        ]
+        sorting_parameters = parse_sort(sort)
     except ValueError as err:
-        detail = "Number of fields to order by must match number of sort options"
-        raise HTTPException(status_code=422, detail=detail) from err
+        raise HTTPException(status_code=422, detail=str(err)) from err
     try:
         results = await query_handler.handle_query(
             class_name=class_name,

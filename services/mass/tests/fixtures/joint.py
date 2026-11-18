@@ -114,7 +114,7 @@ class JointFixture:
         response = await self.rest_client.get(url="/search", params=params)
         result = response.json()
         assert result is not None, result
-        assert "detail" in result or "hits" in result, result
+        assert "detail" in result or "items" in result, result
         response.raise_for_status()
         return models.QueryResults(**result)
 

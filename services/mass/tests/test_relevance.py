@@ -105,14 +105,14 @@ async def test_happy_relevance(joint_fixture: JointFixture):
     params: QueryParams = {"class_name": CLASS_NAME, "query": query}
 
     results = await joint_fixture.call_search_endpoint(params)
-    assert results.count == 5
+    assert results.total_count == 5
 
     reference_ids = sorted_reference_results(
         joint_fixture,
         query=query,
     )
 
-    assert [hit.id_ for hit in results.hits] == reference_ids
+    assert [hit.id_ for hit in results.items] == reference_ids
 
 
 async def test_happy_relevance_descending_id(joint_fixture: JointFixture):
@@ -121,18 +121,17 @@ async def test_happy_relevance_descending_id(joint_fixture: JointFixture):
     params: QueryParams = {
         "class_name": CLASS_NAME,
         "query": query,
-        "order_by": ["query", "id_"],
-        "sort": ["relevance", "descending"],
+        "sort": "relevance,-id_",
     }
 
     results = await joint_fixture.call_search_endpoint(params)
-    assert results.count == 5
+    assert results.total_count == 5
 
     reference_ids = sorted_reference_results(
         joint_fixture, query=query, sorts=[RELEVANCE_SORT, ID_DESC]
     )
 
-    assert [hit.id_ for hit in results.hits] == reference_ids
+    assert [hit.id_ for hit in results.items] == reference_ids
 
 
 async def test_with_absent_term(joint_fixture: JointFixture):
@@ -141,7 +140,7 @@ async def test_with_absent_term(joint_fixture: JointFixture):
 
     results = await joint_fixture.call_search_endpoint(params)
 
-    assert results.count == 0
+    assert results.total_count == 0
 
 
 async def test_limited_term(joint_fixture: JointFixture):
@@ -151,10 +150,10 @@ async def test_limited_term(joint_fixture: JointFixture):
 
     results = await joint_fixture.call_search_endpoint(params)
 
-    assert results.count == 2
+    assert results.total_count == 2
     reference_ids = sorted_reference_results(joint_fixture, query=query)
 
-    assert [hit.id_ for hit in results.hits] == reference_ids
+    assert [hit.id_ for hit in results.items] == reference_ids
 
 
 async def test_two_words(joint_fixture: JointFixture):
@@ -164,10 +163,10 @@ async def test_two_words(joint_fixture: JointFixture):
 
     results = await joint_fixture.call_search_endpoint(params)
 
-    assert results.count == 5
+    assert results.total_count == 5
     reference_ids = sorted_reference_results(joint_fixture, query=query)
 
-    assert [hit.id_ for hit in results.hits] == reference_ids
+    assert [hit.id_ for hit in results.items] == reference_ids
 
 
 async def test_with_filters(joint_fixture: JointFixture):
@@ -183,12 +182,12 @@ async def test_with_filters(joint_fixture: JointFixture):
 
     results = await joint_fixture.call_search_endpoint(params)
 
-    assert results.count == 1
+    assert results.total_count == 1
     reference_ids = sorted_reference_results(
         joint_fixture, query=query, filters=filters
     )
 
-    assert [hit.id_ for hit in results.hits] == reference_ids
+    assert [hit.id_ for hit in results.items] == reference_ids
 
 
 async def test_with_filters_and_sorts(joint_fixture: JointFixture):
@@ -200,13 +199,12 @@ async def test_with_filters_and_sorts(joint_fixture: JointFixture):
         "query": query,
         "filter_by": [f.key for f in filters],
         "value": [f.value for f in filters],
-        "order_by": ["field", "id_"],
-        "sort": ["ascending", "descending"],
+        "sort": "field,-id_",
     }
 
     results = await joint_fixture.call_search_endpoint(params)
 
-    assert results.count == 2
+    assert results.total_count == 2
     reference_ids = sorted_reference_results(
         joint_fixture,
         query=query,
@@ -214,7 +212,7 @@ async def test_with_filters_and_sorts(joint_fixture: JointFixture):
         sorts=[FIELD_ASC, ID_DESC],
     )
 
-    assert [hit.id_ for hit in results.hits] == reference_ids
+    assert [hit.id_ for hit in results.items] == reference_ids
 
 
 @pytest.mark.parametrize("query", ["", "   "], ids=["empty", "blank"])
@@ -223,8 +221,7 @@ async def test_relevance_without_query(query: str, joint_fixture: JointFixture):
     params: QueryParams = {
         "class_name": CLASS_NAME,
         "query": query,
-        "order_by": ["field"],
-        "sort": ["relevance"],
+        "sort": "relevance",
     }
 
     response = await joint_fixture.rest_client.get(url="/search", params=params)
@@ -237,4 +234,17 @@ async def test_blank_query(joint_fixture: JointFixture):
     params: QueryParams = {"class_name": CLASS_NAME, "query": "   "}
 
     results = await joint_fixture.call_search_endpoint(params)
-    assert results.count == 5
+    assert results.total_count == 5
+
+
+async def test_reversed_relevance(joint_fixture: JointFixture):
+    """Make sure sorting by relevance cannot be reversed"""
+    params: QueryParams = {
+        "class_name": CLASS_NAME,
+        "query": "test",
+        "sort": "-relevance",
+    }
+
+    response = await joint_fixture.rest_client.get(url="/search", params=params)
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Sorting by relevance cannot be reversed"

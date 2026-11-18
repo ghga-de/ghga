@@ -80,11 +80,15 @@ class Filter(BaseModel):
 
 
 class QueryResults(BaseModel):
-    """Contains the facets, hit count, and hits"""
+    """Contains the facets, one page of search results, and their total count"""
 
     facets: list[Facet] = Field(default=[], description="Contains the faceted fields")
-    count: int = Field(default=0, description="The number of results found")
-    hits: list[Resource] = Field(default=[], description="The search results")
+    items: list[Resource] = Field(
+        default=[], description="The search results on the requested page"
+    )
+    total_count: int = Field(
+        default=0, description="The number of results found, ignoring skip and limit"
+    )
 
 
 class SortOrder(Enum):

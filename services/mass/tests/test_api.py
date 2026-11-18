@@ -42,8 +42,8 @@ def compare(
     facets: list[models.Facet] | None = None,
 ) -> None:
     """Perform common comparisons for results"""
-    assert results.count == count
-    assert len(results.hits) == hit_length
+    assert results.total_count == count
+    assert len(results.items) == hit_length
 
     if facets:
         assert results.facets == facets
@@ -56,7 +56,7 @@ def compare(
         assert {x.key for x in results.facets} == {x.key for x in configured_facets}
 
     if hits:
-        assert results.hits == hits
+        assert results.items == hits
 
 
 async def test_health_check(joint_fixture: JointFixture):
@@ -197,7 +197,7 @@ async def test_search_filters(joint_fixture: JointFixture):
 
 
 async def test_facets_named_like_result_fields(joint_fixture: JointFixture):
-    """Make sure facets named count or hits do not clash with the results"""
+    """Make sure facets named total_count or items do not clash with the results"""
     params: QueryParams = {"class_name": CLASS_NAME}
     expected = await joint_fixture.call_search_endpoint(params)
 
@@ -207,7 +207,7 @@ async def test_facets_named_like_result_fields(joint_fixture: JointFixture):
     facet_fields = [
         field.model_copy(update={"name": name})
         for field, name in zip(
-            searchable_class.facetable_fields, ["count", "hits", ""], strict=True
+            searchable_class.facetable_fields, ["total_count", "items", ""], strict=True
         )
     ]
     renamed_class = searchable_class.model_copy(
@@ -220,9 +220,13 @@ async def test_facets_named_like_result_fields(joint_fixture: JointFixture):
     async with prepare_core(config=renamed_config) as query_handler:
         results = await query_handler.handle_query(class_name=CLASS_NAME)
 
-    assert results.count == expected.count
-    assert results.hits == expected.hits
-    assert [facet.name for facet in results.facets] == ["count", "hits", "Object Type"]
+    assert results.total_count == expected.total_count
+    assert results.items == expected.items
+    assert [facet.name for facet in results.facets] == [
+        "total_count",
+        "items",
+        "Object Type",
+    ]
     assert [facet.options for facet in results.facets] == [
         facet.options for facet in expected.facets
     ]

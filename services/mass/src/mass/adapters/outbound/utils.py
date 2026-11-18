@@ -81,7 +81,7 @@ def pipeline_facet_sort_and_paginate(
     """Uses a list of facetable fields to build the subquery for faceting"""
     segment: dict[str, list[JsonObject]] = {}
 
-    # key each facet by position, since a name could clash with count or hits
+    # key each facet by position, since a name could clash with total_count or items
     for index, facet in enumerate(facet_fields):
         pipeline: list[JsonObject] = [
             {
@@ -119,33 +119,33 @@ def pipeline_facet_sort_and_paginate(
         )
         segment[f"facet_{index}"] = pipeline
 
-    # this is the total number of hits, but pagination can mean only a few are returned
-    segment["count"] = [{"$count": "total"}]
+    # this is the total number of results, but pagination can mean only a few are returned
+    segment["total_count"] = [{"$count": "total"}]
 
     # rename the ID field to id_ to match our model
-    segment["hits"] = [{"$addFields": {"id_": "$_id"}}, {"$unset": "_id"}]
+    segment["items"] = [{"$addFields": {"id_": "$_id"}}, {"$unset": "_id"}]
 
     # apply sorting parameters (maybe some of them are unselected fields)
     if sort:
-        segment["hits"].append({"$sort": sort})
+        segment["items"].append({"$sort": sort})
 
     # pick only the selected fields
     if project:
-        segment["hits"].append({"$project": project})
+        segment["items"].append({"$project": project})
 
     # apply skip and limit for pagination
     if skip > 0:
-        segment["hits"].append({"$skip": skip})
+        segment["items"].append({"$skip": skip})
     if limit:
-        segment["hits"].append({"$limit": limit})
+        segment["items"].append({"$limit": limit})
 
     return {"$facet": segment}
 
 
 def pipeline_project(*, facet_fields: list[models.FieldLabel]) -> JsonObject:
     """Reshape the query so the facets are contained in a top level object"""
-    segment: dict[str, Any] = {"hits": 1, "facets": []}
-    segment["count"] = {"$arrayElemAt": ["$count.total", 0]}
+    segment: dict[str, Any] = {"items": 1, "facets": []}
+    segment["total_count"] = {"$arrayElemAt": ["$total_count.total", 0]}
 
     # add a segment for each facet to summarize the options
     for index, facet in enumerate(facet_fields):
