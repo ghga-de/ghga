@@ -224,7 +224,7 @@ test('can create an upload box from the manager page', async ({ adminPage: page 
 test('can change the priority order by dragging a box', async ({ adminPage: page }) => {
   // The unit tests call drop() directly, so only the browser tests the real drag
   // and drop. The mock answers the same before and after the save, and the test
-  // bed covers the flow against the real RS.
+  // bed will cover the flow against the real RS.
   const main = page.locator('main');
   await main.getByRole('button', { name: 'Change order' }).click();
 
