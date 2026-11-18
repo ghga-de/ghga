@@ -59,7 +59,7 @@ describe('VerificationSmsDialog', () => {
     expect(text.value).toBe(verificationSmsText(TEST_REQUEST, code.value));
     expect(text.value).toBe(
       `GHGA: Please enter verification code ${code.value} in helpdesk ticket T-1234` +
-        ` to confirm DAC approval of the access request for dataset ${TEST_REQUEST.dataset_id}`,
+        ` to confirm DAC approval of the access request for dataset ${TEST_REQUEST.dataset_id}.`,
     );
   });
 

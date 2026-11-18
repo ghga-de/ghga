@@ -52,7 +52,7 @@ export function verificationSmsText(ar: AccessRequest, code: string): string {
     : 'the helpdesk ticket';
   return (
     `GHGA: Please enter verification code ${code} in ${ticket}` +
-    ` to confirm DAC approval of the access request for dataset ${ar.dataset_id}`
+    ` to confirm DAC approval of the access request for dataset ${ar.dataset_id}.`
   );
 }
 
