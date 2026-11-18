@@ -326,6 +326,7 @@ If RS answers `200`, the page switches to list mode, shows the order from the re
 If RS answers `409`, the page says that the order changed while the steward was editing, loads the current order, and stays in reorder mode, so the steward can make the change again.
 If the save fails otherwise, the page stays in reorder mode, keeps the changes, and asks the steward to try again.
 **Cancel** throws away the changes and switches to list mode.
+Opening reorder mode moves the focus to its heading, and leaving it moves the focus back to **Change order**, because each removes the button that had the focus.
 The existing `pendingEditsGuard` (`shared/features/pending-edits.ts`) asks before the steward leaves the page with unsaved changes.
 The access request detail page already uses it.
 The page implements `HasPendingEdits`, which reports whether reorder mode has unsaved changes.
@@ -496,6 +497,7 @@ No database migration is needed: `box_id` defaults to `None`, and the republish 
 - Data Portal, against a mocked RS:
   - the Prio column, and sorting by it
   - switching between the two modes, and loading the boxes and the order again when reorder mode opens
+  - moving the focus to the heading when reorder mode opens, and back to **Change order** when it closes
   - the order after a drag and after each button
   - disabling **Save order** when the order is back to the loaded one
   - **Cancel** and the leave guard

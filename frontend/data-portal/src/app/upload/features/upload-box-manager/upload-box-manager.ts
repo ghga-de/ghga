@@ -4,7 +4,17 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  OnInit,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -39,6 +49,7 @@ export class UploadBoxManager implements OnInit, HasPendingEdits {
   #uploadBoxService = inject(UploadBoxService);
   #dialog = inject(MatDialog);
   #notificationService = inject(Notifier);
+  #injector = inject(Injector);
 
   /**
    * Fetch all upload boxes when the component is initialized. File counts and
@@ -58,6 +69,8 @@ export class UploadBoxManager implements OnInit, HasPendingEdits {
 
   private priorityEditor = viewChild(UploadBoxPriorityEditor);
 
+  private changeOrderButton = viewChild('changeOrderButton', { read: ElementRef });
+
   /** Whether the boxes and their priority order are loaded, so that the order can be changed */
   protected canChangePriority = computed(
     () =>
@@ -72,6 +85,17 @@ export class UploadBoxManager implements OnInit, HasPendingEdits {
    */
   hasPendingEdits(): boolean {
     return this.priorityEditor()?.hasChanges() ?? false;
+  }
+
+  /**
+   * Leave reorder mode after Cancel or a save. The focus moves back to Change
+   * order, since leaving reorder mode removed the button that had it.
+   */
+  protected stopReordering(): void {
+    this.reordering.set(false);
+    afterNextRender(() => this.changeOrderButton()?.nativeElement.focus(), {
+      injector: this.#injector,
+    });
   }
 
   /**

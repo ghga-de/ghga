@@ -39,7 +39,7 @@
 
   <section id="reorder-mode" aria-labelledby="reorder-heading" hidden>
     <nav aria-label="Breadcrumb">Upload Box Manager / Priority order</nav>
-    <h2 id="reorder-heading">Priority order</h2>
+    <h2 id="reorder-heading" tabindex="-1">Priority order</h2>
     <p>Files of boxes higher up are re-encrypted first. Changes apply from the next batch each Data Hub starts.</p>
     <p id="last-change"></p>
     <p>
@@ -239,6 +239,8 @@ $("change-priority").addEventListener("click", () => {
   $("notice").textContent = "";
   loadFromServer();
   showMode("reorder");
+  // The button that had the focus is gone, so move it to the heading
+  $("reorder-heading").focus();
 });
 
 // Buttons in the list
@@ -305,6 +307,7 @@ $("ranked").addEventListener("dragend", () => {
 $("cancel").addEventListener("click", () => {
   loadFromServer();
   showMode("list");
+  $("change-priority").focus();
 });
 
 $("save").addEventListener("click", () => {
@@ -340,6 +343,7 @@ $("save").addEventListener("click", () => {
       : "Saved the new order. Data Hubs use it from their next batch.";
   loadFromServer();
   showMode("list");
+  $("change-priority").focus();
 });
 
 // Simulated box creation: RS adds the new box to the end of the list

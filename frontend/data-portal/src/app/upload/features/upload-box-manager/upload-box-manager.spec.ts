@@ -230,6 +230,14 @@ describe('UploadBoxManager', () => {
       expect(screen.getByRole('button', { name: /create upload box/i })).toBeVisible();
     });
 
+    it('should move the focus to the heading and back to Change order', async () => {
+      await click('Change order');
+      expect(screen.getByRole('heading', { name: 'Priority order' })).toHaveFocus();
+
+      await click('Cancel');
+      expect(screen.getByRole('button', { name: 'Change order' })).toHaveFocus();
+    });
+
     it('should report unsaved changes to the leave guard until Cancel', async () => {
       expect(component.hasPendingEdits()).toBe(false);
 

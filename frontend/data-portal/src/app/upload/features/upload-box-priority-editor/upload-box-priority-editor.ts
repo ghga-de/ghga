@@ -28,6 +28,7 @@ import {
   OnInit,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
@@ -92,6 +93,8 @@ export class UploadBoxPriorityEditor implements OnInit {
 
   protected readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
   protected readonly timeZone = DEFAULT_TIME_ZONE;
+
+  private heading = viewChild.required<ElementRef<HTMLElement>>('heading');
 
   /** The loaded priority order, undefined if it failed to load */
   protected priority = computed(() =>
@@ -200,10 +203,14 @@ export class UploadBoxPriorityEditor implements OnInit {
 
   /**
    * Load the boxes and their order again, so that the steward starts from the
-   * current order rather than learning about a newer one only when saving.
+   * current order rather than learning about a newer one only when saving. The
+   * focus moves to the heading, since opening reorder mode removed Change order.
    */
   ngOnInit(): void {
     this.#uploadBoxService.reloadAllUploadBoxes();
+    afterNextRender(() => this.heading().nativeElement.focus(), {
+      injector: this.#injector,
+    });
   }
 
   /**

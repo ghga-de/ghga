@@ -1,6 +1,8 @@
 <section aria-labelledby="priority-editor-heading" class="flex flex-col gap-4">
   <div class="flex flex-wrap items-center justify-between gap-2">
-    <h2 id="priority-editor-heading" class="mb-0">Priority order</h2>
+    <h2 #heading id="priority-editor-heading" class="mb-0" tabindex="-1">
+      Priority order
+    </h2>
     <div class="flex gap-2">
       <button mat-button type="button" [disabled]="saving()" (click)="cancel()">
         Cancel
