@@ -362,3 +362,48 @@ def check_upload_box(fixtures: JointFixture, response: Response, storage_name: s
         raise AssertionError(f"ID '{rdub.get('id')}' is not a valid UUID v4 {e}") from e
 
     fixtures.state.set_state(f"rdub_{storage_name}", rdub)
+
+
+# Upload box priority list, which RS keeps in step with the boxes (200, 203, 204)
+
+
+def _priority_box_ids(
+    fixtures: JointFixture, full_name: str = "Data Steward"
+) -> list[str]:
+    """Read the upload box priority list and return its box IDs, highest first."""
+    url = f"{fixtures.config.rs_url}/upload-box-priority"
+    response = fixtures.http.get(url, headers=_session_headers(fixtures, full_name))
+    assert response.status_code == 200, f"{response.status_code}: {response.text}"
+    return [
+        entry["research_data_upload_box_id"] for entry in response.json()["entries"]
+    ]
+
+
+def _box_id_in_state(fixtures: JointFixture, box_name: str) -> str:
+    """Get the ID of the upload box of the given storage, or of the extra box."""
+    if box_name == "extra":
+        box_id = fixtures.state.get_state("extra_rdub_id")
+    else:
+        box_id = (fixtures.state.get_state(f"rdub_{box_name}") or {}).get("id")
+    assert box_id, f"No {box_name} upload box in state"
+    return box_id
+
+
+@then(parse('the "{box_name}" upload box is last in the priority list'))
+def check_box_last_in_priority_list(box_name: str, fixtures: JointFixture):
+    """Check that RS added a new box to the end of the priority list."""
+    box_id = _box_id_in_state(fixtures, box_name)
+    box_ids = _priority_box_ids(fixtures)
+    assert box_ids and box_ids[-1] == box_id, (
+        f"Expected the {box_name} upload box {box_id} at the end of {box_ids}"
+    )
+
+
+@then(parse('the "{box_name}" upload box is no longer in the priority list'))
+def check_box_not_in_priority_list(box_name: str, fixtures: JointFixture):
+    """Check that RS removed a deleted or archived box from the priority list."""
+    box_id = _box_id_in_state(fixtures, box_name)
+    box_ids = _priority_box_ids(fixtures)
+    assert box_id not in box_ids, (
+        f"Expected the {box_name} upload box {box_id} to be gone from {box_ids}"
+    )
