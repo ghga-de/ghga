@@ -24,7 +24,7 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from functools import partial
 from typing import Any, Generic, Literal, TypeAlias
 
-from pymongo import AsyncMongoClient
+from pymongo import AsyncMongoClient, ReplaceOne
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.errors import BulkWriteError, DuplicateKeyError
 
@@ -640,6 +640,55 @@ class MongoDbDao(Generic[Dto]):
                 raise _errors_from_bulk_write(
                     error, ids, ordered=ordered, duplicate_key=_insert_duplicate_error
                 ) from error
+
+    async def _bulk_replace(
+        self,
+        documents: list[dict[str, Any]],
+        ids: list[ID],
+        extra: Mapping[str, Any],
+        *,
+        upsert: bool,
+        ordered: bool,
+    ) -> tuple[int, BatchOperationError | None]:
+        """Replace each document by its ID where `extra` also matches, in one write.
+
+        `ids` holds the documents' IDs, in the same order. Returns the number of matched
+        documents and the failures, if any, instead of raising them, because
+        `update_many` needs both.
+        """
+        operations = [
+            ReplaceOne({"_id": id_, **extra}, document, upsert=upsert)
+            for id_, document in zip(ids, documents, strict=True)
+        ]
+        with translate_pymongo_errors():
+            try:
+                result = await self._collection.bulk_write(operations, ordered=ordered)
+            except BulkWriteError as error:
+                failures = _errors_from_bulk_write(
+                    error, ids, ordered=ordered, duplicate_key=_replace_duplicate_error
+                )
+                # The caller raises it later, outside this except block
+                failures.__cause__ = error
+                return error.details["nMatched"], failures
+        return result.matched_count, None
+
+    async def upsert_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Create or replace several resources in one call, matched by their IDs.
+
+        Please see the `Dao` protocol for the arguments and the errors.
+        """
+        if not dtos:
+            return
+        documents, ids = self._batch_documents(dtos)
+        # No criteria besides the ID ({}), so each document replaces whatever is
+        # stored under its ID, or is inserted where nothing is
+        _, failures = await self._bulk_replace(
+            documents, ids, {}, upsert=True, ordered=ordered
+        )
+        if failures:
+            raise failures
 
 
 class MongoDbDaoFactory(DaoFactoryProtocol[MongoDbIndex]):

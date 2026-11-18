@@ -1005,28 +1005,33 @@ async def test_insert_many_ordered():
 
 
 @pytest.mark.parametrize(
+    ("batch", "single"), [("insert_many", "insert"), ("upsert_many", "upsert")]
+)
+@pytest.mark.parametrize(
     ("ordered", "not_attempted", "stored"),
     [(False, (), ["Wrench", "Hammer"]), (True, ("Hammer",), ["Wrench"])],
 )
-async def test_insert_many_with_other_dao_error(
+async def test_batch_with_other_dao_error(
     monkeypatch: pytest.MonkeyPatch,
+    batch: str,
+    single: str,
     ordered: bool,
     not_attempted: tuple[str, ...],
     stored: list[str],
 ):
     """Test that a batch fails only the DTO whose write raised another DaoError."""
     dao = DaoClass()
-    insert = dao.insert
+    write = getattr(dao, single)
 
-    async def insert_without_candle(dto: InventoryItem) -> None:
+    async def write_without_candle(dto: InventoryItem) -> None:
         if dto.title == "Candle":
             raise UniqueConstraintViolationError(unique_fields={"count": dto.count})
-        await insert(dto)
+        await write(dto)
 
-    monkeypatch.setattr(dao, "insert", insert_without_candle)
+    monkeypatch.setattr(dao, single, write_without_candle)
 
     with pytest.raises(BatchOperationError) as caught:
-        await dao.insert_many([WRENCH, CANDLE, HAMMER], ordered=ordered)
+        await getattr(dao, batch)([WRENCH, CANDLE, HAMMER], ordered=ordered)
 
     assert list(caught.value.errors) == ["Candle"]
     assert isinstance(caught.value.errors["Candle"], UniqueConstraintViolationError)
@@ -1034,7 +1039,7 @@ async def test_insert_many_with_other_dao_error(
     assert await stored_titles(dao) == stored
 
 
-@pytest.mark.parametrize("method", ["insert_many"])
+@pytest.mark.parametrize("method", ["insert_many", "upsert_many"])
 async def test_batch_rejects_duplicate_ids(method: str):
     """Test that a batch with a repeated ID is rejected before anything is written."""
     dao = DaoClass()
@@ -1048,7 +1053,7 @@ async def test_batch_rejects_duplicate_ids(method: str):
     assert (await dao.get_by_id("Wrench")).count == 12
 
 
-@pytest.mark.parametrize("method", ["insert_many"])
+@pytest.mark.parametrize("method", ["insert_many", "upsert_many"])
 async def test_batch_with_empty_input(method: str):
     """Test that an empty batch changes nothing and raises nothing."""
     dao = DaoClass()
@@ -1057,3 +1062,14 @@ async def test_batch_with_empty_input(method: str):
     await getattr(dao, method)([])
 
     assert await stored_titles(dao) == ["Wrench"]
+
+
+async def test_upsert_many():
+    """Test that upsert_many creates new items and replaces existing ones."""
+    dao = DaoClass()
+    await dao.insert(WRENCH)
+
+    await dao.upsert_many([WRENCH.model_copy(update={"count": 1}), HAMMER])
+
+    assert (await dao.get_by_id("Wrench")).count == 1
+    assert await dao.get_by_id("Hammer") == HAMMER

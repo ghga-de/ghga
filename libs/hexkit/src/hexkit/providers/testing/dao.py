@@ -652,6 +652,15 @@ class BaseInMemDao(Generic[DTO]):
         """
         await self._write_each(dtos, self.insert, ordered=ordered)
 
+    async def upsert_many(
+        self, dtos: Collection[DTO], *, ordered: bool = False
+    ) -> None:
+        """Upsert resources one by one, collecting failures as MongoDB does.
+
+        This DAO has no unique indexes, so an upsert fails only where a test patched it.
+        """
+        await self._write_each(dtos, self.upsert, ordered=ordered)
+
 
 def new_mock_dao_class(
     *, dto_model: type[DTO], id_field: str, handle_mql: bool = True
