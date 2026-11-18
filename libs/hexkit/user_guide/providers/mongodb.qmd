@@ -228,7 +228,8 @@ A unique index is also the mechanism behind `UniqueConstraintViolationError`: wr
 ### Batch Operations
 
 The [batch operations](../protocols/dao.qmd#batch-operations) of the DAO protocol each send one bulk command per batch.
-The pymongo driver splits a batch above 100,000 operations or 48 MB into several messages, so only smaller batches take a single round-trip.
+The pymongo driver splits the writes of `insert_many`, `upsert_many` and `update_many` above 100,000 operations or 48 MB into several messages, so only smaller batches take a single round-trip.
+`delete_many` and the lookups of `update_many` send every ID in one filter, which MongoDB caps at 16 MB, a few hundred thousand IDs; a larger batch raises `DaoError`.
 
 A batch is not atomic, and there are no transactions yet to make it so.
 A `BatchOperationError` names every failed, unconfirmed and skipped ID.
@@ -236,6 +237,9 @@ A write concern error names every resource it leaves unconfirmed, with `DbTimeou
 A retryable write concern error, such as one after a failover, is the exception: the driver stops the batch at it and sends none of a split batch's later messages, so the batch raises a plain `DaoError` and its outcome is unknown.
 Any other error leaves the outcome unknown, such as a timeout, a lost connection or a failure after the driver sent part of a split batch; `find_all` shows what arrived.
 `upsert_many` can then be repeated safely.
+To undo a partial `insert_many`, delete the batch's IDs minus `error.errors` and `error.not_attempted`; an ID in `errors` may belong to a resource stored before.
+After a write concern error or a timeout, `find_all` shows what arrived, but not which of it the batch wrote.
+The other batch operations overwrite stored resources, which only a copy taken before can restore.
 
 ### Error Handling
 
