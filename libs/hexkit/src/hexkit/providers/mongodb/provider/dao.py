@@ -704,11 +704,14 @@ class MongoDbDao(Generic[Dto]):
     async def _replace_existing(
         self,
         documents: list[dict[str, Any]],
+        ids: list[ID],
         extra: Mapping[str, Any],
         *,
         ordered: bool,
     ) -> None:
         """Replace the documents that exist and match `extra`, and name the others.
+
+        `ids` holds the documents' IDs, in the same order.
 
         A replacement that matches nothing is no write error, and the bulk result only
         counts matches, so a lookup after the write names the IDs missing at that time.
@@ -722,11 +725,10 @@ class MongoDbDao(Generic[Dto]):
         if not documents:
             return
         matched, failures = await self._bulk_replace(
-            documents, extra, upsert=False, ordered=ordered
+            documents, ids, extra, upsert=False, ordered=ordered
         )
         errors = dict(failures.errors) if failures else {}
         skipped = failures.not_attempted if failures else ()
-        ids = [document["_id"] for document in documents]
         unattempted = set(errors) | set(skipped)
         attempted = [id_ for id_ in ids if id_ not in unattempted]
         if matched < len(attempted):
@@ -759,7 +761,8 @@ class MongoDbDao(Generic[Dto]):
         """
         if not dtos:
             return
-        await self._replace_existing(self._batch_documents(dtos), {}, ordered=ordered)
+        documents, ids = self._batch_documents(dtos)
+        await self._replace_existing(documents, ids, {}, ordered=ordered)
 
 
 class MongoDbDaoFactory(DaoFactoryProtocol[MongoDbIndex]):
