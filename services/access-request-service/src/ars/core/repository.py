@@ -393,9 +393,10 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
     ) -> str:
         """Send an SMS with a verification code for the given access request.
 
-        The recipient is a person authorized to act for the DAC, who confirms the
-        approval by sending the code back via the helpdesk. The sending is recorded
-        in the internal note of the access request.
+        The data steward sends the code from the data portal to a person authorized
+        to act for the DAC. That person confirms the approval by entering the code
+        in the helpdesk ticket, where the data steward compares it with the code
+        recorded in the internal note of the access request.
 
         Only data stewards may use this method, and only for pending requests.
 
@@ -423,7 +424,9 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             log.error(invalid_state_error)
             raise invalid_state_error
 
-        # the note is the only record of the code outside the helpdesk ticket
+        # the note is the only record of the code outside the helpdesk ticket;
+        # it also serves as a simple audit trail until ARS writes audit records,
+        # which will then record the sending, but not the code
         line = (
             f"{now_utc_ms_prec().date().isoformat()}:"
             f" Verification code {sms_data.code} sent"
