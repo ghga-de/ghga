@@ -230,10 +230,6 @@ function createHandlersForResponses(responses: {
         response = undefined;
       } else if (/post/.test(method)) {
         status = 201;
-      } else if (/patch|put|delete/.test(method)) {
-        // Most of these answer without a body; one that returns the stored
-        // resource, such as the PUT of the upload box priority, answers 200
-        status = response === undefined ? 204 : 200;
       }
       if (DELAY && String(status)[0] === '2') {
         console.info(`Delaying response for ${DELAY} seconds...`);
