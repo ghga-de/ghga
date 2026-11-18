@@ -150,8 +150,9 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
         the version it read, or 0 if no list is stored. The change must return only
         IDs of the boxes it got. The result is written only if the stored `version` is
         unchanged. If the result is the same as the stored list, return early.
-        `reordered_by` and `reordered_at` change only with a change, since only a save
-        passes one.
+        `reordered_by` and `reordered_at` are only updated when changes are made by a
+        Data Steward - system updates (repairs, box archival, etc.) are only reflected
+        in `last_changed` and `changed_by`.
 
         Returns the stored list after the update, or None if none is stored and none
         is needed because there is no box.
