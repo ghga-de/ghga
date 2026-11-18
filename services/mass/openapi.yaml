@@ -258,15 +258,17 @@ paths:
           minimum: 0
           title: Skip
           type: integer
-      - description: Limit the results to this number
+      - description: The maximum number of results to return, where 0 returns only
+          the facets and the total count
         in: query
         name: limit
         required: false
         schema:
           default: 100
-          description: Limit the results to this number
+          description: The maximum number of results to return, where 0 returns only
+            the facets and the total count
           maximum: 1000
-          minimum: 1
+          minimum: 0
           title: Limit
           type: integer
       - description: A comma-separated list of field names defining the sort order,

@@ -116,22 +116,28 @@ def pipeline_facet_sort_and_paginate(
     # this is the total number of results, but pagination can mean only a few are returned
     segment["total_count"] = [{"$count": "total"}]
 
+    # a limit of zero asks for the facets and the total count only, and since
+    # MongoDB has no $limit of zero, the items are left to default to an empty list
+    if limit == 0:
+        return {"$facet": segment}
+
     # rename the ID field to id_ to match our model
-    segment["items"] = [{"$addFields": {"id_": "$_id"}}, {"$unset": "_id"}]
+    items: list[JsonObject] = [{"$addFields": {"id_": "$_id"}}, {"$unset": "_id"}]
 
     # apply sorting parameters (maybe some of them are unselected fields)
     if sort:
-        segment["items"].append({"$sort": sort})
+        items.append({"$sort": sort})
 
     # pick only the selected fields
     if project:
-        segment["items"].append({"$project": project})
+        items.append({"$project": project})
 
     # apply skip and limit for pagination
     if skip > 0:
-        segment["items"].append({"$skip": skip})
+        items.append({"$skip": skip})
     if limit:
-        segment["items"].append({"$limit": limit})
+        items.append({"$limit": limit})
+    segment["items"] = items
 
     return {"$facet": segment}
 

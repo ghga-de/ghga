@@ -147,12 +147,23 @@ async def test_search_with_limit(joint_fixture: JointFixture):
     compare(results=results, count=3, hit_length=1, hits=hits)
 
 
+async def test_search_with_zero_limit(joint_fixture: JointFixture):
+    """Make sure a limit of zero returns the facets and the total count only"""
+    params: QueryParams = {"class_name": CLASS_NAME}
+    expected = await joint_fixture.call_search_endpoint(params)
+    assert expected.total_count > 0
+
+    results = await joint_fixture.call_search_endpoint({**params, "limit": 0})
+    assert results.items == []
+    assert results.total_count == expected.total_count
+    assert results.facets == expected.facets
+
+
 @pytest.mark.parametrize(
     "params",
     [
         {"skip": -1},
         {"skip": 2**63},
-        {"limit": 0},
         {"limit": -1},
         {"limit": 1001},
         {"limit": 2**63},
@@ -160,7 +171,6 @@ async def test_search_with_limit(joint_fixture: JointFixture):
     ids=[
         "negative skip",
         "skip above int64",
-        "zero limit",
         "negative limit",
         "limit above maximum",
         "limit above int64",

@@ -160,7 +160,6 @@ async def test_resource_load(joint_fixture: JointFixture):
     target_search = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
         query="added-resource",
-        limit=0,
     )
     assert len(target_search.items) == 1
     validated_resource = target_search.items[0]

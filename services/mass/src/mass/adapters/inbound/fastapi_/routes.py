@@ -87,7 +87,12 @@ async def search(  # noqa: PLR0913
     ] = 0,
     limit: Annotated[
         int,
-        Query(ge=1, le=1000, description="Limit the results to this number"),
+        Query(
+            ge=0,
+            le=1000,
+            description="The maximum number of results to return,"
+            + " where 0 returns only the facets and the total count",
+        ),
     ] = 100,
     sort: Annotated[
         str | None,
