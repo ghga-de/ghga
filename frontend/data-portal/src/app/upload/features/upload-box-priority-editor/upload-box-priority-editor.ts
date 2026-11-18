@@ -13,7 +13,7 @@ import {
   CdkDropList,
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
-import { DatePipe } from '@angular/common';
+import { DatePipe as CommonDatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
@@ -36,11 +36,12 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
+import { DatePipe } from '@app/shared/pipes/date-pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
 import { Notifier } from '@app/shared/services/notification';
 import {
   DEFAULT_TIME_ZONE,
-  FRIENDLY_DATE_FORMAT,
+  FRIENDLY_DATE_TIME_FORMAT,
 } from '@app/shared/utils/date-formats';
 import { UploadBoxStateClass } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
@@ -80,6 +81,7 @@ type MoveAction = 'up' | 'down' | 'top';
   ],
   templateUrl: './upload-box-priority-editor.html',
   styleUrl: './upload-box-priority-editor.scss',
+  providers: [CommonDatePipe],
 })
 export class UploadBoxPriorityEditor implements OnInit {
   #uploadBoxService = inject(UploadBoxService);
@@ -91,7 +93,7 @@ export class UploadBoxPriorityEditor implements OnInit {
   /** Emits after Cancel and after a successful save */
   done = output<void>();
 
-  protected readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
+  protected readonly friendlyDateTimeFormat = FRIENDLY_DATE_TIME_FORMAT;
   protected readonly timeZone = DEFAULT_TIME_ZONE;
 
   private heading = viewChild.required<ElementRef<HTMLElement>>('heading');

@@ -171,7 +171,7 @@ describe('UploadBoxPriorityEditor', () => {
   it('should show the steward who last reordered the boxes', () => {
     expect(userService.fetcher.load).toHaveBeenCalledWith('doe@test.dev');
     expect(lastReorderLine()).toBe(
-      'Last reordered by Dr. John Doe on 10 February 2025.',
+      'Last reordered by Dr. John Doe on 10 February 2025 at 15:30.',
     );
     expect(screen.getByRole('link', { name: 'Dr. John Doe' })).toHaveAttribute(
       'href',
@@ -184,7 +184,7 @@ describe('UploadBoxPriorityEditor', () => {
     await result.fixture.whenStable();
 
     expect(lastReorderLine()).toBe(
-      'Last reordered by doe@test.dev on 10 February 2025.',
+      'Last reordered by doe@test.dev on 10 February 2025 at 15:30.',
     );
     expect(screen.queryByRole('link')).toBeNull();
   });
@@ -199,7 +199,7 @@ describe('UploadBoxPriorityEditor', () => {
     await result.fixture.whenStable();
 
     expect(lastReorderLine()).toBe(
-      'Last reordered by Dr. John Doe on 10 February 2025.',
+      'Last reordered by Dr. John Doe on 10 February 2025 at 15:30.',
     );
   });
 
@@ -308,7 +308,7 @@ describe('UploadBoxPriorityEditor', () => {
     );
     expect(done).toHaveBeenCalledOnce();
     expect(lastReorderLine()).toBe(
-      'Last reordered by Dr. John Doe on 11 February 2025.',
+      'Last reordered by Dr. John Doe on 11 February 2025 at 10:00.',
     );
     expect(result.fixture.componentInstance.hasChanges()).toBe(false);
   });

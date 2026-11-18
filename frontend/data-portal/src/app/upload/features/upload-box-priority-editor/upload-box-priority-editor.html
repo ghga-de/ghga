@@ -40,7 +40,7 @@
         } @else if (reorderedBy() === null) {
           by {{ current.reordered_by }}
         }
-        on {{ current.reordered_at | date: friendlyDateFormat : timeZone }}.
+        on {{ current.reordered_at | date: friendlyDateTimeFormat : timeZone }}.
       } @else {
         Not reordered yet.
       }

@@ -300,7 +300,7 @@ It replaces the filters, the table and the paginator with one list of all non-ar
 Reorder mode has no paging, filters or column sorting, because they don't work with reordering.
 A box cannot be dragged to another page, and "move up" would skip boxes that are hidden.
 
-The header shows "Last reordered by <name> on <date>", from `reordered_by` and `reordered_at`.
+The header shows "Last reordered by <name> on <date> at <time>", from `reordered_by` and `reordered_at`, so two saves on the same day can be told apart.
 It doesn't show the version, which only the save needs.
 The page turns `reordered_by` into a display name with a link to `/user-manager/<id>`, as the upload box detail page does.
 If that fails, it shows the plain ID.
