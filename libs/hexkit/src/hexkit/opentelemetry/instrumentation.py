@@ -17,10 +17,17 @@
 
 import importlib
 import logging
+from collections.abc import Sequence
 from typing import Annotated
 
-from opentelemetry import trace
+from opentelemetry import metrics, trace
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import (
+    MetricReader,
+    PeriodicExportingMetricReader,
+)
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -82,6 +89,11 @@ class OpenTelemetryConfig(BaseSettings):
         "Setting this to 0 will result in no spans being sampled, but this does not "
         "automatically set `enable_opentelemetry` to False.",
     )
+    enable_otel_metrics: bool = Field(
+        default=False,
+        description="Also export metrics via OTLP. Requires `enable_opentelemetry` "
+        "and a collector with a metrics pipeline.",
+    )
 
 
 def configure_opentelemetry(
@@ -89,6 +101,7 @@ def configure_opentelemetry(
     service_name: str,
     config: OpenTelemetryConfig,
     span_processor: SpanProcessor | None = None,
+    metric_readers: Sequence[MetricReader] | None = None,
 ):
     """Configure all needed parts of OpenTelemetry.
 
@@ -99,6 +112,9 @@ def configure_opentelemetry(
     leaving the default no-op TracerProvider from the OpenTelemetry API in place.
 
     By default, spans are exported via OTLP over HTTP using a `BatchSpanProcessor`.
+    If `enable_otel_metrics` is set, a MeterProvider with the same resource is set up
+    too, by default exporting via OTLP over HTTP on the interval given by the
+    `OTEL_METRIC_EXPORT_INTERVAL` environment variable (60 seconds if unset).
     """
     if not config.enable_opentelemetry:
         logger.info("OpenTelemetry disabled via config.")
@@ -119,5 +135,17 @@ def configure_opentelemetry(
         span_processor or BatchSpanProcessor(OTLPSpanExporter())
     )
     trace.set_tracer_provider(trace_provider)
+
+    # Set before instrumenting, so the instrumented libraries record their metrics
+    # on this provider from the start
+    if config.enable_otel_metrics:
+        readers = (
+            metric_readers
+            if metric_readers is not None
+            else [PeriodicExportingMetricReader(OTLPMetricExporter())]
+        )
+        metrics.set_meter_provider(
+            MeterProvider(resource=resource, metric_readers=readers)
+        )
 
     instrument_installed_libraries()

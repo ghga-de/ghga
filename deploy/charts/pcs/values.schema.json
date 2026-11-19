@@ -922,6 +922,15 @@
             "null"
           ]
         },
+        "enable_otel_metrics": {
+          "default": false,
+          "description": "Also export metrics via OTLP. Requires `enable_opentelemetry` and a collector with a metrics pipeline.",
+          "title": "Enable Otel Metrics",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "file_deletion_request_topic": {
           "description": "The name of the topic to receive events informing about files to delete.",
           "examples": [

@@ -10,6 +10,7 @@ db_name: upload-controller
 db_version_collection: ucsDbVersions
 docs_url: /docs
 enable_opentelemetry: false
+enable_otel_metrics: false
 file_deletion_request_topic: file-deletion-requests
 file_deletion_request_type: file_deletion_requested
 file_internally_registered_topic: internal-file-registry
