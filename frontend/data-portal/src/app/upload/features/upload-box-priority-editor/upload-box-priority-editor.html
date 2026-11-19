@@ -1,0 +1,157 @@
+<section aria-labelledby="priority-editor-heading" class="flex flex-col gap-4">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <h2 #heading id="priority-editor-heading" class="mb-0" tabindex="-1">
+      Priority order
+    </h2>
+    <div class="flex gap-2">
+      <button mat-button type="button" [disabled]="saving()" (click)="cancel()">
+        Cancel
+      </button>
+      <button
+        mat-raised-button
+        type="button"
+        class="button-primary"
+        [disabled]="!canSave()"
+        (click)="save()"
+      >
+        <mat-icon fontIcon="save"></mat-icon>
+        Save order
+      </button>
+    </div>
+  </div>
+
+  <p class="mb-0">
+    Files of boxes higher up are re-encrypted first. Changes apply from the next batch
+    each Data Hub starts.
+  </p>
+
+  @let current = priority();
+  @if (current) {
+    <p class="mb-0">
+      @if (current.reordered_by) {
+        Last reordered
+        @if (reorderedBy()) {
+          by
+          <a
+            [routerLink]="'/user-manager/' + current.reordered_by"
+            class="text-primary"
+            >{{ reorderedBy()!.displayName }}</a
+          >
+        } @else if (reorderedBy() === null) {
+          by {{ current.reordered_by }}
+        }
+        on {{ current.reordered_at | date: friendlyDateTimeFormat : timeZone }}.
+      } @else {
+        Not reordered yet.
+      }
+    </p>
+  }
+
+  <p role="status" class="mb-0 min-h-6" [class.text-error]="statusIsError()">
+    {{ status() }}
+  </p>
+
+  @if (loadFailed()) {
+    <p class="text-error mb-0">
+      There was an error retrieving the upload boxes or their priority order. Please try
+      again later.
+    </p>
+  } @else if (rows().length) {
+    <ol
+      cdkDropList
+      aria-labelledby="priority-editor-heading"
+      class="flex flex-col gap-1"
+      [cdkDropListDisabled]="busy()"
+      (cdkDropListDropped)="drop($event)"
+    >
+      @for (row of rows(); track row.box.id) {
+        <li
+          cdkDrag
+          class="box-row border-outline flex flex-wrap items-center gap-2 rounded border p-2 transition-colors"
+          [class.bg-yellow-100]="row.highlighted"
+          [attr.data-box-id]="row.box.id"
+        >
+          <mat-icon
+            cdkDragHandle
+            fontIcon="drag_indicator"
+            aria-hidden="true"
+            class="shrink-0 cursor-move"
+          ></mat-icon>
+          <!-- On narrow screens, the buttons wrap below the title -->
+          <div class="min-w-0 grow basis-48">
+            <span class="block break-words">{{ row.box.title }}</span>
+            <span
+              >{{ row.storageLabel }} –
+              <span class="{{ row.stateClass }}">{{
+                row.box.state | CapitalisePipe
+              }}</span>
+              – {{ row.box.size | parseBytes: 1 }} of
+              {{ row.box.max_size | parseBytes: 1 }}</span
+            >
+          </div>
+          <!-- Right-aligned, like the Prio column of the table -->
+          <span class="w-12 shrink-0 text-right tabular-nums">{{ row.position }}</span>
+          <div class="ms-auto flex shrink-0">
+            <button
+              mat-icon-button
+              type="button"
+              data-action="up"
+              matTooltip="Move up"
+              [attr.aria-label]="'Move ' + row.box.title + ' up'"
+              [disabled]="row.isFirst || busy()"
+              (click)="moveWithButton(row.index, 'up')"
+            >
+              <mat-icon fontIcon="arrow_upward"></mat-icon>
+            </button>
+            <button
+              mat-icon-button
+              type="button"
+              data-action="down"
+              matTooltip="Move down"
+              [attr.aria-label]="'Move ' + row.box.title + ' down'"
+              [disabled]="row.isLast || busy()"
+              (click)="moveWithButton(row.index, 'down')"
+            >
+              <mat-icon fontIcon="arrow_downward"></mat-icon>
+            </button>
+            <button
+              mat-icon-button
+              type="button"
+              data-action="top"
+              matTooltip="Move to top"
+              [attr.aria-label]="'Move ' + row.box.title + ' to top'"
+              [disabled]="row.isFirst || busy()"
+              (click)="moveWithButton(row.index, 'top')"
+            >
+              <mat-icon fontIcon="vertical_align_top"></mat-icon>
+            </button>
+          </div>
+          <div *cdkDragPlaceholder class="bg-primary h-1 rounded"></div>
+          <!-- The CDK resets the background and border of the preview's root element -->
+          <div *cdkDragPreview>
+            <div
+              class="box-row border-outline flex items-center gap-2 rounded border p-2 shadow-lg"
+            >
+              <mat-icon
+                fontIcon="drag_indicator"
+                aria-hidden="true"
+                class="shrink-0"
+              ></mat-icon>
+              <span class="truncate">{{ row.box.title }}</span>
+              <span class="w-12 shrink-0 text-right tabular-nums">{{
+                row.position
+              }}</span>
+            </div>
+          </div>
+        </li>
+      }
+    </ol>
+  } @else {
+    <p class="mb-0">There are no boxes that are not archived.</p>
+  }
+
+  <p class="mb-0 text-sm">
+    Drag a row, or use its buttons, to change its position. Files already being
+    re-encrypted are not interrupted. Archived boxes are not listed.
+  </p>
+</section>

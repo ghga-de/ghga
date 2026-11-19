@@ -1269,7 +1269,8 @@ export const uploadBoxes: BoxRetrievalResults = {
 
 /**
  * The priority order of all upload boxes that are not archived, as returned by
- * the RS. Box 3 is archived, so the RS has dropped it.
+ * the RS. A data steward reordered the boxes; Box 3 was archived later, so the
+ * RS has dropped it.
  */
 export const uploadBoxPriority: UploadBoxPriority = {
   version: 5,
@@ -1277,8 +1278,10 @@ export const uploadBoxPriority: UploadBoxPriority = {
     research_data_upload_box_id: `0a36607a-b53f-49ed-bf3e-a5f2dbc6800${n}`,
     file_upload_box_id: `b0f11e00-0000-4000-8000-a5f2dbc6800${n}`,
   })),
-  changed_by: 'doe@test.dev',
-  last_changed: '2025-02-10T14:30:00Z',
+  changed_by: 'roe@test.dev',
+  last_changed: '2025-02-12T10:00:00Z',
+  reordered_by: 'doe@test.dev',
+  reordered_at: '2025-02-10T14:30:00Z',
 };
 
 /**
@@ -1288,7 +1291,10 @@ export const uploadBoxPriority: UploadBoxPriority = {
 export const savedUploadBoxPriority: UploadBoxPriority = {
   ...uploadBoxPriority,
   version: uploadBoxPriority.version + 1,
-  last_changed: '2025-02-11T09:00:00Z',
+  changed_by: 'doe@test.dev',
+  last_changed: '2025-02-13T09:00:00Z',
+  reordered_by: 'doe@test.dev',
+  reordered_at: '2025-02-13T09:00:00Z',
 };
 
 /**

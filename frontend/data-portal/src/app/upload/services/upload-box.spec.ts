@@ -109,6 +109,8 @@ const TEST_PRIORITY: UploadBoxPriority = {
   ],
   changed_by: 'doe@test.dev',
   last_changed: '2025-03-02T09:00:00Z',
+  reordered_by: 'doe@test.dev',
+  reordered_at: '2025-03-02T09:00:00Z',
 };
 
 /**
@@ -446,6 +448,35 @@ describe('UploadBoxService', () => {
     expect(service.boxPriority.error()).toBeInstanceOf(HttpErrorResponse);
     expect(service.prioritizedUploadBoxes()).toBeUndefined();
     expect(service.uploadBoxes()).toEqual(TEST_BOX_RETRIEVAL_RESULTS.boxes);
+  });
+
+  it('should save a new priority order and show it without another request', async () => {
+    await loadBoxes();
+    httpMock.expectOne(PRIORITY_URL).flush(TEST_PRIORITY);
+    await Promise.resolve();
+
+    const [alpha, beta] = TEST_BOX_RETRIEVAL_RESULTS.boxes;
+    const savedPriority: UploadBoxPriority = {
+      ...TEST_PRIORITY,
+      version: TEST_PRIORITY.version + 1,
+      entries: [...TEST_PRIORITY.entries].reverse(),
+    };
+    let result: UploadBoxPriority | undefined;
+    service
+      .saveBoxPriority(TEST_PRIORITY.version, [alpha.id, beta.id])
+      .subscribe((priority) => (result = priority));
+
+    const req = httpMock.expectOne(PRIORITY_URL);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({
+      version: TEST_PRIORITY.version,
+      box_ids: [alpha.id, beta.id],
+    });
+    req.flush(savedPriority);
+
+    expect(result).toEqual(savedPriority);
+    expect(service.boxPriority.value()).toEqual(savedPriority);
+    expect(service.prioritizedUploadBoxes()).toEqual([alpha, beta]);
   });
 
   it('should resolve storage aliases to storage location labels', async () => {

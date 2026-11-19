@@ -21,9 +21,15 @@ export interface UploadBoxPriority {
   version: number;
   /** The upload boxes in priority order, the highest priority first */
   entries: UploadBoxPriorityEntry[];
-  /** The ID of the data steward who changed it last, null if the RS did */
+  /**
+   * The ID of the data steward who changed it last, including by creating,
+   * archiving or deleting a box, null if the RS did
+   */
   changed_by: string | null;
   last_changed: string | null; // ISO date string
+  /** The ID of the data steward who last saved a new order, null before the first */
+  reordered_by: string | null;
+  reordered_at: string | null; // ISO date string
 }
 
 /**
