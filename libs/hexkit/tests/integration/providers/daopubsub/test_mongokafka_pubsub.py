@@ -2179,13 +2179,6 @@ async def test_delete_many_rejects_a_single_id(mongo_kafka: MongoKafkaFixture):
     """Test that delete_many rejects one string ID instead of tombstoning the
     resources named by its characters and publishing their deletion.
     """
-async def test_update_first_publishes_returned_document(
-    mongo_kafka: MongoKafkaFixture,
-):
-    """Test that `update_first` publishes the document it returns, skips deleted
-    resources and publishes nothing if nothing matches.
-    """
-    kafka = mongo_kafka.kafka
     async with MongoKafkaDaoPublisherFactory.construct(
         config=mongo_kafka.config
     ) as factory:
@@ -2207,6 +2200,99 @@ async def test_update_first_publishes_returned_document(
 
         for dto in (named, by_character):
             assert await dao.get_by_id(dto.custom_id) == dto
+
+
+async def test_update_first_publishes_returned_document(
+    mongo_kafka: MongoKafkaFixture,
+):
+    """Test that `update_first` publishes the document it returns, skips deleted
+    resources and publishes nothing if nothing matches.
+    """
+    kafka = mongo_kafka.kafka
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=mongo_kafka.config
+    ) as factory:
+        dao = await factory.get_dao(
+            name="example",
+            dto_model=ExampleDto,
+            id_field="id",
+            dto_to_event=lambda dto: dto.model_dump(),
+            event_topic=EXAMPLE_TOPIC,
+        )
+        deleted = ExampleDto(field_b=0)
+        first = ExampleDto(field_b=1)
+        second = ExampleDto(field_b=2)
+        for resource in (deleted, first, second):
+            await dao.insert(resource)
+        await dao.delete(deleted.id)
+
+        expected = first.model_copy(update={"field_a": "claimed", "field_b": 11})
+        async with kafka.expect_events(
+            events=[
+                ExpectedEvent(
+                    payload=expected.model_dump(),
+                    type_=CHANGE_EVENT_TYPE,
+                    key=str(first.id),
+                )
+            ],
+            in_topic=EXAMPLE_TOPIC,
+        ):
+            changed = await dao.update_first(
+                filter_={},
+                changes={"field_a": "claimed", "$inc": {"field_b": 10}},
+                sort=["field_b"],
+            )
+
+        assert changed == expected
+        assert await dao.get_by_id(first.id) == expected
+        assert await dao.get_by_id(second.id) == second
+
+        async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
+            with pytest.raises(NoHitsFoundError):
+                await dao.update_first(
+                    filter_={"field_b": 0}, changes={"field_a": "claimed"}
+                )
+            with pytest.raises(InvalidChangesError):
+                await dao.update_first(filter_={}, changes={"field_b": "no number"})
+
+
+async def test_update_first_without_autopublish(mongo_kafka: MongoKafkaFixture):
+    """Test that `update_first` without autopublish publishes nothing, but leaves the
+    change for `publish_pending`.
+    """
+    kafka = mongo_kafka.kafka
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=mongo_kafka.config
+    ) as factory:
+        dao = await factory.get_dao(
+            name="example",
+            dto_model=ExampleDto,
+            id_field="id",
+            dto_to_event=lambda dto: dto.model_dump(),
+            event_topic=EXAMPLE_TOPIC,
+            autopublish=False,
+        )
+        example = ExampleDto(field_b=1)
+        await dao.insert(example)
+        await dao.publish_pending()
+
+        async with kafka.record_events(in_topic=EXAMPLE_TOPIC) as recorder:
+            changed = await dao.update_first(
+                filter_={}, changes={"$inc": {"field_b": 1}}
+            )
+        assert len(recorder.recorded_events) == 0
+
+        async with kafka.expect_events(
+            events=[
+                ExpectedEvent(
+                    payload=changed.model_dump(),
+                    type_=CHANGE_EVENT_TYPE,
+                    key=str(example.id),
+                )
+            ],
+            in_topic=EXAMPLE_TOPIC,
+        ):
+            await dao.publish_pending()
 
 
 @pytest.mark.parametrize("recreate", [False, True])
@@ -2417,82 +2503,3 @@ async def test_empty_batch_through_the_outbox(
 
     assert publisher.published == []
     assert get_mongo_collection(mongo_kafka, "example").count_documents({}) == 0
-            dto_model=ExampleDto,
-            id_field="id",
-            dto_to_event=lambda dto: dto.model_dump(),
-            event_topic=EXAMPLE_TOPIC,
-        )
-        deleted = ExampleDto(field_b=0)
-        first = ExampleDto(field_b=1)
-        second = ExampleDto(field_b=2)
-        for resource in (deleted, first, second):
-            await dao.insert(resource)
-        await dao.delete(deleted.id)
-
-        expected = first.model_copy(update={"field_a": "claimed", "field_b": 11})
-        async with kafka.expect_events(
-            events=[
-                ExpectedEvent(
-                    payload=expected.model_dump(),
-                    type_=CHANGE_EVENT_TYPE,
-                    key=str(first.id),
-                )
-            ],
-            in_topic=EXAMPLE_TOPIC,
-        ):
-            changed = await dao.update_first(
-                filter_={},
-                changes={"field_a": "claimed", "$inc": {"field_b": 10}},
-                sort=["field_b"],
-            )
-
-        assert changed == expected
-        assert await dao.get_by_id(first.id) == expected
-        assert await dao.get_by_id(second.id) == second
-
-        async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
-            with pytest.raises(NoHitsFoundError):
-                await dao.update_first(
-                    filter_={"field_b": 0}, changes={"field_a": "claimed"}
-                )
-            with pytest.raises(InvalidChangesError):
-                await dao.update_first(filter_={}, changes={"field_b": "no number"})
-
-
-async def test_update_first_without_autopublish(mongo_kafka: MongoKafkaFixture):
-    """Test that `update_first` without autopublish publishes nothing, but leaves the
-    change for `publish_pending`.
-    """
-    kafka = mongo_kafka.kafka
-    async with MongoKafkaDaoPublisherFactory.construct(
-        config=mongo_kafka.config
-    ) as factory:
-        dao = await factory.get_dao(
-            name="example",
-            dto_model=ExampleDto,
-            id_field="id",
-            dto_to_event=lambda dto: dto.model_dump(),
-            event_topic=EXAMPLE_TOPIC,
-            autopublish=False,
-        )
-        example = ExampleDto(field_b=1)
-        await dao.insert(example)
-        await dao.publish_pending()
-
-        async with kafka.record_events(in_topic=EXAMPLE_TOPIC) as recorder:
-            changed = await dao.update_first(
-                filter_={}, changes={"$inc": {"field_b": 1}}
-            )
-        assert len(recorder.recorded_events) == 0
-
-        async with kafka.expect_events(
-            events=[
-                ExpectedEvent(
-                    payload=changed.model_dump(),
-                    type_=CHANGE_EVENT_TYPE,
-                    key=str(example.id),
-                )
-            ],
-            in_topic=EXAMPLE_TOPIC,
-        ):
-            await dao.publish_pending()

@@ -1157,12 +1157,6 @@ async def test_delete_many_rejects_a_single_id():
         await dao.delete_many("Wrench")
 
     assert await stored_titles(dao) == ["Wrench", "Candle", "Hammer"]
-    # Sorting by a nested sub-field of the ID field is a no-op (insertion order kept)
-    assert [x.label async for x in dao.find_all(filter_={}, sort=["inner.x"])] == [
-        1,
-        2,
-        3,
-    ]
 
 
 class Counter(BaseModel):
