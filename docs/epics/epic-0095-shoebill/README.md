@@ -531,10 +531,12 @@ Additions and removals, in the existing features, which already create, archive 
 
 Data Portal, in `502_data_portal_uploads.feature`, before the scenario that maps and archives the box:
 
-- The data steward opens the Upload Box Manager, clicks **Change order**, moves the primary box once by dragging and once with a button, and saves.
-- The Prio column shows the box at the position it was moved to.
-- The reorder view shows "Last reordered by" with the steward's name.
-- After the archival scenario, the box's Prio cell is empty, and the reorder view does not show the box.
+- The data steward opens the Upload Box Manager, clicks **Change order**, drags the primary box below the secondary box, and saves.
+  With two boxes, a second move of the primary box only undoes the first, so the steward then opens reorder mode again, moves the box back to the top with its button, and saves again.
+- Each save checks that the order RS returns is the order reorder mode shows.
+- After each save, the Prio column shows both boxes at their new positions.
+- Reorder mode shows "Last reordered by" with the steward's name.
+- After the archival scenario, the box's Prio cell is empty, the secondary box is first, and reorder mode does not show the archived box.
 
 Audit records are covered by the RS tests; the testbed has no access to them so far.
 
