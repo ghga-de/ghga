@@ -404,13 +404,42 @@ jobs:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Refuse to overwrite an existing release tag
+      # A tag pushed from this same commit is a re-run after a later step failed, so its
+      # image is reused rather than rebuilt: the tag never moves, and signing and
+      # attesting run again on it (an extra signature or attestation is harmless).
+      - name: Guard release tag against reuse from another commit
+        id: existing
         if: ${{ inputs.push }}
         run: |
           tag="${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}"
-          if docker manifest inspect "$tag" >/dev/null 2>&1; then
-            echo "::error::$tag already exists — releases are immutable. Bump the version to re-run."
+          # Only a clear "not found" means the tag is free; any other failure (rate
+          # limit, network) must not be mistaken for it, or the build pushes over the tag.
+          if inspect_err=$(docker manifest inspect "$tag" 2>&1 >/dev/null); then
+            exists=true
+          elif grep -qiE 'no such manifest|manifest unknown|not found' <<<"$inspect_err"; then
+            exists=false
+          else
+            echo "::error::could not check whether $tag exists: ${inspect_err}"
             exit 1
+          fi
+          if [ "$exists" = true ]; then
+            revision=$(docker buildx imagetools inspect "$tag" --format '{{json .Image}}' |
+              jq -r 'if has("config") then .config.Labels else (.[] | .config.Labels) end
+                | .["org.opencontainers.image.revision"] // empty' | head -1)
+            if [ "$revision" = "$SHORT_SHA" ]; then
+              digest=$(docker buildx imagetools inspect "$tag" --format '{{json .Manifest}}' | jq -r .digest)
+              # An empty digest would let the build run and push over the tag.
+              if [[ "$digest" != sha256:* ]]; then
+                echo "::error::could not resolve the digest of existing $tag (got '${digest}')"
+                exit 1
+              fi
+              echo "::warning::$tag already exists from this commit (${SHORT_SHA}) — reusing ${digest}, not rebuilding."
+              echo "digest=$digest" >> "$GITHUB_OUTPUT"
+              echo "DIGEST=$digest" >> "$GITHUB_ENV"
+            else
+              echo "::error::$tag already exists from commit '${revision:-unknown}', not ${SHORT_SHA} — releases are immutable. Bump the version to re-run."
+              exit 1
+            fi
           fi
       # OCI labels are set on the CLI so members whose Dockerfile does not stamp them
       # itself (the mainline-synced frontend one) still carry version + revision;
@@ -420,8 +449,10 @@ jobs:
       # existing "build-only dry run" (push=false) mode — that mode's behavior is
       # otherwise unchanged (no --push/--load means buildx discards the result after
       # verifying it builds, same as before: nothing to keep around for a dry run).
+      # Skipped when the guard above reuses an image pushed from this commit.
       - name: Build (stamped, attested when pushing)
         id: build
+        if: ${{ steps.existing.outputs.digest == '' }}
         run: |
           push_flags=()
           attest_flags=()
@@ -446,7 +477,7 @@ jobs:
             "${{ matrix.member.context }}"
           if [ "${{ inputs.push }}" = "true" ]; then
             digest=$(jq -r '."containerimage.digest"' metadata.json)
-            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+            echo "DIGEST=$digest" >> "$GITHUB_ENV"
           fi
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
@@ -454,11 +485,11 @@ jobs:
         if: ${{ inputs.push }}
       - name: Sign the published image (keyless)
         if: ${{ inputs.push }}
-        run: cosign sign --yes --recursive "${{ env.REGISTRY }}/${{ matrix.member.package }}@${{ steps.build.outputs.digest }}"
+        run: cosign sign --yes --recursive "${{ env.REGISTRY }}/${{ matrix.member.package }}@${DIGEST}"
       # See dev-images.yaml. Gated like signing: no pushed digest to attest in build-only mode.
       - name: Attest SBOM + provenance (keyless)
         if: ${{ inputs.push }}
-        run: scripts/attest-image.sh "${REGISTRY}/${{ matrix.member.package }}@${{ steps.build.outputs.digest }}"
+        run: scripts/attest-image.sh "${REGISTRY}/${{ matrix.member.package }}@${DIGEST}"
       # Hands the resolved digest to package-charts so a chart can pin image.digest
       # instead of the mutable tag (create_charts.py's --digests). One artifact per
       # matrix member (not a job output) because matrix job outputs don't aggregate
@@ -467,7 +498,7 @@ jobs:
         if: ${{ inputs.push }}
         run: |
           mkdir -p digests
-          echo -n "${{ steps.build.outputs.digest }}" > "digests/${{ matrix.member.package }}"
+          echo -n "${DIGEST}" > "digests/${{ matrix.member.package }}"
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: ${{ inputs.push }}
         with:
@@ -476,7 +507,9 @@ jobs:
           retention-days: 1
       - name: Summary
         run: |
-          if [ "${{ inputs.push }}" = "true" ]; then
+          if [ -n "${{ steps.existing.outputs.digest }}" ]; then
+            echo "reused existing ${REGISTRY}/${{ matrix.member.package }}@${DIGEST} for ${{ needs.resolve.outputs.version }} (signed and cosign-attested again)"
+          elif [ "${{ inputs.push }}" = "true" ]; then
             echo "pushed ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} (signed; SBOM + provenance attached and cosign-attested)"
           else
             echo "build-only: ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} (push input not set)"
