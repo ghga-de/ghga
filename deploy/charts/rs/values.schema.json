@@ -1541,6 +1541,15 @@
             "null"
           ]
         },
+        "enable_otel_metrics": {
+          "default": false,
+          "description": "Also export metrics via OTLP. Requires `enable_opentelemetry` and a collector with a metrics pipeline.",
+          "title": "Enable Otel Metrics",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "log_level": {
           "default": "INFO",
           "description": "The minimum log level to capture.",

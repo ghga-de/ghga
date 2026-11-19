@@ -23,7 +23,7 @@ title: "OpenTelemetry Tracing"
 It defines a common data model and wire protocol (OTLP) for telemetry — traces, metrics, and logs — together with SDKs and auto-instrumentation libraries for many languages, so that telemetry can be collected once and sent to any compatible backend (Jaeger, Grafana Tempo, and many commercial offerings).
 The [OpenTelemetry documentation](https://opentelemetry.io/docs/) is the place to learn about its concepts in depth.
 
-hexkit uses OpenTelemetry for **distributed tracing**: recording each operation as a *span* (with timing, attributes, and outcome) and linking spans into a *trace* that follows one request across service boundaries.
+hexkit uses OpenTelemetry mainly for **distributed tracing**, with [metrics](#metrics) as an opt-in: recording each operation as a *span* (with timing, attributes, and outcome) and linking spans into a *trace* that follows one request across service boundaries.
 Where [correlation IDs](correlation_ids.qmd) and [structured logs](logging.qmd) answer *which log lines belong to this request*, traces answer *what happened when, where the time went, and what called what* — the three tools complement each other.
 
 ## Installation
@@ -55,6 +55,7 @@ Settings are collected in [`OpenTelemetryConfig`](../../reference/opentelemetry.
 | --------- | ----------- |
 | `enable_opentelemetry` | Master switch; defaults to `False`, in which case no setup code runs and tracing stays disabled. |
 | `otel_trace_sampling_rate` | The proportion of traces to sample, between `0` and `1`. Defaults to `1.0` (sample everything). Note that `0` records no spans but does not disable the OpenTelemetry machinery itself — use `enable_opentelemetry` for that. |
+| `enable_otel_metrics` | Also export metrics, see [Metrics](#metrics). Defaults to `False` and has no effect while `enable_opentelemetry` is `False`. |
 
 ## Setting Up Tracing
 
@@ -89,6 +90,32 @@ hexkit installs a `ParentBasedTraceIdRatio` sampler: the configured `otel_trace_
 Within one service this always yields complete traces.
 Across service boundaries, note that each service applies its own rate to traces it starts, so with differing rates a downstream service's traces may be sampled at its upstream's rate.
 Keeping the default of `1.0` everywhere sidesteps this; lowering the rate per service is a way to introduce head sampling later when trace volume becomes a concern.
+
+## Metrics
+
+With `enable_otel_metrics` on, `configure_opentelemetry` also sets up a `MeterProvider` with the same service name resource as the traces.
+It exports via OTLP over HTTP, configured through the same `OTEL_*` environment variables as the span exporter, every 60 seconds unless `OTEL_METRIC_EXPORT_INTERVAL` (in milliseconds) says otherwise.
+The collector receiving them needs a metrics pipeline, for example one that a Prometheus server scrapes.
+
+Metrics are off by default because turning them on changes more than your own code: the instrumented libraries, such as FastAPI and httpx, start recording their own metrics on the same provider.
+
+Record metrics through the OpenTelemetry API, which hexkit already depends on:
+
+```python
+from opentelemetry import metrics
+
+meter = metrics.get_meter(__name__)
+uploads = meter.create_counter("my_service.uploads", unit="{upload}")
+uploads.add(1)
+```
+
+Until a `MeterProvider` is set, the API hands out no-op instruments, so this code runs unchanged with metrics disabled.
+
+Prefer synchronous instruments such as counters and `create_gauge`.
+The callback of an observable instrument runs on the exporter's thread and cannot await, so it cannot read from an async database client without blocking a thread on the event loop.
+For a value read from such a source, `refresh_gauge` in `ghga_service_commons.metrics` sets a gauge from a background task on the event loop instead.
+
+To check metrics in a test, pass an `InMemoryMetricReader` from `opentelemetry.sdk.metrics.export` as `metric_readers` to `configure_opentelemetry`.
 
 ## Traces Across Kafka Events
 

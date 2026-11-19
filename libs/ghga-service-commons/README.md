@@ -30,6 +30,7 @@ Thereby, you may specify following extra(s):
 
 - `api`: dependencies needed to use the API server functionalities
 - `auth`: dependencies needed for dealing with authentication and authorization
+- `metrics`: dependencies needed for `refresh_gauge`, which keeps an OpenTelemetry gauge set from an async source such as a database count
 
 ### Development
 
