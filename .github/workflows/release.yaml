@@ -404,13 +404,22 @@ jobs:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # A tag pushed from this same commit is a re-run after a later step failed,
+      # not version reuse, so it may be replaced.
       - name: Refuse to overwrite an existing release tag
         if: ${{ inputs.push }}
         run: |
           tag="${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}"
           if docker manifest inspect "$tag" >/dev/null 2>&1; then
-            echo "::error::$tag already exists — releases are immutable. Bump the version to re-run."
-            exit 1
+            revision=$(docker buildx imagetools inspect "$tag" --format '{{json .Image}}' |
+              jq -r 'if has("config") then .config.Labels else (.[] | .config.Labels) end
+                | .["org.opencontainers.image.revision"] // empty' | head -1)
+            if [ "$revision" = "$SHORT_SHA" ]; then
+              echo "::warning::$tag already exists from this commit (${SHORT_SHA}) — re-pushing."
+            else
+              echo "::error::$tag already exists from commit '${revision:-unknown}', not ${SHORT_SHA} — releases are immutable. Bump the version to re-run."
+              exit 1
+            fi
           fi
       # OCI labels are set on the CLI so members whose Dockerfile does not stamp them
       # itself (the mainline-synced frontend one) still carry version + revision;
