@@ -161,6 +161,7 @@ export const routes: Routes = [
     children: [
       {
         path: '',
+        canDeactivate: [pendingEditsGuard],
         loadComponent: () =>
           import('./upload/features/upload-box-manager/upload-box-manager').then(
             (m) => m.UploadBoxManager,

@@ -96,11 +96,12 @@ The [basic prototype](./prototype.html) walks through each journey.
    It shows the position of each box that is not archived, starting at 1, and is empty for archived boxes.
    The steward can sort the list by this column.
 2. **Change the order.**
-   The steward clicks **Change priority**.
+   The steward clicks **Change order**.
    The list is replaced by the reorder view, which shows all non-archived boxes in priority order.
-   The view also shows the version of the order, and who changed it last and when.
+   Opening the view loads the boxes and the order again, so the steward starts from the current order.
+   The view also shows who last reordered the boxes and when.
    The steward drags boxes, or uses their buttons, to move them.
-   **Save priority** sends the new order and switches back to the list, which confirms the new version.
+   **Save order** sends the new order and switches back to the list, which confirms the save.
 3. **Cancel.**
    **Cancel** throws away the changes and switches back to the list.
    If the steward tries to leave the page with unsaved changes, the page asks first.
@@ -123,7 +124,7 @@ sequenceDiagram
     participant RS
     participant FIS
     participant DHFS
-    Steward->>Portal: Change priority, reorder boxes, Save priority
+    Steward->>Portal: Change order, reorder boxes, Save order
     Portal->>RS: PUT /upload-box-priority (version, box_ids)
     RS-->>Portal: 200, version n+1
     RS->>FIS: priority event (outbox, version n+1)
@@ -290,33 +291,42 @@ The column shows each non-archived box's position, starting at 1, and is empty f
 It is right-aligned like **Size** and **Limit**, so that multi-digit positions line up.
 Sorting by it puts archived boxes last.
 The list already sorts and pages in the browser (`upload-box-manager-list.ts`), so the column needs no further RS change.
-If the priority list fails to load, the column stays empty, **Change priority** is disabled, and the page shows a message.
+If the priority list fails to load, the column stays empty, **Change order** is disabled, and the page shows a message.
 
-**Reorder mode** opens when the steward clicks **Change priority**.
+**Reorder mode** opens when the steward clicks **Change order**, which has a `swap_vert` icon.
+Its heading is **Priority order**, and its **Save order** button has a `save` icon; **Cancel** is text only.
+Opening it loads the boxes and the order again, so the steward doesn't learn about a newer order only from a `409` after making the change.
 It replaces the filters, the table and the paginator with one list of all non-archived boxes in priority order.
 Reorder mode has no paging, filters or column sorting, because they don't work with reordering.
 A box cannot be dragged to another page, and "move up" would skip boxes that are hidden.
 
-The header shows the version and "Last changed by <name> on <date>".
-The page turns `changed_by` into a display name with a link to `/user-manager/<id>`, as the upload box detail page does.
+The header shows "Last reordered by <name> on <date> at <time>", from `reordered_by` and `reordered_at`, so two saves on the same day can be told apart.
+It doesn't show the version, which only the save needs.
+The page turns `reordered_by` into a display name with a link to `/user-manager/<id>`, as the upload box detail page does.
 If that fails, it shows the plain ID.
-If `changed_by` is `null` because of a repair at startup, the header shows "Last changed automatically on <date>".
-Before the first write, the header shows "No edit history yet".
+Until a steward first saves an order, the header shows "Not reordered yet".
+The header doesn't use `changed_by`, which repairs and box changes also set, so it often wouldn't name the steward who chose the order.
 The page takes these values from the priority document, because it cannot read the audit log.
 
-Each row shows the box's position, title, storage alias, state and file count.
+Each row shows the box's title, storage location, state, size and limit (for example "2.5 GiB of 10.0 TiB"), and position.
+The size matters more for the re-encryption order than the file count.
+The rows look like the rows of the table, in the same font, size and background, with the state in the table's colours, so the steward finds the boxes again at a glance.
+The position is on the right, right-aligned like the **Prio** column, and the drag handle on the left.
 The steward drags a row to move it (Angular CDK `cdkDropList`, already a dependency).
-The move up, move down and move to top buttons do the same for keyboard users.
+The move up, move down and move to top buttons do the same for keyboard users, and each has a tooltip.
 While the steward drags a row, a bar between two rows shows where the row will be dropped.
 After a move, the row stays highlighted for about 1.5 seconds, so the steward can find it again.
+The rows slide to their new places: while dragging with the CDK's standard transitions, and after a button move in 200 ms, however far the row moves, so moving to the top of a long list is not slower.
+Both animations are skipped if the user prefers reduced motion.
 
-If the steward brings the order back to the one the page loaded, the page disables **Save priority**.
+If the steward brings the order back to the one the page loaded, the page disables **Save order**.
 
-**Save priority** sends the new order and the loaded version with `PUT /upload-box-priority`.
-If RS answers `200`, the page switches to list mode, shows the order from the response, and confirms the new version.
+**Save order** sends the new order and the loaded version with `PUT /upload-box-priority`.
+If RS answers `200`, the page switches to list mode, shows the order from the response, and confirms the save.
 If RS answers `409`, the page says that the order changed while the steward was editing, loads the current order, and stays in reorder mode, so the steward can make the change again.
 If the save fails otherwise, the page stays in reorder mode, keeps the changes, and asks the steward to try again.
 **Cancel** throws away the changes and switches to list mode.
+Opening reorder mode moves the focus to its heading, and leaving it moves the focus back to **Change order**, because each removes the button that had the focus.
 The existing `pendingEditsGuard` (`shared/features/pending-edits.ts`) asks before the steward leaves the page with unsaved changes.
 The access request detail page already uses it.
 The page implements `HasPendingEdits`, which reports whether reorder mode has unsaved changes.
@@ -325,7 +335,7 @@ The [basic prototype](./prototype.html) shows both modes and each response, with
 List mode, with the new column and button (the other columns stay the same):
 
 ```text
-Upload Box Manager                                                [Change priority]
+Upload Box Manager                                                   [Change order]
 [Filters                                                                          ]
 
 | Title | State    | Files | Location   | ^ Prio | Last change      | Details |
@@ -342,30 +352,30 @@ Upload Box Manager                                                [Change priori
 Reorder mode:
 
 ```text
-Upload Box Manager / Change priority                 [Cancel] [Save priority]
+Upload Box Manager / Priority order                     [Cancel] [Save order]
 Files of boxes higher up are re-encrypted first.
-Version 7, last changed by _Steward A_ on 2026-10-14 15:02
+Last reordered by _Steward A_ on 2026-10-14 15:02
 
 | You have unsaved changes to the priority order.                          |
 
-+- Priority order --------------------------------------+
-| :: (1) Box B                             [^] [v] [^^] |
-|        Tuebingen - locked - 8 files                   |
-|=======================================================|
-| :: (2) Box A                             [^] [v] [^^] |
-|        Heidelberg - open - 120 files                  |
-|                                                       |
-| :: (3) Box D                             [^] [v] [^^] |
-|        Koeln - open - 60 files                        |
-|                                                       |
-| :: (4) Box C                             [^] [v] [^^] |
-|        Heidelberg - open - 35 files                   |
-|                                                       |
-| :: (5) Box E                             [^] [v] [^^] |
-|        Tuebingen - open - 12 files                    |
-|                                                       |
-| Drag a row or use the buttons to change its position. |
-+-------------------------------------------------------+
++- Priority order ----------------------------------------+
+| :: Box B                                 1 [^] [v] [^^] |
+|    Tuebingen - locked - 0.8 TiB of 2.0 TiB              |
+|=========================================================|
+| :: Box A                                 2 [^] [v] [^^] |
+|    Heidelberg - open - 3.1 TiB of 10.0 TiB              |
+|                                                         |
+| :: Box D                                 3 [^] [v] [^^] |
+|    Koeln - open - 1.4 TiB of 5.0 TiB                    |
+|                                                         |
+| :: Box C                                 4 [^] [v] [^^] |
+|    Heidelberg - open - 512.0 GiB of 1.0 TiB             |
+|                                                         |
+| :: Box E                                 5 [^] [v] [^^] |
+|    Tuebingen - open - 96.0 GiB of 1.0 TiB               |
+|                                                         |
+| Drag a row or use the buttons to change its position.   |
++---------------------------------------------------------+
 
 ::    drag handle          ===  drop position while dragging
 [^] [v]  move up, down     [^^] move to top
@@ -407,9 +417,9 @@ A file in FIS:
 
 The Upload Box Manager:
 
-- List mode: loading, load failed, priority not loaded (column empty, **Change priority** disabled), and loaded.
+- List mode: loading, load failed, priority not loaded (column empty, **Change order** disabled), and loaded.
   After a save, the loaded list also shows the confirmation.
-- Reorder mode: no changes (**Save priority** disabled), unsaved changes, saving (buttons disabled), order changed in the meantime, and save failed.
+- Reorder mode: no changes (**Save order** disabled), unsaved changes, saving (buttons disabled), order changed in the meantime, and save failed.
 
 The prototype shows each of these except loading and the two load failures.
 
@@ -486,11 +496,12 @@ No database migration is needed: `box_id` defaults to `None`, and the republish 
 - DHFS: the wait is skipped after a round that concluded at least one file, and kept after an empty response or a round in which every file was inconclusive.
 - Data Portal, against a mocked RS:
   - the Prio column, and sorting by it
-  - switching between the two modes
+  - switching between the two modes, and loading the boxes and the order again when reorder mode opens
+  - moving the focus to the heading when reorder mode opens, and back to **Change order** when it closes
   - the order after a drag and after each button
-  - disabling **Save priority** when the order is back to the loaded one
+  - disabling **Save order** when the order is back to the loaded one
   - **Cancel** and the leave guard
-  - the "Last changed" line before the first write, after a repair at startup, and after a save
+  - the "Last reordered" line before the first save, after a save, and after a repair or box change that follows a save
   - ignoring entries for archived or deleted boxes, and showing missing boxes at the end
   - a save that fails with `409`
   - a failed save
@@ -520,9 +531,9 @@ Additions and removals, in the existing features, which already create, archive 
 
 Data Portal, in `502_data_portal_uploads.feature`, before the scenario that maps and archives the box:
 
-- The data steward opens the Upload Box Manager, clicks **Change priority**, moves the primary box once by dragging and once with a button, and saves.
+- The data steward opens the Upload Box Manager, clicks **Change order**, moves the primary box once by dragging and once with a button, and saves.
 - The Prio column shows the box at the position it was moved to.
-- The reorder view shows the new version and "Last changed by" with the steward's name.
+- The reorder view shows "Last reordered by" with the steward's name.
 - After the archival scenario, the box's Prio cell is empty, and the reorder view does not show the box.
 
 Audit records are covered by the RS tests; the testbed has no access to them so far.

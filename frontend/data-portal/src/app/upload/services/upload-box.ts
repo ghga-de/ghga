@@ -614,6 +614,25 @@ export class UploadBoxService {
   }
 
   /**
+   * Save a new priority order. The RS answers 409 if the stored order is no
+   * longer the given version, or if the order holds other boxes than the ones
+   * that are not archived.
+   * @param version - the version of the order that the new order is based on
+   * @param boxIds - the IDs of all upload boxes that are not archived, in the new order
+   * @returns An observable that emits the saved priority order
+   */
+  saveBoxPriority(version: number, boxIds: string[]): Observable<UploadBoxPriority> {
+    return this.#http
+      .put<UploadBoxPriority>(this.#priorityUrl, { version, box_ids: boxIds })
+      .pipe(
+        tap((priority) => {
+          this.#httpCache.delete(this.#priorityBucket);
+          this.boxPriority.value.set(priority);
+        }),
+      );
+  }
+
+  /**
    * Create a new upload box.
    * @param data - the base data for the new upload box
    * @returns An observable that emits the ID of the created box
