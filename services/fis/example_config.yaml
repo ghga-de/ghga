@@ -24,6 +24,7 @@ dhfs_version_constraint: ~=2.0
 docs_url: /docs
 ekss_api_url: http://127.0.0.1/ekss
 enable_opentelemetry: false
+enable_otel_metrics: false
 file_interrogations_topic: file-interrogations
 file_upload_topic: file-uploads
 generate_correlation_id: true

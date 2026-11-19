@@ -98,6 +98,9 @@ The service requires the following configuration parameters:
   Minimum: `0`.
   Maximum: `1`.
   Default: `1.0`.
+- <a id="properties/enable_otel_metrics"></a>**`enable_otel_metrics`** *(boolean)*: Also export metrics via OTLP.
+  Requires `enable_opentelemetry` and a collector with a metrics pipeline.
+  Default: `false`.
 - <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture.
   Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE".
   Default: `"INFO"`.

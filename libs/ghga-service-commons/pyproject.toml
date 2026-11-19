@@ -23,7 +23,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_service_commons"
-version = "9.1.0"
+version = "9.2.0"
 description = "A library that contains common functionality used in services of GHGA"
 license = "Apache-2.0"
 dependencies = [
@@ -50,6 +50,9 @@ crypt = [
 dev = [
     "requests>=2.32, <3",
 ]
+metrics = [
+    "opentelemetry-api >=1.44, <2",
+]
 objectstorage = [
     "hexkit[s3]>=8",
 ]
@@ -58,7 +61,7 @@ transports = [
     "ghga-service-commons[http]",
 ]
 all = [
-    "ghga-service-commons[api,auth,crypt,dev,http,objectstorage,transports]",
+    "ghga-service-commons[api,auth,crypt,dev,http,metrics,objectstorage,transports]",
 ]
 
 [project.urls]

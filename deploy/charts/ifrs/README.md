@@ -26,6 +26,7 @@ for the full set of configurable values.
 | `config.migration_wait_sec` | The number of seconds to wait before checking the DB version again | `null` |
 | `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
+| `config.enable_otel_metrics` | Also export metrics via OTLP. Requires `enable_opentelemetry` and a collector with a metrics pipeline. | `false` |
 | `config.log_level` | The minimum log level to capture. | `"INFO"` |
 | `config.service_name` | NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"ifrs"` |
 | `config.service_instance_id` | A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id. | `null` |

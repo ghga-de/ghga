@@ -24,6 +24,7 @@ for the full set of configurable values.
 | `config.vault_path` | Path without leading or trailing slashes where secrets should be stored in the vault. | `null` |
 | `config.enable_opentelemetry` | If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled. | `false` |
 | `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
+| `config.enable_otel_metrics` | Also export metrics via OTLP. Requires `enable_opentelemetry` and a collector with a metrics pipeline. | `false` |
 | `config.private_key_passphrase` | Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted. | `null` |
 | `config.log_level` | The minimum log level to capture. | `"INFO"` |
 | `config.service_name` | NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"ekss"` |
