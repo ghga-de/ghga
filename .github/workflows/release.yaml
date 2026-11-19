@@ -418,6 +418,11 @@ jobs:
                 | .["org.opencontainers.image.revision"] // empty' | head -1)
             if [ "$revision" = "$SHORT_SHA" ]; then
               digest=$(docker buildx imagetools inspect "$tag" --format '{{json .Manifest}}' | jq -r .digest)
+              # An empty digest would let the build run and push over the tag.
+              if [[ "$digest" != sha256:* ]]; then
+                echo "::error::could not resolve the digest of existing $tag (got '${digest}')"
+                exit 1
+              fi
               echo "::warning::$tag already exists from this commit (${SHORT_SHA}) — reusing ${digest}, not rebuilding."
               echo "digest=$digest" >> "$GITHUB_OUTPUT"
               echo "DIGEST=$digest" >> "$GITHUB_ENV"
@@ -434,6 +439,7 @@ jobs:
       # existing "build-only dry run" (push=false) mode — that mode's behavior is
       # otherwise unchanged (no --push/--load means buildx discards the result after
       # verifying it builds, same as before: nothing to keep around for a dry run).
+      # Skipped when the guard above reuses an image pushed from this commit.
       - name: Build (stamped, attested when pushing)
         id: build
         if: ${{ steps.existing.outputs.digest == '' }}
@@ -491,7 +497,9 @@ jobs:
           retention-days: 1
       - name: Summary
         run: |
-          if [ "${{ inputs.push }}" = "true" ]; then
+          if [ -n "${{ steps.existing.outputs.digest }}" ]; then
+            echo "reused existing ${REGISTRY}/${{ matrix.member.package }}@${DIGEST} for ${{ needs.resolve.outputs.version }} (signed and cosign-attested again)"
+          elif [ "${{ inputs.push }}" = "true" ]; then
             echo "pushed ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} (signed; SBOM + provenance attached and cosign-attested)"
           else
             echo "build-only: ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} (push input not set)"
