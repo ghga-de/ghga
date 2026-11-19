@@ -27,6 +27,8 @@ from hexkit.providers.mongodb.testutils import MongoDbFixture
 from metldata.artifacts_rest.api_factory import rest_api_factory
 from metldata.artifacts_rest.artifact_info import ArtifactInfo, get_artifact_info_dict
 from metldata.load.aggregator import MongoDbAggregator
+from metldata.load.file_governance import get_file_governance_dao
+from metldata.load.models import FileGovernanceRecord
 from metldata.load.stats import create_stats_using_aggregator
 from tests.artifact_rest.test_load_artifacts import load_example_artifact_resources
 from tests.fixtures.artifact_info import EXAMPLE_ARTIFACT_INFOS, MINIMAL_ARTIFACT_INFO
@@ -181,3 +183,70 @@ async def test_get_stats_endpoint(mongodb: MongoDbFixture):
         },
     }
     assert observed_stats == expected_stats
+
+
+async def test_query_file_governance_endpoint(mongodb: MongoDbFixture):
+    """Test that the file governance query returns the nested data access policy of
+    each known file accession and null for an unknown one.
+    """
+    data_access_policy_1 = {
+        "accession": "GHGAP00000000000001",
+        "content": {"name": "Policy 1", "policy_text": "Text 1"},
+        "data_access_committee": {
+            "accession": "GHGAC00000000000001",
+            "alias": "committee_1",
+            "content": {"email": "committee_1@example.org"},
+        },
+    }
+    data_access_policy_2 = {
+        "accession": None,
+        "content": {"name": "Policy 2", "policy_text": "Text 2"},
+        "data_access_committee": {
+            "accession": None,
+            "alias": "committee_2",
+            "content": {"email": "committee_2@example.org"},
+        },
+    }
+    file_governance_dao = await get_file_governance_dao(dao_factory=mongodb.dao_factory)
+    for index, data_access_policy in enumerate(
+        [data_access_policy_1, data_access_policy_2], start=1
+    ):
+        await file_governance_dao.insert(
+            FileGovernanceRecord.model_validate(
+                {
+                    "file_accession": f"GHGAF0000000000000{index}",
+                    "dataset_accession": f"GHGAD0000000000000{index}",
+                    "data_access_policy": data_access_policy,
+                }
+            )
+        )
+
+    async with await get_example_app_client(dao_factory=mongodb.dao_factory) as client:
+        response = await client.post(
+            "/file-governance/query",
+            json={
+                "file_accessions": [
+                    "GHGAF00000000000001",
+                    "GHGAF00000000000002",
+                    "GHGAF99999999999999",
+                ]
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "GHGAF00000000000001": data_access_policy_1,
+        "GHGAF00000000000002": data_access_policy_2,
+        "GHGAF99999999999999": None,
+    }
+
+
+async def test_query_file_governance_empty_batch(mongodb: MongoDbFixture):
+    """Test that an empty batch of file accessions gives an empty result."""
+    async with await get_example_app_client(dao_factory=mongodb.dao_factory) as client:
+        response = await client.post(
+            "/file-governance/query", json={"file_accessions": []}
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {}

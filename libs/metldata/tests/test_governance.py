@@ -25,6 +25,7 @@ import pytest
 from metldata.artifacts_rest.models import ArtifactInfo
 from metldata.custom_types import Json
 from metldata.governance import (
+    DataAccessCommittee,
     GovernanceMetadata,
     GovernanceResolutionError,
     MissingAccessionError,
@@ -284,9 +285,10 @@ def test_submission_without_accessions():
 
     assert len(governance) == 2
     assert governance[1].dataset_accession is None
-    assert governance[1].data_access_committee_accession is None
-    assert governance[1].data_access_committee_alias == "DAC_1"
-    assert governance[1].data_access_policy["name"] == "DAP 2"
+    data_access_policy = governance[1].data_access_policy
+    assert data_access_policy.data_access_committee.accession is None
+    assert data_access_policy.data_access_committee.alias == "DAC_1"
+    assert data_access_policy.content["name"] == "DAP 2"
 
 
 def test_unknown_file_accession():
@@ -378,8 +380,14 @@ def test_compared_by_content_only():
         ),
     )
 
-    assert governance_a.data_access_policy == governance_b.data_access_policy
-    assert governance_a.data_access_committee == governance_b.data_access_committee
+    policy_a, policy_b = (
+        governance_a.data_access_policy,
+        governance_b.data_access_policy,
+    )
+    assert policy_a.content == policy_b.content
+    assert (
+        policy_a.data_access_committee.content == policy_b.data_access_committee.content
+    )
 
     study_b.content["data_access_committees"][0]["institute"] = "institute_b"
     governance_a, governance_b = resolve_file_governance(
@@ -390,8 +398,14 @@ def test_compared_by_content_only():
         ),
     )
 
-    assert governance_a.data_access_policy == governance_b.data_access_policy
-    assert governance_a.data_access_committee != governance_b.data_access_committee
+    policy_a, policy_b = (
+        governance_a.data_access_policy,
+        governance_b.data_access_policy,
+    )
+    assert policy_a.content == policy_b.content
+    assert (
+        policy_a.data_access_committee.content != policy_b.data_access_committee.content
+    )
 
 
 def test_resolved_restricted_artifact():
@@ -408,14 +422,14 @@ def test_resolved_restricted_artifact():
     )
 
     assert governance.dataset_accession == "GHGAD23572188878277"
-    assert governance.data_access_policy_accession == "GHGAP32793167771402"
-    assert governance.data_access_policy["name"] == "DAP 1"
-    assert governance.data_access_committee_accession == "GHGAC05045906188918"
-    assert governance.data_access_committee_alias == "DAC_1"
-    assert governance.data_access_committee == {
-        "email": "dac_institute_a@dac.dac",
-        "institute": "institute_a",
-    }
+    data_access_policy = governance.data_access_policy
+    assert data_access_policy.accession == "GHGAP32793167771402"
+    assert data_access_policy.content["name"] == "DAP 1"
+    assert data_access_policy.data_access_committee == DataAccessCommittee(
+        accession="GHGAC05045906188918",
+        alias="DAC_1",
+        content={"email": "dac_institute_a@dac.dac", "institute": "institute_a"},
+    )
 
     file_accessions = [
         file["accession"]
@@ -517,5 +531,8 @@ def test_submission_with_study_pid():
     )
 
     assert governance.dataset_accession == f"{study_pid}.DS.AAA"
-    assert governance.data_access_policy_accession == f"{study_pid}.dap_1"
-    assert governance.data_access_committee_accession == f"{study_pid}.dac_1"
+    assert governance.data_access_policy.accession == f"{study_pid}.dap_1"
+    assert (
+        governance.data_access_policy.data_access_committee.accession
+        == f"{study_pid}.dac_1"
+    )

@@ -22,16 +22,23 @@ from fastapi.routing import APIRouter
 from hexkit.protocols.dao import DaoFactoryProtocol, ResourceNotFoundError
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection, DaoNotFoundError
 from metldata.artifacts_rest.artifact_info import get_artifact_info_dict
-from metldata.artifacts_rest.models import ArtifactInfo, GlobalStats
+from metldata.artifacts_rest.models import (
+    ArtifactInfo,
+    FileGovernanceQuery,
+    GlobalStats,
+)
+from metldata.artifacts_rest.query_file_governance import query_file_governance
 from metldata.artifacts_rest.query_resources import (
     ArtifactResourceNotFoundError,
     query_artifact_resource,
 )
 from metldata.custom_types import Json
+from metldata.governance import DataAccessPolicy
+from metldata.load.file_governance import get_file_governance_dao
 from metldata.load.stats import STATS_COLLECTION_NAME
 
 
-async def rest_api_factory(
+async def rest_api_factory(  # noqa: C901
     *, artifact_infos: list[ArtifactInfo], dao_factory: DaoFactoryProtocol
 ) -> APIRouter:
     """Factory to build a REST API for querying the provided artifact.
@@ -50,6 +57,7 @@ async def rest_api_factory(
     stats_dao = await dao_factory.get_dao(
         name=STATS_COLLECTION_NAME, dto_model=GlobalStats, id_field="id"
     )
+    file_governance_dao = await get_file_governance_dao(dao_factory=dao_factory)
 
     router = APIRouter()
 
@@ -107,5 +115,16 @@ async def rest_api_factory(
             raise HTTPException(status_code=404, detail=str(error)) from error
 
         return resource
+
+    @router.post("/file-governance/query")
+    async def get_file_governance(
+        query: FileGovernanceQuery,
+    ) -> dict[str, DataAccessPolicy | None]:
+        """Get the data access policy, with its data access committee, governing each
+        of the given file accessions. Unknown file accessions map to null.
+        """
+        return await query_file_governance(
+            file_accessions=query.file_accessions, dao=file_governance_dao
+        )
 
     return router

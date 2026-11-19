@@ -123,3 +123,11 @@ class GlobalStats(BaseModel):
             + " The values are the corresponding summary statistics."
         ),
     )
+
+
+class FileGovernanceQuery(BaseModel):
+    """A batch of file accessions to query the governance of."""
+
+    file_accessions: list[str] = Field(
+        ..., description="Accessions of the files to query the governance of."
+    )

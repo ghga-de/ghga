@@ -72,6 +72,42 @@ class MissingAccessionError(RuntimeError):
         )
 
 
+class DataAccessCommittee(BaseModel):
+    """The data access committee of a data access policy.
+
+    The accession is None if the committee has no accession yet.
+    """
+
+    accession: str | None = Field(
+        ..., description="Accession of the data access committee."
+    )
+    alias: str | None = Field(..., description="Alias of the data access committee.")
+    content: Json = Field(
+        ..., description="Content of the data access committee, without identity slots."
+    )
+
+
+class DataAccessPolicy(BaseModel):
+    """The data access policy of a dataset, with its data access committee.
+
+    The accession is None if the policy has no accession yet.
+    """
+
+    accession: str | None = Field(
+        ..., description="Accession of the data access policy."
+    )
+    content: Json = Field(
+        ...,
+        description=(
+            "Content of the data access policy, without identity slots and without"
+            + " the reference to its data access committee."
+        ),
+    )
+    data_access_committee: DataAccessCommittee = Field(
+        ..., description="The data access committee of the policy."
+    )
+
+
 class FileGovernance(BaseModel):
     """The governance of a file through one of its datasets.
 
@@ -81,24 +117,8 @@ class FileGovernance(BaseModel):
     dataset_accession: str | None = Field(
         ..., description="Accession of the dataset the file belongs to."
     )
-    data_access_policy_accession: str | None = Field(
-        ..., description="Accession of the dataset's data access policy."
-    )
-    data_access_policy: Json = Field(
-        ...,
-        description=(
-            "Content of the data access policy, without identity slots and without"
-            + " the reference to its data access committee."
-        ),
-    )
-    data_access_committee_accession: str | None = Field(
-        ..., description="Accession of the policy's data access committee."
-    )
-    data_access_committee_alias: str | None = Field(
-        ..., description="Alias of the data access committee."
-    )
-    data_access_committee: Json = Field(
-        ..., description="Content of the data access committee, without identity slots."
+    data_access_policy: DataAccessPolicy = Field(
+        ..., description="The data access policy of the dataset."
     )
 
 
@@ -498,14 +518,18 @@ def resolve_file_governance(
 
         governance_by_dataset[dataset_key] = FileGovernance(
             dataset_accession=dataset.accession,
-            data_access_policy_accession=data_access_policy.accession,
-            data_access_policy=_strip_slots(
-                resource=data_access_policy.content,
-                slot_names={DATA_ACCESS_POLICY_DATA_ACCESS_COMMITTEE_SLOT},
+            data_access_policy=DataAccessPolicy(
+                accession=data_access_policy.accession,
+                content=_strip_slots(
+                    resource=data_access_policy.content,
+                    slot_names={DATA_ACCESS_POLICY_DATA_ACCESS_COMMITTEE_SLOT},
+                ),
+                data_access_committee=DataAccessCommittee(
+                    accession=data_access_committee.accession,
+                    alias=data_access_committee.alias,
+                    content=data_access_committee.content,
+                ),
             ),
-            data_access_committee_accession=data_access_committee.accession,
-            data_access_committee_alias=data_access_committee.alias,
-            data_access_committee=data_access_committee.content,
         )
 
     return list(governance_by_dataset.values())
