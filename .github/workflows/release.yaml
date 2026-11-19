@@ -412,7 +412,17 @@ jobs:
         if: ${{ inputs.push }}
         run: |
           tag="${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}"
-          if docker manifest inspect "$tag" >/dev/null 2>&1; then
+          # Only a clear "not found" means the tag is free; any other failure (rate
+          # limit, network) must not be mistaken for it, or the build pushes over the tag.
+          if inspect_err=$(docker manifest inspect "$tag" 2>&1 >/dev/null); then
+            exists=true
+          elif grep -qiE 'no such manifest|manifest unknown|not found' <<<"$inspect_err"; then
+            exists=false
+          else
+            echo "::error::could not check whether $tag exists: ${inspect_err}"
+            exit 1
+          fi
+          if [ "$exists" = true ]; then
             revision=$(docker buildx imagetools inspect "$tag" --format '{{json .Image}}' |
               jq -r 'if has("config") then .config.Labels else (.[] | .config.Labels) end
                 | .["org.opencontainers.image.revision"] // empty' | head -1)
