@@ -269,9 +269,9 @@ def check_single_reorder_row(storage_name: str, fixtures: JointFixture):
 @then(parse('reorder mode says the boxes were last reordered by "{full_name}"'))
 def check_last_reordered_by(full_name: str, fixtures: JointFixture):
     """Check that reorder mode names the steward who last saved an order."""
+    # A string, unlike a pattern, matches whatever whitespace the template leaves
     expect(_reorder_mode(fixtures)).to_contain_text(
-        re.compile(rf"Last reordered by {re.escape(full_name)} on "),
-        timeout=UI_TIMEOUT,
+        f"Last reordered by {full_name} on ", timeout=UI_TIMEOUT
     )
 
 
