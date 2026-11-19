@@ -547,6 +547,73 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
 
         return FindResult(results_iterator=_iter(), get_total_count=_total_count)
 
+    async def update_first(
+        self,
+        *,
+        filter_: Mapping[str, Any],
+        changes: Mapping[str, Any],
+        sort: list[str] | None = None,
+    ) -> Dto:
+        """Change the first resource that matches the filter in the given sort order,
+        publish it and return the changed resource, in one atomic call.
+
+        The returned document is published as it is, without another read. Deleted
+        resources are not matched.
+
+        Args:
+            filter_:
+                A mapping that selects the resources, as in `find_all`.
+            changes:
+                A mapping of resource fields to their new plain values. Only these
+                fields are changed. Each value is validated and serialized against
+                the type of its field before the call. The ID field cannot be changed.
+                Keys that start with `$` are MongoDB update operators, e.g.
+                `{"$inc": {"counter": 1}}`. This is an extension in the same way as
+                the operators in filters: their values are not validated.
+            sort:
+                A list of field names defining the sort order, as in `find_all`.
+
+        Returns:
+            The changed resource, validated against the DTO model.
+
+        Raises:
+            NoHitsFoundError:
+                If no resource matches `filter_`.
+            InvalidFilterError:
+                If `filter_` doesn't pass validation.
+            InvalidChangesError:
+                If `changes` doesn't pass validation.
+            UniqueConstraintViolationError:
+                when the change would violate a unique index constraint over some
+                field other than the ID field.
+        """
+        metadata = {
+            "deleted": False,
+            "published": False,
+            "correlation_id": get_correlation_id(),
+            "last_event_id": None,
+            "write_id": uuid4(),
+        }
+        document = await self._dao._update_first_document(
+            filter_=filter_,
+            changes=changes,
+            sort=sort,
+            extra_filter={
+                "$or": [
+                    {"__metadata__": {"$exists": False}},
+                    {"__metadata__.deleted": False},
+                ]
+            },
+            extra_changes={"__metadata__": metadata},
+        )
+        dto = document_to_dto(
+            document, id_field=self._id_field, dto_model=self._dto_model
+        )
+
+        if self._autopublish:
+            await self.publish_document(document)
+        return dto
+
     async def insert(self, dto: Dto) -> None:
         """Create a new resource.
 

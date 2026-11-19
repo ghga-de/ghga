@@ -24,7 +24,7 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from functools import partial
 from typing import Any, Generic, Literal, TypeAlias
 
-from pymongo import AsyncMongoClient, ReplaceOne
+from pymongo import AsyncMongoClient, ReplaceOne, ReturnDocument
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.errors import BulkWriteError, DuplicateKeyError
 
@@ -52,6 +52,7 @@ from hexkit.providers.mongodb.provider.client import ConfiguredMongoClient
 from hexkit.providers.mongodb.provider.utils import (
     document_to_dto,
     dto_to_document,
+    split_changes,
     translate_pymongo_errors,
 )
 from hexkit.utils import FieldNotInModelError, validate_fields_in_model
@@ -457,7 +458,7 @@ class MongoDbDao(Generic[Dto]):
         hits = self.find_all(filter_=filter_)
         return await get_single_hit(hits=hits, filter_=filter_)
 
-    def find_all(  # noqa: C901
+    def find_all(
         self,
         *,
         filter_: Mapping[str, Any],
@@ -505,14 +506,7 @@ class MongoDbDao(Generic[Dto]):
         validate_find_filter(filter_, dto_model=self._dto_model)
         filter_ = replace_id_field_in_find_filter(filter_, self._id_field)
 
-        # Convert generic sort spec to MongoDB-specific sort spec
-        mongodb_sort: list[tuple[str, int]] = []
-        for spec in sort or []:
-            field = spec.removeprefix("-")
-            order = 1 if field == spec else -1
-            if field == self._id_field:
-                field = "_id"
-            mongodb_sort.append((field, order))
+        mongodb_sort = self._to_mongodb_sort(sort)
 
         collection = self._collection
 
@@ -542,6 +536,115 @@ class MongoDbDao(Generic[Dto]):
                     yield self._document_to_dto(document)
 
         return FindResult(results_iterator=_iter(), get_total_count=_total_count)
+
+    def _to_mongodb_sort(self, sort: list[str] | None) -> list[tuple[str, int]]:
+        """Convert the generic sort spec of `find_all` to a MongoDB-specific one."""
+        mongodb_sort: list[tuple[str, int]] = []
+        for spec in sort or []:
+            field = spec.removeprefix("-")
+            order = 1 if field == spec else -1
+            if field == self._id_field:
+                field = "_id"
+            mongodb_sort.append((field, order))
+        return mongodb_sort
+
+    async def update_first(
+        self,
+        *,
+        filter_: Mapping[str, Any],
+        changes: Mapping[str, Any],
+        sort: list[str] | None = None,
+    ) -> Dto:
+        """Change the first resource that matches the filter in the given sort order
+        and return the changed resource, in one atomic call.
+
+        This is the atomic form of `find_all(limit=1)` followed by `update`: concurrent
+        calls get different resources, and none of them needs to retry.
+
+        Args:
+            filter_:
+                A mapping that selects the resources, as in `find_all`.
+            changes:
+                A mapping of resource fields to their new plain values. Only these
+                fields are changed. Each value is validated and serialized against
+                the type of its field before the call. The ID field cannot be changed.
+                Keys that start with `$` are MongoDB update operators, e.g.
+                `{"$inc": {"counter": 1}}`. This is an extension in the same way as
+                the operators in filters: their values are not validated.
+            sort:
+                A list of field names defining the sort order, as in `find_all`.
+
+        Returns:
+            The changed resource, validated against the DTO model.
+
+        Raises:
+            NoHitsFoundError:
+                If no resource matches `filter_`.
+            InvalidFilterError:
+                If `filter_` doesn't pass validation.
+            InvalidChangesError:
+                If `changes` doesn't pass validation.
+            UniqueConstraintViolationError:
+                when the change would violate a unique index constraint over some
+                field other than the ID field.
+        """
+        document = await self._update_first_document(
+            filter_=filter_, changes=changes, sort=sort
+        )
+        return self._document_to_dto(document)
+
+    async def _update_first_document(
+        self,
+        *,
+        filter_: Mapping[str, Any],
+        changes: Mapping[str, Any],
+        sort: list[str] | None = None,
+        extra_filter: Mapping[str, Any] | None = None,
+        extra_changes: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Change a document, see `update_first`, and return it in its stored form.
+
+        Args:
+            extra_filter:
+                An additional filter in MongoDB's own terms, that the document must
+                match too.
+            extra_changes:
+                Additional fields to set, in MongoDB's own terms, e.g. metadata.
+        """
+        validate_find_filter(filter_, dto_model=self._dto_model)
+        field_values, operators = split_changes(
+            changes, dto_model=self._dto_model, id_field=self._id_field
+        )
+        criteria = replace_id_field_in_find_filter(filter_, self._id_field)
+        if extra_filter:
+            # A separate $and clause keeps operators in `filter_` from replacing the
+            # ones in `extra_filter`
+            criteria = {"$and": [extra_filter, criteria]}
+
+        update = dict(operators)
+        set_values = {
+            **operators.get("$set", {}),
+            **field_values,
+            **(extra_changes or {}),
+        }
+        if set_values:
+            update["$set"] = set_values
+
+        with translate_pymongo_errors():
+            try:
+                document = await self._collection.find_one_and_update(
+                    criteria,
+                    update,
+                    sort=self._to_mongodb_sort(sort) or None,
+                    return_document=ReturnDocument.AFTER,
+                )
+            except DuplicateKeyError as error:
+                key_value = error.details.get("keyValue", {})  # type: ignore
+                raise UniqueConstraintViolationError(unique_fields=key_value) from error
+
+        if document is None:
+            raise NoHitsFoundError(filter_=filter_)
+        return document
 
     @classmethod
     def with_transaction(cls) -> AbstractAsyncContextManager["Dao[Dto]"]:

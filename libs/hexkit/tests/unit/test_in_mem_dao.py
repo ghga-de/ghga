@@ -19,11 +19,12 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from pydantic import BaseModel, ConfigDict, PydanticInvalidForJsonSchema
+from pydantic import BaseModel, ConfigDict, Field, PydanticInvalidForJsonSchema
 
 from hexkit.protocols.dao import (
     BatchOperationError,
     DaoFactoryBase,
+    InvalidChangesError,
     InvalidFilterError,
     NoHitsFoundError,
     PreconditionFailedError,
@@ -1156,3 +1157,168 @@ async def test_delete_many_rejects_a_single_id():
         await dao.delete_many("Wrench")
 
     assert await stored_titles(dao) == ["Wrench", "Candle", "Hammer"]
+
+
+class Counter(BaseModel):
+    """A model with a few fields to change"""
+
+    name: str
+    group: str
+    count: int = 0
+    note: str | None = None
+
+
+CounterDao = new_mock_dao_class(dto_model=Counter, id_field="name")
+
+
+async def _counter_dao() -> Any:
+    dao = CounterDao()
+    for name, group, count in [
+        ("a", "x", 3),
+        ("b", "x", 1),
+        ("c", "x", 2),
+        ("d", "y", 0),
+    ]:
+        await dao.insert(Counter(name=name, group=group, count=count))
+    return dao
+
+
+async def test_update_first_filter_sort_and_changed_fields():
+    """update_first respects filter and sort and changes only the given fields."""
+    dao = await _counter_dao()
+
+    changed = await dao.update_first(
+        filter_={"group": "x"}, changes={"note": "claimed"}, sort=["count"]
+    )
+
+    assert changed == Counter(name="b", group="x", count=1, note="claimed")
+    assert await dao.get_by_id("b") == changed
+    for name, count in [("a", 3), ("c", 2), ("d", 0)]:
+        assert (await dao.get_by_id(name)).note is None
+        assert (await dao.get_by_id(name)).count == count
+
+    changed = await dao.update_first(
+        filter_={"group": "x"}, changes={"note": "again"}, sort=["-count"]
+    )
+    assert changed.name == "a"
+
+
+async def test_update_first_inc():
+    """update_first applies `$inc` along with plain values."""
+    dao = await _counter_dao()
+
+    changed = await dao.update_first(
+        filter_={"name": "a"}, changes={"note": "n", "$inc": {"count": 2}}
+    )
+
+    assert changed == Counter(name="a", group="x", count=5, note="n")
+    assert await dao.get_by_id("a") == changed
+
+
+async def test_update_first_no_hits():
+    """update_first raises NoHitsFoundError if nothing matches."""
+    dao = await _counter_dao()
+
+    with pytest.raises(NoHitsFoundError):
+        await dao.update_first(filter_={"group": "z"}, changes={"note": "n"})
+
+
+async def test_update_first_invalid_changes():
+    """update_first rejects invalid changes without writing anything."""
+    dao = await _counter_dao()
+    before = [dao.resources[name].copy() for name in "abcd"]
+
+    for changes in (
+        {"note": "n", "count": "not a number"},
+        {"note": "n", "not_a_field": 1},
+        {"name": "other"},
+        {},
+    ):
+        with pytest.raises(InvalidChangesError):
+            await dao.update_first(filter_={}, changes=changes)
+    with pytest.raises(InvalidFilterError):
+        await dao.update_first(filter_={"not_a_field": 1}, changes={"note": "n"})
+    with pytest.raises(MQLError):
+        await dao.update_first(filter_={}, changes={"$push": {"note": "n"}})
+
+    assert [dao.resources[name] for name in "abcd"] == before
+
+
+async def test_update_first_refuses_id_changes():
+    """update_first refuses update operators that change the ID or part of it."""
+    dao = await _counter_dao()
+
+    for operators in (
+        {"$set": {"name": "other"}},
+        {"$inc": {"name": 1}},
+        {"$set": {"name.part": "other"}},
+    ):
+        with pytest.raises(InvalidChangesError):
+            await dao.update_first(filter_={}, changes=operators)
+    assert set(dao.resources) == set("abcd")
+
+
+class Stats(BaseModel):
+    """An embedded document for nested changes"""
+
+    attempts: int = 0
+
+
+class Tracked(BaseModel):
+    """A model with embedded documents"""
+
+    name: str
+    stats: Stats = Field(default_factory=Stats)
+    extra: dict[str, Any] = Field(default_factory=dict)
+
+
+TrackedDao = new_mock_dao_class(dto_model=Tracked, id_field="name")
+
+
+async def test_update_first_creates_missing_embedded_documents():
+    """update_first creates missing embedded documents along a dotted `$set` or
+    `$inc` path, like MongoDB. Changes to existing ones are compared with MongoDB in
+    the integration tests.
+    """
+    dao = TrackedDao()
+    await dao.insert(Tracked(name="a"))
+
+    changed = await dao.update_first(
+        filter_={},
+        changes={"$set": {"extra.deep.key": 1}, "$inc": {"extra.counter": 3}},
+    )
+
+    assert changed == Tracked(name="a", extra={"deep": {"key": 1}, "counter": 3})
+    assert await dao.get_by_id("a") == changed
+
+
+async def test_update_first_nested_operator_through_non_document():
+    """update_first refuses an operator path through a value that is not a document
+    and leaves the resource unchanged.
+    """
+    dao = TrackedDao()
+    await dao.insert(Tracked(name="a"))
+    before = await dao.get_by_id("a")
+
+    for changes in (
+        {"$set": {"stats.attempts.part": 1}},
+        {"$inc": {"stats.attempts.part": 1}},
+    ):
+        with pytest.raises(MQLError):
+            await dao.update_first(filter_={}, changes=changes)
+
+    assert await dao.get_by_id("a") == before
+
+
+async def test_update_first_copies_set_values():
+    """A dict passed to `$set` is copied, so changing it later doesn't change the
+    stored resource.
+    """
+    dao = TrackedDao()
+    await dao.insert(Tracked(name="a"))
+    extra: dict[str, Any] = {"key": 1}
+
+    await dao.update_first(filter_={}, changes={"$set": {"extra": extra}})
+    extra["key"] = 2
+
+    assert (await dao.get_by_id("a")).extra == {"key": 1}

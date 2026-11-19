@@ -49,6 +49,7 @@ __all__ = [
     "DaoFactoryProtocol",
     "FindError",
     "FindResult",
+    "InvalidChangesError",
     "MultipleHitsFoundError",
     "PreconditionFailedError",
     "RaceConditionAttempt",
@@ -187,6 +188,10 @@ class FindError(DaoError):
 
 class InvalidFilterError(FindError):
     """Raised when an invalid filter was provided to find."""
+
+
+class InvalidChangesError(DaoError):
+    """Raised when invalid changes were provided to `update_first`."""
 
 
 class MultipleHitsFoundError(FindError):
@@ -417,6 +422,50 @@ class Dao(typing.Protocol[Dto]):
         Raises:
             InvalidFilterError: If `filter_` doesn't pass validation.
             ValueError: if `skip` or `limit` are less than 0.
+        """
+        ...
+
+    async def update_first(
+        self,
+        *,
+        filter_: Mapping[str, Any],
+        changes: Mapping[str, Any],
+        sort: list[str] | None = None,
+    ) -> Dto:
+        """Change the first resource that matches the filter in the given sort order
+        and return the changed resource, in one atomic call.
+
+        This is the atomic form of `find_all(limit=1)` followed by `update`: concurrent
+        calls get different resources, and none of them needs to retry.
+
+        Args:
+            filter_:
+                A mapping that selects the resources, as in `find_all`.
+            changes:
+                A mapping of resource fields to their new plain values. Only these
+                fields are changed. Each value is validated and serialized against
+                the type of its field before anything is written. The ID field cannot
+                be changed.
+                Keys that start with `$` are MongoDB update operators, e.g.
+                `{"$inc": {"counter": 1}}`. This is an extension in the same way as
+                the operators in filters: their values are not validated, and which
+                operators a provider supports depends on the provider.
+            sort:
+                A list of field names defining the sort order, as in `find_all`.
+
+        Returns:
+            The changed resource, validated against the DTO model.
+
+        Raises:
+            NoHitsFoundError:
+                If no resource matches `filter_`.
+            InvalidFilterError:
+                If `filter_` doesn't pass validation.
+            InvalidChangesError:
+                If `changes` doesn't pass validation.
+            UniqueConstraintViolationError:
+                when the change would violate a unique index constraint over some
+                field other than the ID field.
         """
         ...
 

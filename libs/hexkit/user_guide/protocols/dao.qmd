@@ -92,7 +92,7 @@ Since index capabilities differ between databases, each provider brings its own 
 
 ## CRUD Operations
 
-The [`Dao`](../../reference/protocols.dao.Dao.qmd) interface offers seven operations:
+The [`Dao`](../../reference/protocols.dao.Dao.qmd) interface offers eight operations:
 
 | Operation | Description | Raises |
 | --------- | ----------- | ------ |
@@ -103,11 +103,16 @@ The [`Dao`](../../reference/protocols.dao.Dao.qmd) interface offers seven operat
 | `delete(id_)` | Remove a resource by its ID. | `ResourceNotFoundError` |
 | `find_one(filter_=...)` | Fetch the single resource matching a filter. | `NoHitsFoundError`, `MultipleHitsFoundError`, `InvalidFilterError` |
 | `find_all(filter_=...)` | Iterate over all resources matching a filter. | `InvalidFilterError`, `ValueError` |
+| `update_first(filter_=..., changes=..., sort=...)` | Atomically change the first resource matching a filter in sort order and return it. | `NoHitsFoundError`, `InvalidFilterError`, `InvalidChangesError`, `UniqueConstraintViolationError` |
 
 The write operations are deliberately strict about existence.
 `insert` refuses to overwrite, `update` refuses to create, and both signal violations with exceptions rather than silent no-ops.
 That makes accidental data loss loud instead of quiet.
 When "create or replace" is genuinely what you want, say so explicitly by calling `upsert`.
+
+`update_first` is the atomic form of `find_all(limit=1)` followed by `update`: concurrent callers get different resources and none of them retries, which suits claiming work from a queue-like collection.
+`changes` maps fields to plain values, which are validated against the field types before anything is written.
+Keys starting with `$` are MongoDB update operators, e.g. `{"$inc": {"attempts": 1}}`; like operators in filters, they tie the caller to MongoDB, and the mock DAO supports only `$inc` and `$set`.
 
 `update` also guards against lost updates.
 Pass `precondition` as a mapping of field names to the values the stored resource must still have, and the provider checks and writes atomically, raising `PreconditionFailedError` if another writer got there first.
