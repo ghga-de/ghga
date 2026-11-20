@@ -142,10 +142,15 @@ TEST_LEGACY_PREFIXES = {
 }
 
 
+def read_submission(*, submission_id: str) -> dict:
+    """Read a stored submission."""
+    path = Path("submission_store") / f"{submission_id}.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def read_accession_map(*, submission_id: str) -> dict[str, dict[str, str]]:
     """Read the accession map of a stored submission."""
-    path = Path("submission_store") / f"{submission_id}.json"
-    return json.loads(path.read_text(encoding="utf-8"))["accession_map"]
+    return read_submission(submission_id=submission_id)["accession_map"]
 
 
 def submit_legacy() -> tuple[str, dict[str, dict[str, str]]]:
@@ -910,12 +915,6 @@ def submit_reserved(
         metadata_path=metadata_path,
         config_path=METADATA_CONFIG_PATH,
     )
-
-
-def read_submission(*, submission_id: str) -> dict:
-    """Read a stored submission."""
-    path = Path("submission_store") / f"{submission_id}.json"
-    return json.loads(path.read_text(encoding="utf-8"))
 
 
 @pytest.fixture
