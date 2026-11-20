@@ -22,6 +22,7 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from metldata.submission_registry.models import (
     StatusChange,
     Submission,
+    SubmissionHeader,
     SubmissionStatus,
 )
 
@@ -51,3 +52,11 @@ def test_submission_current_status():
     )
 
     assert submission.current_status == SubmissionStatus.COMPLETED
+
+
+def test_title_is_kept_on_one_line():
+    """Test that line breaks in a title become spaces, also for a stored submission,
+    and that other spacing stays as given.
+    """
+    assert SubmissionHeader(title="line one\nline two").title == "line one line two"
+    assert Submission(id="x", title="a\r\nb  c").title == "a b  c"

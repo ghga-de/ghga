@@ -56,22 +56,19 @@ class SubmissionHeader(BaseModel):
     title: str = Field(..., description="A descriptive title for this submission.")
     description: str | None = Field(None, description="An optional description.")
 
+    @field_validator("title")
+    @classmethod
+    def join_title_lines(cls, title: str) -> str:
+        """Keep the title on one line, since commands print it as one."""
+        return " ".join(title.splitlines())
 
-class Submission(SubmissionHeader):
-    """A model for describing a submission."""
+
+class SubmissionSummary(SubmissionHeader):
+    """A submission without its metadata content, which is the largest part of it
+    and is not needed to tell what the submission is and which status it has.
+    """
 
     id: str
-
-    content: SubmissionContent | None = Field(
-        None,
-        description=(
-            "The metadata content of the submission. Keys on the top level correspond to"
-            + " names of anchored metadata classes. Keys and values on the second level"
-            + " correspond to the user-defined aliases and contents of class instance. Please note,"
-            + " that the user-defined alias might only be unique within the scope of"
-            + " the coressponding class and this submission."
-        ),
-    )
 
     accession_map: AccessionMap = Field(
         default_factory=dict,
@@ -121,3 +118,18 @@ class Submission(SubmissionHeader):
             raise ValueError("Accessions are not unique.")
 
         return value
+
+
+class Submission(SubmissionSummary):
+    """A model for describing a submission."""
+
+    content: SubmissionContent | None = Field(
+        None,
+        description=(
+            "The metadata content of the submission. Keys on the top level correspond to"
+            + " names of anchored metadata classes. Keys and values on the second level"
+            + " correspond to the user-defined aliases and contents of class instance. Please note,"
+            + " that the user-defined alias might only be unique within the scope of"
+            + " the coressponding class and this submission."
+        ),
+    )
