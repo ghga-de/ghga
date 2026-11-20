@@ -171,7 +171,8 @@ The command refuses, before writing anything:
 - metadata that fails validation; the reservation then stays as it was, and the corrected metadata can be submitted to it.
 
 If the command fails after the metadata is stored but before the submission is completed, run it again with the same arguments: it keeps every PID and completes the submission.
-Do not run `metadata submit` for a study with a reserved PID, since it mints a second PID for the study.
+A `metadata submit` run that stopped before completing can be finished the same way, with the ID and study PID of its stored submission, where running `metadata submit` again would mint a second study PID.
+Do not run `metadata submit` for a study with a reserved PID, since it mints a second PID for the study; use `submit-pending` with the reserved PID instead.
 
 #### metadata amend
 
