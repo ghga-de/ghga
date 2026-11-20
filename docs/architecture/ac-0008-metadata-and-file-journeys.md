@@ -1,7 +1,7 @@
 ---
 status: current
 date: 2026-07-13
-amended: 2026-11-16
+amended: 2026-11-20
 tags: [backend, data, events]
 related: [AC-0001, AC-0002, AC-0007, AC-0009]
 ---
@@ -98,6 +98,7 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
 - Persisted as **one JSON file per submission** (`{id}.json`) — `submission_store.py:61`.
   Full-document overwrite each save; not event-sourced at the store layer.
 - Registry ops (`submission_registry.py`): `init_submission` → `upsert_submission_content` (validates via metldata's own `MetadataValidator`, regenerates the accession map, publishes a source event) → `complete_submission`.
+  For a reserved study PID, `reserve_study_pid` takes the place of `init_submission`, `check_study_pid` runs before the upsert and `update_submission_header` after it.
   **Only `PENDING`→`COMPLETED` is ever used.**
   `upsert_submission_content` refuses anything but `PENDING`, and nothing in metldata amends a completed submission.
   dskit does that itself (`ghga_datasteward_kit/amendment/`), and there also stores a new flat-accessioned submission as completed, driving `SubmissionStore`, `generate_accession_map` with its own `LegacyAccessionRegistry`, and `SourceEventPublisher` directly rather than through the registry — see Journey A's accession notes below.
