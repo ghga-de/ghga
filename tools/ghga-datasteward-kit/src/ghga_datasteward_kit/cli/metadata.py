@@ -22,6 +22,7 @@ from pathlib import Path
 import typer
 
 from ghga_datasteward_kit import metadata, study_pid_reservation
+from ghga_datasteward_kit import submit_pending as submit_pending_module
 from ghga_datasteward_kit.amendment import amendment, legacy_submission
 from ghga_datasteward_kit.amendment.amendment import AccessionChanges
 from ghga_datasteward_kit.amendment.exceptions import AmendmentAbortedError
@@ -180,28 +181,75 @@ def submit_pending(  # noqa: PLR0913
     The study keeps the PID the submission holds, and the datasets get PIDs derived
     from it. Both the submission ID and the study PID are asked for, so that a
     mixed-up ID is refused. A submission that is not pending is refused too.
+
+    Before writing, it shows the current title of the submission and asks whether
+    the metadata belongs there; it must run in a terminal to be answered.
     """
     logging.basicConfig(level=logging.CRITICAL)
+
+    def confirm(current_title: str) -> bool:
+        return _confirm_submit_pending(
+            current_title,
+            submission_id=submission_id,
+            study_pid=study_pid,
+            submission_title=submission_title,
+            metadata_path=metadata_path,
+        )
+
     try:
-        reserved_title = study_pid_reservation.submit_pending_metadata_from_path(
+        reserved_title = submit_pending_module.submit_pending_metadata_from_path(
             submission_id=submission_id,
             study_pid=study_pid,
             submission_title=submission_title,
             submission_description=submission_description,
             metadata_path=metadata_path,
             config_path=config_path,
+            confirm=confirm,
         )
-    # the refusals for a mixed-up or already submitted ID, which write nothing
+    # the refusals for a mixed-up or already submitted ID, and a declined
+    # confirmation, all of which write nothing
     except (
         SubmissionRegistry.SubmissionDoesNotExistError,
         SubmissionRegistry.StudyPidMismatchError,
         SubmissionRegistry.StatusError,
+        submit_pending_module.SubmitPendingAbortedError,
     ) as error:
         typer.echo(str(error))
         raise typer.Abort() from error
     else:
         # only reached once the submission is completed and its source event published
         typer.echo(f"Submission {submission_id} ('{reserved_title}') submitted.")
+
+
+def _confirm_submit_pending(
+    current_title: str,
+    *,
+    submission_id: str,
+    study_pid: str,
+    submission_title: str,
+    metadata_path: Path,
+) -> bool:
+    """Show the submission the metadata is about to fill and ask whether it belongs
+    there, since the ID and PID alone cannot tell that the metadata is the right one.
+
+    As for `amend`, the question is never answered without a terminal, so that a piped
+    `y` cannot answer for a person who never saw it.
+    """
+    typer.echo(
+        f"Submission {submission_id} with study PID {study_pid} is titled"
+        f" '{current_title}'."
+    )
+
+    if not sys.stdin.isatty():
+        typer.echo(
+            "Submitting needs confirmation, but stdin is not a terminal."
+            " Re-run it interactively."
+        )
+        return False
+
+    return typer.confirm(
+        f"Submit {metadata_path} to it as '{submission_title}'?", default=False
+    )
 
 
 def _report_and_confirm_amendment(

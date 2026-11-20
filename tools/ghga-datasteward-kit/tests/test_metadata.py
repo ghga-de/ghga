@@ -918,6 +918,13 @@ def read_submission(*, submission_id: str) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+@pytest.fixture
+def confirm_submit_pending(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Answer the question of `submit-pending` with yes, from a pretended terminal."""
+    pretend_terminal(monkeypatch)
+    monkeypatch.setattr(typer, "confirm", lambda *args, **kwargs: True)
+
+
 def failing_complete_submission(self: SubmissionRegistry, *, id_: str) -> None:
     """Stand in for a run that stops before the submission is completed."""
     raise OSError("stopped before completing")
@@ -941,6 +948,7 @@ def test_reserve_study_pid(example_workdir: Path, capsys: pytest.CaptureFixture[
     )
 
 
+@pytest.mark.usefixtures("confirm_submit_pending")
 def test_submit_pending_keeps_reserved_pid(
     example_workdir: Path, capsys: pytest.CaptureFixture[str]
 ):
@@ -989,6 +997,45 @@ def test_submit_pending_refuses_mismatched_pid(
     assert not list(Path("event_store").rglob("*.json"))
 
 
+def _decline(*args, **kwargs) -> bool:
+    return False
+
+
+def _fail_if_asked(*args, **kwargs) -> bool:
+    raise AssertionError("confirmation must not be read from a non-terminal stdin")
+
+
+@pytest.mark.parametrize(
+    "terminal, confirm",
+    [(True, _decline), (False, _fail_if_asked)],
+    ids=["declined", "no_terminal"],
+)
+def test_submit_pending_unconfirmed_writes_nothing(
+    terminal: bool,
+    confirm,
+    example_workdir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+):
+    """Test that metadata is not submitted unless the user confirms it in a terminal,
+    and that the submission is then left as it was.
+    """
+    submission_id, study_pid = reserve()
+    submission_before = read_submission(submission_id=submission_id)
+    if terminal:
+        pretend_terminal(monkeypatch)
+    monkeypatch.setattr(typer, "confirm", confirm)
+
+    with pytest.raises(typer.Abort):
+        submit_reserved(submission_id=submission_id, study_pid=study_pid)
+
+    output = capsys.readouterr().out
+    assert f"is titled '{INTERNAL_NAME}'." in output
+    assert output.splitlines()[-1] == "Nothing was submitted."
+    assert read_submission(submission_id=submission_id) == submission_before
+
+
+@pytest.mark.usefixtures("confirm_submit_pending")
 def test_submit_pending_invalid_metadata_keeps_reservation(example_workdir: Path):
     """Test that metadata failing validation leaves the reservation as it was, the
     internal name included.
@@ -1009,6 +1056,7 @@ def test_submit_pending_invalid_metadata_keeps_reservation(example_workdir: Path
     assert read_submission(submission_id=submission_id) == submission_before
 
 
+@pytest.mark.usefixtures("confirm_submit_pending")
 def test_submit_pending_rerun_after_stop_before_completion(
     example_workdir: Path, monkeypatch: pytest.MonkeyPatch
 ):

@@ -147,7 +147,7 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
   It then runs `upsert_submission_content` and `complete_submission` as `submit` does: `upsert` refuses a submission that is not pending, and `get_study_pid` keeps the PID whatever its alias, so the map files it under the real study alias and the dataset PIDs derive from it.
   The title and description replace the internal name through `update_submission_header`, only once the metadata has passed validation.
   A pending submission that already has content is accepted too, so a run that stopped before completing can be repeated, keeping its PIDs.
-  The commands live in dskit (`ghga_datasteward_kit/study_pid_reservation.py`) and only chain `SubmissionRegistry` steps; the PID keeps the year of its reservation.
+  The commands live in dskit (`ghga_datasteward_kit/study_pid_reservation.py` and `submit_pending.py`) and only chain `SubmissionRegistry` steps; the PID keeps the year of its reservation.
   There is still no accession stability *across* submissions. → [changed by the feature](../epics/epic-0093-giraffe.md).
 
 ### The LinkML model (current testbed model)

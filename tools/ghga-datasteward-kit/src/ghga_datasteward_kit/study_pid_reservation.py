@@ -13,21 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Reserve a study PID before the metadata of a study arrives, and submit the
-metadata under it later.
+"""Reserve a study PID before the metadata of a study arrives.
 
 The reservation is a pending submission without content whose accession map holds
-the new study PID. Submitting the metadata fills that submission through the same
-registry steps as `metadata submit`, which keep a study PID already in the map.
+the new study PID. `submit_pending` fills it once the metadata arrives.
 """
 
 from pathlib import Path
 
-import yaml
-
 from ghga_datasteward_kit.metadata import MetadataConfig, build_submission_registry
 from ghga_datasteward_kit.utils import load_config_yaml
-from metldata.custom_types import Json
 from metldata.submission_registry.models import SubmissionHeader
 
 
@@ -51,57 +46,6 @@ def reserve_study_pid(
     )
 
 
-def submit_pending_metadata(  # noqa: PLR0913
-    *,
-    submission_id: str,
-    study_pid: str,
-    submission_title: str,
-    submission_description: str,
-    metadata: Json,
-    config: MetadataConfig,
-) -> str:
-    """Fill the given pending submission with the metadata and complete it, keeping
-    the study PID it holds. Returns the title the submission had before, which for a
-    reservation is the internal name of the study.
-
-    A submission that already has content is accepted too, so that a run which
-    stopped before completing the submission can be repeated.
-
-    Raises:
-        SubmissionRegistry.SubmissionDoesNotExistError:
-            when no submission with the given ID exists.
-        SubmissionRegistry.StudyPidMismatchError:
-            when the submission does not hold the given study PID.
-        SubmissionRegistry.StatusError:
-            when the submission is not pending.
-        SubmissionRegistry.ValidationError:
-            when the metadata failed validation against the metadata model.
-        MissingStudyError:
-            when the metadata holds no study.
-    """
-    submission_registry = build_submission_registry(config=config)
-
-    submission_registry.check_study_pid(
-        submission_id=submission_id, study_pid=study_pid
-    )
-    reserved_title = submission_registry.get_submission(id_=submission_id).title
-
-    # refuses a submission that is not pending before validating or minting anything
-    submission_registry.upsert_submission_content(
-        submission_id=submission_id, content=metadata
-    )
-    # after the upsert, so that metadata failing validation leaves the internal name
-    submission_registry.update_submission_header(
-        submission_id=submission_id,
-        header=SubmissionHeader(
-            title=submission_title, description=submission_description
-        ),
-    )
-    submission_registry.complete_submission(id_=submission_id)
-
-    return reserved_title
-
-
 def reserve_study_pid_from_path(
     *,
     submission_title: str,
@@ -114,32 +58,5 @@ def reserve_study_pid_from_path(
     return reserve_study_pid(
         submission_title=submission_title,
         submission_description=submission_description,
-        config=config,
-    )
-
-
-def submit_pending_metadata_from_path(  # noqa: PLR0913
-    *,
-    submission_id: str,
-    study_pid: str,
-    submission_title: str,
-    submission_description: str,
-    metadata_path: Path,
-    config_path: Path,
-) -> str:
-    """Read metadata and config from the specified paths, then submit the metadata
-    to the given pending submission.
-    """
-    with open(metadata_path, encoding="utf8") as metadata_file:
-        metadata = yaml.safe_load(metadata_file)
-
-    config = load_config_yaml(path=config_path, config_cls=MetadataConfig)
-
-    return submit_pending_metadata(
-        submission_id=submission_id,
-        study_pid=study_pid,
-        submission_title=submission_title,
-        submission_description=submission_description,
-        metadata=metadata,
         config=config,
     )
