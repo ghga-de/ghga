@@ -57,7 +57,10 @@ from metldata.model_utils.anchors import (
 from metldata.model_utils.essentials import MetadataModel
 from metldata.model_utils.metadata_validator import MetadataValidator
 from metldata.submission_registry.event_publisher import SourceEventPublisher
-from metldata.submission_registry.identifiers import generate_accession_map
+from metldata.submission_registry.identifiers import (
+    generate_accession_map,
+    lookup_study_pid,
+)
 from metldata.submission_registry.models import Submission, SubmissionStatus
 from metldata.submission_registry.submission_store import SubmissionStore
 
@@ -345,8 +348,8 @@ def _check_legacy_study_accession(
             when the study accession is not a flat one.
     """
     study_anchor = anchor_points_by_target[study_class_name].root_slot
-    study_accession = next(
-        iter(submission.accession_map.get(study_anchor, {}).values()), None
+    study_accession = lookup_study_pid(
+        anchor=study_anchor, accession_map=submission.accession_map
     )
     if study_accession is None:
         raise StudyAccessionMissingError(submission_id=submission.id)
