@@ -26,6 +26,7 @@ from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from metldata.artifacts_rest.api_factory import rest_api_factory
 from metldata.artifacts_rest.artifact_info import ArtifactInfo, get_artifact_info_dict
+from metldata.artifacts_rest.models import MAX_FILE_GOVERNANCE_QUERY_ACCESSIONS
 from metldata.load.aggregator import MongoDbAggregator
 from metldata.load.file_governance import get_file_governance_dao
 from metldata.load.models import FileGovernanceRecord
@@ -250,3 +251,28 @@ async def test_query_file_governance_empty_batch(mongodb: MongoDbFixture):
 
     assert response.status_code == 200
     assert response.json() == {}
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {},
+        {
+            "file_accessions": [
+                f"GHGAF{index:014d}"
+                for index in range(MAX_FILE_GOVERNANCE_QUERY_ACCESSIONS + 1)
+            ]
+        },
+    ],
+    ids=["missing_file_accessions", "too_many_file_accessions"],
+)
+async def test_query_file_governance_invalid_body(
+    body: dict[str, list[str]], mongodb: MongoDbFixture
+):
+    """Test that a body without file accessions or with more than the maximum
+    number of them gives a 422.
+    """
+    async with await get_example_app_client(dao_factory=mongodb.dao_factory) as client:
+        response = await client.post("/file-governance/query", json=body)
+
+    assert response.status_code == 422

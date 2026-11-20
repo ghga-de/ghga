@@ -125,9 +125,20 @@ class GlobalStats(BaseModel):
     )
 
 
+# An RS file listing page holds up to 1000 files, each with one or more accessions.
+# The cap leaves room for 10 accessions per file and keeps the query far below
+# MongoDB's 16 MiB command limit.
+MAX_FILE_GOVERNANCE_QUERY_ACCESSIONS = 10_000
+
+
 class FileGovernanceQuery(BaseModel):
     """A batch of file accessions to query the governance of."""
 
     file_accessions: list[str] = Field(
-        ..., description="Accessions of the files to query the governance of."
+        ...,
+        max_length=MAX_FILE_GOVERNANCE_QUERY_ACCESSIONS,
+        description=(
+            "Accessions of the files to query the governance of, at most"
+            + f" {MAX_FILE_GOVERNANCE_QUERY_ACCESSIONS} per query."
+        ),
     )
