@@ -83,6 +83,21 @@ def test_happy(config_sub_fixture: SubmissionConfig):  # noqa: F811
     ]
 
 
+def test_get_summary_by_id(config_sub_fixture: SubmissionConfig):  # noqa: F811
+    """Test that a stored submission is read without its content, and that a
+    non-existing one is refused.
+    """
+    submission_store = SubmissionStore(config=config_sub_fixture)
+    submission_store.insert_new(submission=EXAMPLE_SUBMISSION)
+
+    summary = submission_store.get_summary_by_id(submission_id=EXAMPLE_SUBMISSION.id)
+
+    assert summary.model_dump() == EXAMPLE_SUBMISSION.model_dump(exclude={"content"})
+    assert summary.current_status == SubmissionStatus.COMPLETED
+    with pytest.raises(SubmissionStore.SubmissionDoesNotExistError):
+        submission_store.get_summary_by_id(submission_id="non-existing-id")
+
+
 def test_query_non_existing(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):

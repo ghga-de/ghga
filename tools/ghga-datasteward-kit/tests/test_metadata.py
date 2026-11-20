@@ -936,7 +936,7 @@ def test_list_pending(example_workdir: Path, capsys: pytest.CaptureFixture[str])
     list_pending(config_path=METADATA_CONFIG_PATH)
     assert capsys.readouterr().out.splitlines() == ["No pending submissions."]
 
-    reservations = sorted([reserve(), reserve()])
+    reservations = [reserve(), reserve()]
 
     list_pending(config_path=METADATA_CONFIG_PATH)
     assert capsys.readouterr().out.splitlines() == [

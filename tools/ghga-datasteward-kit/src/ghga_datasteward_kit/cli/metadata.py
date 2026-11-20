@@ -235,8 +235,9 @@ def list_pending(
     """List the pending submissions, one per line: study PID, submission ID, title.
 
     A pending submission is a reserved study PID, or a 'submit' or 'submit-pending'
-    run that stopped before completing; 'submit-pending' fills or finishes it. One
-    without a study PID yet shows '-' in its place.
+    run that stopped before completing; 'submit-pending' fills or finishes one that
+    holds a study PID. One shown with '-' stopped before its metadata was stored
+    and cannot be finished.
     """
     logging.basicConfig(level=logging.CRITICAL)
     pending_submissions = submit_pending_module.list_pending_submissions_from_path(
@@ -246,9 +247,9 @@ def list_pending(
         typer.echo("No pending submissions.")
         return
 
-    pids = [study_pid or "-" for study_pid, _, _ in pending_submissions]
-    width = max(len(pid) for pid in pids)
-    for pid, (_, submission_id, title) in zip(pids, pending_submissions, strict=True):
+    rows = [(pid or "-", sid, title) for pid, sid, title in pending_submissions]
+    width = max(len(pid) for pid, _, _ in rows)
+    for pid, submission_id, title in rows:
         typer.echo(f"{pid:<{width}}  {submission_id}  {title}")
 
 
