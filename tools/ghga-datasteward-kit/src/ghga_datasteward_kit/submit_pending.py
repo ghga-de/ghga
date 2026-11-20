@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Submit metadata to a pending submission and complete it.
+"""List the pending submissions, and submit metadata to one of them and complete it.
 
 The pending submission is a reserved study PID, or a `metadata submit` run that
 stopped before completing. Either way, the registry steps keep the study PID the
@@ -98,6 +98,21 @@ def submit_pending_metadata(  # noqa: PLR0913
     submission_registry.complete_submission(id_=submission_id)
 
     return current_title
+
+
+def list_pending_submissions_from_path(
+    *, config_path: Path
+) -> list[tuple[str | None, str, str]]:
+    """Read the config from the specified path, then list the pending submissions,
+    each as its study PID, or None if it holds none yet, its ID and its title.
+    """
+    config = load_config_yaml(path=config_path, config_cls=MetadataConfig)
+    submission_registry = build_submission_registry(config=config)
+
+    return [
+        (study_pid, submission.id, submission.title)
+        for submission, study_pid in submission_registry.get_pending_submissions()
+    ]
 
 
 def submit_pending_metadata_from_path(  # noqa: PLR0913

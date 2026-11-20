@@ -170,6 +170,23 @@ class SubmissionRegistry:
         """
         return self._submission_store.get_by_id(id_)
 
+    def get_pending_submissions(self) -> list[tuple[models.Submission, str | None]]:
+        """Get every pending submission, such as a reserved study PID or a run that
+        stopped before completing, each with the study PID it holds, or None if it
+        holds none yet.
+        """
+        pending_submissions = []
+        for submission_id in self._submission_store.get_all_submission_ids():
+            submission = self._submission_store.get_by_id(submission_id)
+            if submission.current_status != models.SubmissionStatus.PENDING:
+                continue
+            study_pid = lookup_study_pid(
+                anchor=self._study_anchor, accession_map=submission.accession_map
+            )
+            pending_submissions.append((submission, study_pid))
+
+        return pending_submissions
+
     def check_study_pid(self, *, submission_id: str, study_pid: str) -> None:
         """Check that the existing submission with the specified id holds the provided
         study PID, so that content meant for one study is not added to another.
