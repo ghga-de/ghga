@@ -1,7 +1,7 @@
 ---
 status: current
 date: 2026-07-13
-amended: 2026-11-16
+amended: 2026-11-20
 tags: [backend, data, events]
 related: [AC-0001, AC-0002, AC-0007, AC-0009]
 ---
@@ -98,6 +98,7 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
 - Persisted as **one JSON file per submission** (`{id}.json`) — `submission_store.py:61`.
   Full-document overwrite each save; not event-sourced at the store layer.
 - Registry ops (`submission_registry.py`): `init_submission` → `upsert_submission_content` (validates via metldata's own `MetadataValidator`, regenerates the accession map, publishes a source event) → `complete_submission`.
+  For a reserved study PID, `reserve_study_pid` takes the place of `init_submission`, `check_study_pid` runs before the upsert and `update_submission_header` after it.
   **Only `PENDING`→`COMPLETED` is ever used.**
   `upsert_submission_content` refuses anything but `PENDING`, and nothing in metldata amends a completed submission.
   dskit does that itself (`ghga_datasteward_kit/amendment/`), and there also stores a new flat-accessioned submission as completed, driving `SubmissionStore`, `generate_accession_map` with its own `LegacyAccessionRegistry`, and `SourceEventPublisher` directly rather than through the registry — see Journey A's accession notes below.
@@ -125,7 +126,7 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
   Every other accession follows from the study PID and the alias, so it stays the same as long as both do.
   `submit` always calls `init_submission` (fresh UUID, empty map), so a new `submit` run of the same aliases mints *fresh* accessions.
   **`dskit metadata amend --submission-id <id>` extends a submission accessioned in the flat scheme**, whose study accession is `GHGA`, one letter and 14 digits.
-  A submission with a study PID is refused with `AccessionNotLegacyError`, so study PIDs are only ever minted by `submit`.
+  A submission with a study PID is refused with `AccessionNotLegacyError`, so study PIDs are only ever minted by `submit` and `reserve-study-pid`.
   It loads the completed submission, validates the new metadata against the model, and checks that no alias is repeated within its class; a flat accession holds no alias, so uniqueness across classes is not needed.
   It hands the stored map to metldata's `generate_accession_map` with dskit's `LegacyAccessionRegistry` (in `amendment/legacy_accessioning.py`), whose `stores_accession` keeps every class in the map and which mints `prefix + 14 digits` for each new alias and registers it under `legacy`, so a flat accession is never given out twice.
   It writes the result back under the same ID and republishes the source event, so existing accessions survive and only new aliases are minted.
@@ -140,6 +141,14 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
   It stores the submission as completed under a new ID, registers the study accession under `legacy` unless it is there already, and publishes the source event.
   The result is amended like any other flat-accessioned submission.
   All of it lives in dskit (`ghga_datasteward_kit/amendment/`); metldata provides the helpers in `submission_registry/identifiers.py` and the `AccessionRegistry` that dskit subclasses.
+  **`dskit metadata reserve-study-pid` and `submit-pending` give a study its PID before the metadata arrives**, so the PID can be handed to the submitter.
+  `reserve-study-pid` calls the registry's `reserve_study_pid`, a sibling of `init_submission`: it mints a study PID with `generate_study_accession`, which registers it under `years`, then stores a new pending submission without content whose map holds the PID under the PID itself as alias, since the study alias is not known yet; nothing is published.
+  `submit-pending --submission-id <id> --study-pid <pid>` calls the registry's `check_study_pid`, which refuses the submission unless it holds the given PID, so a mixed-up ID is caught.
+  It then shows the current title of the submission and asks the data steward to confirm that the metadata belongs there, since no check can tell.
+  It then runs `upsert_submission_content` and `complete_submission` as `submit` does: `upsert` refuses a submission that is not pending, and `get_study_pid` keeps the PID whatever its alias, so the map files it under the real study alias and the dataset PIDs derive from it.
+  The title and description replace the internal name through `update_submission_header`, only once the metadata has passed validation.
+  A pending submission that already has content is accepted too, so a run that stopped before completing can be repeated, keeping its PIDs; this also finishes a `metadata submit` run that stopped before completing, which a second `submit` would accession anew.
+  The commands live in dskit (`ghga_datasteward_kit/study_pid_reservation.py` and `submit_pending.py`) and only chain `SubmissionRegistry` steps; the PID keeps the year of its reservation.
   There is still no accession stability *across* submissions. → [changed by the feature](../epics/epic-0093-giraffe.md).
 
 ### The LinkML model (current testbed model)

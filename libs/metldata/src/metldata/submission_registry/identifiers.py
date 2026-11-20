@@ -125,6 +125,15 @@ def get_aliases_for_resources(
         )
 
 
+def lookup_study_pid(*, anchor: str, accession_map: AccessionMap) -> str | None:
+    """Lookup the study PID held in the accession map under the provided study
+    anchor. If none is held, None is returned.
+    """
+    # only the first PID, since a submission holds exactly one study; not looked up
+    # by alias, since a new alias does not make it a new study
+    return next(iter(accession_map.get(anchor, {}).values()), None)
+
+
 def get_study_pid(
     *,
     content: SubmissionContent,
@@ -147,11 +156,8 @@ def get_study_pid(
         if not params.accession_registry.is_study_class(class_name) or not resources:
             continue
 
-        # only the first PID, since a submission holds exactly one study; not looked
-        # up by alias, since a new alias does not make it a new study
-        existing_pids = params.accession_map.get(anchor, {}).values()
         return (
-            next(iter(existing_pids), None)
+            lookup_study_pid(anchor=anchor, accession_map=params.accession_map)
             or params.accession_registry.generate_study_accession()
         )
 
