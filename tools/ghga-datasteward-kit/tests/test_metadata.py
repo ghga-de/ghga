@@ -967,19 +967,24 @@ def test_submit_pending_keeps_reserved_pid(
     transform(config_path=METADATA_CONFIG_PATH)
 
 
-def test_submit_pending_refuses_mismatched_pid(example_workdir: Path):
-    """Test that the ID of one reservation with the PID of another is refused before
-    anything is written.
+def test_submit_pending_refuses_mismatched_pid(
+    example_workdir: Path, capsys: pytest.CaptureFixture[str]
+):
+    """Test that the ID of one reservation with the PID of another is refused with a
+    plain message before anything is written.
     """
     submission_id, _ = reserve()
     _, other_study_pid = reserve()
     submission_before = read_submission(submission_id=submission_id)
 
-    with pytest.raises(
-        SubmissionRegistry.StudyPidMismatchError, match=re.escape(other_study_pid)
-    ):
+    with pytest.raises(typer.Abort):
         submit_reserved(submission_id=submission_id, study_pid=other_study_pid)
 
+    assert capsys.readouterr().out.splitlines()[-1] == str(
+        SubmissionRegistry.StudyPidMismatchError(
+            submission_id=submission_id, study_pid=other_study_pid
+        )
+    )
     assert read_submission(submission_id=submission_id) == submission_before
     assert not list(Path("event_store").rglob("*.json"))
 

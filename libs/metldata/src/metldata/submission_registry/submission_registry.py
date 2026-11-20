@@ -50,7 +50,7 @@ class SubmissionRegistry:
             self, *, submission_id: str, current_status: str, expected_status: str
         ):
             message = (
-                f"The submission with id '{submission_id} has the status"
+                f"The submission with id '{submission_id}' has the status"
                 + f" '{current_status}' but expected '{expected_status}'."
             )
             super().__init__(message)
@@ -60,7 +60,7 @@ class SubmissionRegistry:
 
         def __init__(self, *, submission_id: str):
             message = (
-                f"The content for the submission with id '{submission_id} has not yet"
+                f"The content for the submission with id '{submission_id}' has not yet"
                 + " been specified."
             )
             super().__init__(message)
@@ -112,8 +112,8 @@ class SubmissionRegistry:
         if submission.current_status != expected_status:
             raise self.StatusError(
                 submission_id=id_,
-                current_status=str(submission.current_status),
-                expected_status=str(expected_status),
+                current_status=submission.current_status.value,
+                expected_status=expected_status.value,
             )
 
         return submission

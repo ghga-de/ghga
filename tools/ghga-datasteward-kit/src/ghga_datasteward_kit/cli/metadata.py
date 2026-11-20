@@ -26,6 +26,7 @@ from ghga_datasteward_kit.amendment import amendment, legacy_submission
 from ghga_datasteward_kit.amendment.amendment import AccessionChanges
 from ghga_datasteward_kit.amendment.exceptions import AmendmentAbortedError
 from ghga_transpiler.cli import transpile
+from metldata.submission_registry.submission_registry import SubmissionRegistry
 
 cli = typer.Typer(no_args_is_help=True)
 
@@ -181,16 +182,26 @@ def submit_pending(  # noqa: PLR0913
     mixed-up ID is refused. A submission that is not pending is refused too.
     """
     logging.basicConfig(level=logging.CRITICAL)
-    reserved_title = study_pid_reservation.submit_pending_metadata_from_path(
-        submission_id=submission_id,
-        study_pid=study_pid,
-        submission_title=submission_title,
-        submission_description=submission_description,
-        metadata_path=metadata_path,
-        config_path=config_path,
-    )
-    # only reached once the submission is completed and its source event published
-    typer.echo(f"Submission {submission_id} ('{reserved_title}') submitted.")
+    try:
+        reserved_title = study_pid_reservation.submit_pending_metadata_from_path(
+            submission_id=submission_id,
+            study_pid=study_pid,
+            submission_title=submission_title,
+            submission_description=submission_description,
+            metadata_path=metadata_path,
+            config_path=config_path,
+        )
+    # the refusals for a mixed-up or already submitted ID, which write nothing
+    except (
+        SubmissionRegistry.SubmissionDoesNotExistError,
+        SubmissionRegistry.StudyPidMismatchError,
+        SubmissionRegistry.StatusError,
+    ) as error:
+        typer.echo(str(error))
+        raise typer.Abort() from error
+    else:
+        # only reached once the submission is completed and its source event published
+        typer.echo(f"Submission {submission_id} ('{reserved_title}') submitted.")
 
 
 def _report_and_confirm_amendment(
