@@ -31,6 +31,10 @@ from metldata.submission_registry.identifiers import (
 )
 from metldata.submission_registry.submission_store import SubmissionStore
 
+# a Submission is a SubmissionHeader too, so a header argument may carry the other
+# fields of a submission, which must not be copied with the header
+HEADER_FIELDS = set(models.SubmissionHeader.model_fields)
+
 
 class SubmissionRegistryConfig(MetadataModelConfig):
     """Config parameters and their defaults."""
@@ -124,7 +128,9 @@ class SubmissionRegistry:
         submission content is still empty.
         """
         id_ = generate_submission_id()
-        submission_creation = models.Submission(id=id_, **header.model_dump())
+        submission_creation = models.Submission(
+            id=id_, **header.model_dump(include=HEADER_FIELDS)
+        )
         self._submission_store.insert_new(submission=submission_creation)
 
         return id_
@@ -148,7 +154,7 @@ class SubmissionRegistry:
         study_pid = self._accession_registry.generate_study_accession()
         submission_creation = models.Submission(
             id=generate_submission_id(),
-            **header.model_dump(),
+            **header.model_dump(include=HEADER_FIELDS),
             accession_map={self._study_anchor: {study_pid: study_pid}},
         )
         self._submission_store.insert_new(submission=submission_creation)
@@ -239,7 +245,9 @@ class SubmissionRegistry:
             expected_status=models.SubmissionStatus.PENDING,
         )
 
-        updated_submission = submission.model_copy(update=header.model_dump())
+        updated_submission = submission.model_copy(
+            update=header.model_dump(include=HEADER_FIELDS)
+        )
         self._submission_store.update_existing(submission=updated_submission)
 
     def complete_submission(self, *, id_: str) -> None:
