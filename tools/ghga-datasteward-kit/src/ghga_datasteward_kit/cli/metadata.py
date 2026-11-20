@@ -52,7 +52,7 @@ def submit(
         help="Path to a config YAML.",
         exists=True,
         file_okay=True,
-        dir_okay=True,
+        dir_okay=False,
         readable=True,
     ),
 ):
@@ -89,7 +89,7 @@ def submit_legacy(
         help="Path to a config YAML.",
         exists=True,
         file_okay=True,
-        dir_okay=True,
+        dir_okay=False,
         readable=True,
     ),
 ):
@@ -126,7 +126,7 @@ def reserve_study_pid(
         help="Path to a config YAML.",
         exists=True,
         file_okay=True,
-        dir_okay=True,
+        dir_okay=False,
         readable=True,
     ),
 ):
@@ -170,7 +170,7 @@ def submit_pending(  # noqa: PLR0913
         help="Path to a config YAML.",
         exists=True,
         file_okay=True,
-        dir_okay=True,
+        dir_okay=False,
         readable=True,
     ),
 ):
@@ -253,7 +253,7 @@ def amend(
         help="Path to a config YAML.",
         exists=True,
         file_okay=True,
-        dir_okay=True,
+        dir_okay=False,
         readable=True,
     ),
 ):
