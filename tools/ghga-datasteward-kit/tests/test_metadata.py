@@ -38,7 +38,7 @@ from ghga_datasteward_kit.amendment.exceptions import (
     StudyAccessionMissingError,
     StudyAccessionNotFlatError,
 )
-from ghga_datasteward_kit.cli.metadata import amend, submit, transform
+from ghga_datasteward_kit.cli.metadata import amend, list_pending, submit, transform
 from ghga_datasteward_kit.cli.metadata import (
     reserve_study_pid as reserve_study_pid_command,
 )
@@ -927,6 +927,22 @@ def confirm_submit_pending(monkeypatch: pytest.MonkeyPatch) -> None:
 def failing_complete_submission(self: SubmissionRegistry, *, id_: str) -> None:
     """Stand in for a run that stops before the submission is completed."""
     raise OSError("stopped before completing")
+
+
+def test_list_pending(example_workdir: Path, capsys: pytest.CaptureFixture[str]):
+    """Test that `list-pending` says so when nothing is pending, and otherwise prints
+    the study PID, the submission ID and the title of each pending submission.
+    """
+    list_pending(config_path=METADATA_CONFIG_PATH)
+    assert capsys.readouterr().out.splitlines() == ["No pending submissions."]
+
+    reservations = [reserve(), reserve()]
+
+    list_pending(config_path=METADATA_CONFIG_PATH)
+    assert capsys.readouterr().out.splitlines() == [
+        f"{study_pid}  {submission_id}  {INTERNAL_NAME}"
+        for submission_id, study_pid in reservations
+    ]
 
 
 def test_reserve_study_pid(example_workdir: Path, capsys: pytest.CaptureFixture[str]):

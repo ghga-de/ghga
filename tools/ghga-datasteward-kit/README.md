@@ -173,6 +173,19 @@ The command refuses, before writing anything:
 If the command fails after the metadata is stored but before the submission is completed, run it again with the same arguments: it keeps every PID and completes the submission.
 A `metadata submit` run that stopped before completing can be finished the same way, with the ID and study PID of its stored submission, where running `metadata submit` again would mint a second study PID.
 Do not run `metadata submit` for a study with a reserved PID, since it mints a second PID for the study; use `submit-pending` with the reserved PID instead.
+`metadata list-pending` shows the ID, study PID and title of every pending submission.
+
+#### metadata list-pending
+
+Lists the pending submissions, so that a reservation or a stopped run can be found again:
+
+```text
+ghga-datasteward-kit metadata list-pending --config-path <metadata config YAML>
+```
+
+The command prints one line per pending submission, with its study PID, its submission ID and its title, which for a reservation is the internal name of the study.
+A submission without a study PID yet, from a `metadata submit` run that stopped before storing the metadata, shows `-` in its place.
+If nothing is pending, it prints `No pending submissions.`
 
 #### metadata amend
 

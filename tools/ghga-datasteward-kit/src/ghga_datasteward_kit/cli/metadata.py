@@ -221,6 +221,38 @@ def submit_pending(  # noqa: PLR0913
         typer.echo(f"Submission {submission_id} ('{reserved_title}') submitted.")
 
 
+@cli.command(no_args_is_help=True)
+def list_pending(
+    config_path: Path = typer.Option(
+        ...,
+        help="Path to a config YAML.",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+    ),
+):
+    """List the pending submissions, one per line: study PID, submission ID, title.
+
+    A pending submission is a reserved study PID, or a 'submit' or 'submit-pending'
+    run that stopped before completing; 'submit-pending' fills or finishes one that
+    holds a study PID. One shown with '-' stopped before its metadata was stored
+    and cannot be finished.
+    """
+    logging.basicConfig(level=logging.CRITICAL)
+    pending_submissions = submit_pending_module.list_pending_submissions_from_path(
+        config_path=config_path
+    )
+    if not pending_submissions:
+        typer.echo("No pending submissions.")
+        return
+
+    rows = [(pid or "-", sid, title) for pid, sid, title in pending_submissions]
+    width = max(len(pid) for pid, _, _ in rows)
+    for pid, submission_id, title in rows:
+        typer.echo(f"{pid:<{width}}  {submission_id}  {title}")
+
+
 def _confirm_submit_pending(
     current_title: str,
     *,

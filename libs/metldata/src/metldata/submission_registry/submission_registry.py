@@ -88,13 +88,13 @@ class SubmissionRegistry:
         accession_registry: AccessionRegistry,
     ):
         """Initialize with dependencies and config parameters."""
+        # the property loads and checks the model file on every read
+        model = config.metadata_model
         self._submission_store = submission_store
-        self._metadata_validator = MetadataValidator(model=config.metadata_model)
+        self._metadata_validator = MetadataValidator(model=model)
         self._event_publisher = event_publisher
         self._accession_registry = accession_registry
-        self._anchor_points_by_target = get_anchors_points_by_target(
-            model=config.metadata_model
-        )
+        self._anchor_points_by_target = get_anchors_points_by_target(model=model)
         self._study_anchor = self._anchor_points_by_target[
             config.study_class_name
         ].root_slot
@@ -169,6 +169,33 @@ class SubmissionRegistry:
                 when no submission with the specified ID exists.
         """
         return self._submission_store.get_by_id(id_)
+
+    def get_pending_submissions(
+        self,
+    ) -> list[tuple[models.SubmissionSummary, str | None]]:
+        """Get every pending submission, such as a reserved study PID or a run that
+        stopped before completing, each with the study PID it holds, or None if it
+        holds none yet. The oldest comes first.
+
+        The submissions come without their metadata content, which is not loaded,
+        so that a store full of completed submissions is listed quickly.
+        """
+        pending_submissions = []
+        for submission_id in self._submission_store.get_all_submission_ids():
+            submission = self._submission_store.get_summary_by_id(
+                submission_id=submission_id
+            )
+            if submission.current_status != models.SubmissionStatus.PENDING:
+                continue
+            study_pid = lookup_study_pid(
+                anchor=self._study_anchor, accession_map=submission.accession_map
+            )
+            pending_submissions.append((submission, study_pid))
+
+        # oldest first, since submission IDs are random
+        return sorted(
+            pending_submissions, key=lambda item: item[0].status_history[0].timestamp
+        )
 
     def check_study_pid(self, *, submission_id: str, study_pid: str) -> None:
         """Check that the existing submission with the specified id holds the provided
