@@ -36,7 +36,7 @@ describe('DatasetSummaryPanel', () => {
 
   beforeEach(async () => {
     result = await render(DatasetSummaryPanel, {
-      inputs: { hit: searchResults.hits.at(0)!, summary: datasetSummary },
+      inputs: { hit: searchResults.items.at(0)!, summary: datasetSummary },
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: AuthService, useClass: MockAuthService },
@@ -62,7 +62,7 @@ describe('DatasetSummaryPanel', () => {
 
   it('should not show ega details and button for empty string ega accession', async () => {
     await result.rerender({
-      inputs: { hit: searchResults.hits.at(3)! },
+      inputs: { hit: searchResults.items.at(3)! },
       partialUpdate: true,
     });
 
@@ -72,7 +72,7 @@ describe('DatasetSummaryPanel', () => {
 
   it('should not show ega details and button for undefined ega accession', async () => {
     await result.rerender({
-      inputs: { hit: searchResults.hits.at(4)! },
+      inputs: { hit: searchResults.items.at(4)! },
       partialUpdate: true,
     });
 

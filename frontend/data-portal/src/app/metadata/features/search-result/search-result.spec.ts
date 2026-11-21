@@ -51,7 +51,7 @@ describe(SearchResult, () => {
 
   beforeEach(async () => {
     result = await render(SearchResult, {
-      inputs: { hit: searchResults.hits.at(0)! },
+      inputs: { hit: searchResults.items.at(0)! },
       providers: [
         { provide: AuthService, useClass: MockAuthService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },

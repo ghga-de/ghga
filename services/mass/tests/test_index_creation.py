@@ -91,5 +91,5 @@ async def test_index_creation(joint_fixture: JointFixture, create_index_manually
         class_name=CLASS_NAME, query=QUERY_STRING
     )
 
-    assert results_with_coll.count == 1
-    assert results_with_coll.hits[0] == RESOURCE
+    assert results_with_coll.total_count == 1
+    assert results_with_coll.items[0] == RESOURCE
