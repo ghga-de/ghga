@@ -1515,7 +1515,8 @@ paths:
         '204':
           description: Successful Response
         '401':
-          description: The access token is missing or invalid.
+          description: The access token is missing or invalid, or the user account
+            has been deleted.
         '403':
           description: The user account is disabled.
         '422':

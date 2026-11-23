@@ -646,8 +646,11 @@ export class AuthService {
   /**
    * Verify the given TOTP code
    *
-   * When the outcome is "locked" or "disabled", the backend has already ended
-   * the session, and the user is forgotten locally as well.
+   * When the outcome is "locked", "ended" or "disabled", the backend has already
+   * ended the session, and the user is forgotten locally as well.
+   *
+   * On success, the backend returns the session with its roles fetched again,
+   * since they can change, e.g. when a new TOTP token has reset the IVAs.
    * @param code - the 6-digit TOTP code to verify
    * @returns a promise that resolves to the outcome of the verification
    */
@@ -661,25 +664,38 @@ export class AuthService {
       return 'invalid';
     }
     const verification = await firstValueFrom(
-      this.#http.post<null>(this.#verifyTotpUrl, null, { headers }).pipe(
-        map((): TotpVerification => {
-          console.info('TOTP code verified');
-          this.#setNewState('Authenticated');
-          return 'verified';
-        }),
-        catchError((error) => {
-          console.error('Failed to verify TOTP code');
-          let verification: TotpVerification = 'invalid';
-          if (isAccountDisabled(error)) {
-            verification = 'disabled';
-          } else if (hasErrorDetail(error, 401, 'Too many failed attempts')) {
-            verification = 'locked';
-          }
-          return of(verification);
-        }),
-      ),
+      this.#http
+        .post<null>(this.#verifyTotpUrl, null, { headers, observe: 'response' })
+        .pipe(
+          map((response: HttpResponse<null>): TotpVerification => {
+            console.info('TOTP code verified');
+            const session = response.headers.get('X-Session');
+            const user = session ? this.#parseUserFromSession(session) : null;
+            if (user) {
+              this.#userSignal.set(user);
+            } else {
+              this.#setNewState('Authenticated');
+            }
+            return 'verified';
+          }),
+          catchError((error) => {
+            console.error('Failed to verify TOTP code');
+            let verification: TotpVerification = 'invalid';
+            if (isAccountDisabled(error)) {
+              verification = 'disabled';
+            } else if (hasErrorDetail(error, 401, 'Too many failed attempts')) {
+              verification = 'locked';
+            } else if (
+              hasErrorDetail(error, 401, 'User account has been deleted') ||
+              hasErrorDetail(error, 401, 'Not logged in')
+            ) {
+              verification = 'ended';
+            }
+            return of(verification);
+          }),
+        ),
     );
-    if (verification === 'locked' || verification === 'disabled') {
+    if (verification !== 'verified' && verification !== 'invalid') {
       await this.#clearUser();
     }
     return verification;

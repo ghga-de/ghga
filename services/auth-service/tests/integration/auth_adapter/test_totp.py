@@ -28,14 +28,17 @@ from fastapi import status
 from auth_service.auth_adapter.core.session_store import Session, SessionState
 from auth_service.auth_adapter.deps import get_session_store
 from auth_service.auth_adapter.ports.session_store import SessionStorePort
+from auth_service.auth_adapter.rest.headers import get_bearer_token
+from auth_service.claims_repository.deps import get_claim_dao
 from auth_service.user_registry.models.ivas import IvaState
 from auth_service.user_registry.models.users import UserStatus
 from hexkit.utils import now_utc_ms_prec
-from tests.fixtures.constants import ID_OF_JOHN, SOME_USER_ID
+from tests.fixtures.constants import DATA_STEWARD_IVA_ID, ID_OF_JOHN, SOME_USER_ID
 
 from ...fixtures.utils import (
     USER_INFO,
     OidcProviderMock,
+    get_claims_from_token,
     headers_for_session,
     mock_userinfo,
 )
@@ -46,6 +49,7 @@ from .fixtures import (
     fixture_bare_client,  # noqa: F401
     fixture_bare_client_with_session,  # noqa: F401
     query_new_session,
+    session_from_response,
 )
 
 pytestmark = pytest.mark.asyncio()
@@ -553,3 +557,101 @@ async def test_recreate_totp_token_for_disabled_user(
     response = await client.post(TOTP_TOKEN_PATH, headers=headers)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Not logged in"}
+
+
+async def test_verify_totp_for_deleted_user(client_with_session: ClientWithSession):
+    """Test that a user deleted after login cannot complete the second factor."""
+    client, session, user_registry, user_token_dao = client_with_session
+    headers = headers_for_session(session)
+
+    response = await client.post(TOTP_TOKEN_PATH, headers=headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    secret = parse_qs(urlparse(response.json()["uri"]).query)["secret"][0]
+
+    user_registry.mock_user_dao.users.clear()
+
+    response = await client.post(
+        VERIFY_TOTP_PATH, headers=with_totp_code(headers, secret)
+    )
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "User account has been deleted"}
+
+    # no token is stored and the session has ended
+    assert not user_token_dao.user_tokens
+    assert not user_registry.published_events
+    response = await client.post(TOTP_TOKEN_PATH, headers=headers)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not logged in"}
+
+
+async def test_recreate_totp_token_clears_roles_of_pending_sessions(
+    client_with_session: ClientWithSession,
+):
+    """Test that sessions passing the second factor get the roles after a reset.
+
+    Replacing the TOTP token resets the verified IVAs that the roles depend on.
+    This covers the session that replaces the token and a second session that
+    logged in before, but had not passed the second factor yet. Sessions that
+    had passed it already are not covered here.
+    """
+    client, session, user_registry, user_token_dao = client_with_session
+    headers = headers_for_session(session)
+
+    # set up a TOTP token
+    response = await client.post(TOTP_TOKEN_PATH, headers=headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    secret = parse_qs(urlparse(response.json()["uri"]).query)["secret"][0]
+    response = await client.post(
+        VERIFY_TOTP_PATH, headers=with_totp_code(headers, secret)
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    response = await client.post(LOGOUT_PATH, headers=headers)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # make the user a data steward with a verified IVA
+    user_id = user_registry.dummy_user.id
+    claim_dao = client.app.dependency_overrides[get_claim_dao]()
+    claim_dao.claims[0] = claim_dao.claims[0].model_copy(update={"user_id": user_id})
+    user_registry.add_dummy_iva(id_=DATA_STEWARD_IVA_ID, state=IvaState.VERIFIED)
+
+    # log in twice, so that both sessions have passed the first factor only
+    sessions = []
+    for _ in range(2):
+        client.cookies.clear()
+        session = await query_new_session(client)
+        assert session.state is SessionState.HAS_TOTP_TOKEN
+        assert session.roles == ["data_steward"]
+        sessions.append(session)
+    client.cookies.clear()
+    headers_a, headers_b = map(headers_for_session, sessions)
+
+    # replace the TOTP token in the first session
+    response = await client.post(TOTP_TOKEN_PATH + "?force=true", headers=headers_a)
+    assert response.status_code == status.HTTP_201_CREATED
+    new_secret = parse_qs(urlparse(response.json()["uri"]).query)["secret"][0]
+    response = await client.post(
+        VERIFY_TOTP_PATH, headers=with_totp_code(headers_a, new_secret)
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # complete the second factor with the new token in the second session,
+    # in the next time step, since replay protection blocks the current one
+    user_token = await user_token_dao.get_by_id(user_id)
+    user_token.totp_token.last_counter -= 1
+    response = await client.post(
+        VERIFY_TOTP_PATH, headers=with_totp_code(headers_b, new_secret)
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # the client learns the new roles from the verification response
+    session_b = session_from_response(response, sessions[1].session_id)
+    assert session_b.state is SessionState.AUTHENTICATED
+    assert session_b.roles == []
+
+    # neither session carries the role into the internal token
+    for headers in headers_a, headers_b:
+        response = await client.get("/api/some/path", headers=headers)
+        assert response.status_code == status.HTTP_200_OK
+        internal_token = get_bearer_token(response.headers["Authorization"])
+        assert internal_token
+        assert get_claims_from_token(internal_token)["roles"] == []
