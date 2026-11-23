@@ -56,7 +56,7 @@ from ..core.auth import (
     internal_token_from_session,
     log_auth_info,
 )
-from ..core.session_store import SessionState
+from ..core.session_store import AsyncUserRoleFetcher, SessionState
 from ..core.verify_totp import verify_totp
 from ..deps import (
     SESSION_COOKIE,
@@ -134,6 +134,21 @@ async def health() -> None:
 add_allowed_routes()
 
 
+def _role_fetcher(
+    *, iva_dao: IvaDaoDependency, claim_dao: ClaimDaoDependency
+) -> AsyncUserRoleFetcher:
+    """Get a function that fetches the active roles of a user.
+
+    This includes the check whether the corresponding IVAs have been verified.
+    """
+
+    async def get_roles(user: User) -> list[str]:
+        """Get the active roles of the given user."""
+        return await get_active_roles(user.id, iva_dao=iva_dao, claim_dao=claim_dao)
+
+    return get_roles
+
+
 def _delete_session_cookie(response: Response) -> None:
     """Tell the client to delete the session cookie."""
     response.delete_cookie(
@@ -194,7 +209,14 @@ async def login(  # noqa: C901, PLR0913
         try:
             user = await user_dao.get_by_id(session.user_id)
         except ResourceNotFoundError:
-            user = None  # user has been deleted
+            # a session ends with its user, and the client counts as logged out
+            await session_store.delete_session(session.session_id)
+            denied = JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": "User account has been deleted"},
+            )
+            _delete_session_cookie(denied)
+            return denied
     else:
         try:
             user = await user_dao.find_one(filter_={"ext_id": session.ext_id})
@@ -218,14 +240,6 @@ async def login(  # noqa: C901, PLR0913
             _delete_session_cookie(denied)
         return denied
 
-    async def _get_roles(user: User) -> list[str]:
-        """Get the active roles of the given user.
-
-        This includes the check whether the corresponding IVAs have been verified.
-        """
-        # if the user exists, the account is active at this point
-        return await get_active_roles(user.id, iva_dao=iva_dao, claim_dao=claim_dao)
-
     async def _has_totp_token(user: User) -> bool:
         """Check whether the given user has a TOTP token."""
         try:
@@ -237,7 +251,7 @@ async def login(  # noqa: C901, PLR0913
     await session_store.save_session(
         session,
         user=user,
-        get_roles=_get_roles,
+        get_roles=_role_fetcher(iva_dao=iva_dao, claim_dao=claim_dao),
         has_totp_token=_has_totp_token,
     )
 
@@ -408,6 +422,8 @@ async def rpc_verify_totp(  # noqa: PLR0913
     totp_handler: TOTPHandlerDependency,
     user_registry: UserRegistryDependency,
     token_dao: UserTokenDaoDependency,
+    claim_dao: ClaimDaoDependency,
+    iva_dao: IvaDaoDependency,
     x_authorization: Annotated[
         str | None, Header(title="the TOTP code to verify")
     ] = None,
@@ -440,6 +456,7 @@ async def rpc_verify_totp(  # noqa: PLR0913
         totp_handler=totp_handler,
         user_registry=user_registry,
         token_dao=token_dao,
+        get_roles=_role_fetcher(iva_dao=iva_dao, claim_dao=claim_dao),
     )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
