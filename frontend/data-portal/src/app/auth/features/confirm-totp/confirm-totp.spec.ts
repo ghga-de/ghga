@@ -218,6 +218,19 @@ describe('ConfirmTotp', () => {
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
   });
 
+  it('should ask a user whose session ended to log in again and leave the page', async () => {
+    mockAuthService.verifyTotpCode.mockResolvedValue('ended');
+
+    await enterCode('123456');
+
+    expect(mockNotificationService.showError).toHaveBeenCalledWith(
+      'Your session has ended, please log in again.',
+    );
+    expect(mockAuthService.showAccountDisabled).not.toHaveBeenCalled();
+    expect(component.allowNavigation).toBe(true);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
+  });
+
   it('should request a new setup when the token was lost', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Get new 2FA setup' }));
 

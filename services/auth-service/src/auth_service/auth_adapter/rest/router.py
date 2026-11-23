@@ -459,7 +459,12 @@ async def rpc_verify_totp(  # noqa: PLR0913
         get_roles=_role_fetcher(iva_dao=iva_dao, claim_dao=claim_dao),
     )
 
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    # the roles have been fetched again, so the client needs the new session
+    response.headers["X-Session"] = session_to_header(
+        session, timeouts=session_store.timeouts
+    )
+    return response
 
 
 @router.api_route(

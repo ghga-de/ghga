@@ -229,11 +229,12 @@ describe('AuthService', () => {
      * @param options - the status of the response
      * @param options.status - the status code
      * @param options.statusText - the status text
+     * @param options.headers - the headers of the response
      * @returns the outcome of the verification
      */
     async function verify(
       body: object | null,
-      options: { status: number; statusText: string },
+      options: { status: number; statusText: string; headers?: Record<string, string> },
     ): Promise<string> {
       const verification = service.verifyTotpCode('123456');
       await Promise.resolve();
@@ -248,6 +249,24 @@ describe('AuthService', () => {
       expect(service.sessionState()).toBe('Authenticated');
     });
 
+    it('should take the roles from the verified session', async () => {
+      const session = {
+        ext_id: 'john@aai.org',
+        id: 'some-user-id',
+        name: 'John Doe',
+        email: 'john@home.org',
+        state: 'Authenticated',
+        roles: ['data_steward'],
+        csrf: 'some-csrf-token',
+      };
+      const headers = { 'X-Session': JSON.stringify(session) };
+      expect(
+        await verify(null, { status: 204, statusText: 'No Content', headers }),
+      ).toBe('verified');
+      expect(service.sessionState()).toBe('Authenticated');
+      expect(service.roles()).toEqual(['data_steward']);
+    });
+
     it('should report an invalid code and keep the session', async () => {
       expect(await verify({ detail: 'Invalid TOTP code' }, UNAUTHORIZED)).toBe(
         'invalid',
@@ -259,6 +278,17 @@ describe('AuthService', () => {
       expect(await verify({ detail: 'Too many failed attempts' }, UNAUTHORIZED)).toBe(
         'locked',
       );
+      expect(service.sessionState()).toBe('LoggedOut');
+    });
+
+    it('should report a session of a deleted account as ended', async () => {
+      const body = { detail: 'User account has been deleted' };
+      expect(await verify(body, UNAUTHORIZED)).toBe('ended');
+      expect(service.sessionState()).toBe('LoggedOut');
+    });
+
+    it('should report a session that has expired as ended', async () => {
+      expect(await verify({ detail: 'Not logged in' }, UNAUTHORIZED)).toBe('ended');
       expect(service.sessionState()).toBe('LoggedOut');
     });
 

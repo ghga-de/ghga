@@ -112,13 +112,17 @@ export class ConfirmTotp {
         this.allowNavigation = true;
         this.#authService.redirectAfterLogin();
         break;
-      // in the next two cases, the session has ended, so leave the page
+      // in the next three cases, the session has ended, so leave the page
       case 'disabled':
         this.#authService.showAccountDisabled();
         this.#leave();
         break;
       case 'locked':
         this.#notify.showError('Too many failed attempts, please log in again.');
+        this.#leave();
+        break;
+      case 'ended':
+        this.#notify.showError('Your session has ended, please log in again.');
         this.#leave();
         break;
       default:

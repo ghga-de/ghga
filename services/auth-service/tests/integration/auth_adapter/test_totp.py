@@ -49,6 +49,7 @@ from .fixtures import (
     fixture_bare_client,  # noqa: F401
     fixture_bare_client_with_session,  # noqa: F401
     query_new_session,
+    session_from_response,
 )
 
 pytestmark = pytest.mark.asyncio()
@@ -639,6 +640,11 @@ async def test_recreate_totp_token_clears_roles_of_all_sessions(
         VERIFY_TOTP_PATH, headers=with_totp_code(headers_b, new_secret)
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # the client learns the new roles from the verification response
+    session_b = session_from_response(response, sessions[1].session_id)
+    assert session_b.state is SessionState.AUTHENTICATED
+    assert session_b.roles == []
 
     # neither session carries the role into the internal token
     for headers in headers_a, headers_b:
