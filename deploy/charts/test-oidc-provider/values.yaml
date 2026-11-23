@@ -149,6 +149,8 @@ serviceName: test-oidc-provider
 serviceInstanceId:
   fromPodName: false
 otelExcludedUrls: /health$
+otelResource:
+  podName: true
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

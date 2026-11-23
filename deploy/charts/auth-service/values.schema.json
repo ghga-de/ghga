@@ -964,6 +964,17 @@
       "description": "Comma-separated regexes of URLs that OpenTelemetry neither traces nor counts in its HTTP metrics, set as OTEL_PYTHON_EXCLUDED_URLS (read by the FastAPI and httpx instrumentations). Defaults to the health probes; empty turns it off. Skipped when envVars set OTEL_PYTHON_EXCLUDED_URLS themselves.",
       "default": "/health$"
     },
+    "otelResource": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "podName": {
+          "type": "boolean",
+          "description": "Add the pod name as k8s.pod.name to the OpenTelemetry resource of traces and metrics, via OTEL_RESOURCE_ATTRIBUTES and the Kubernetes Downward API. Skipped when envVars already set OTEL_RESOURCE_ATTRIBUTES.",
+          "default": true
+        }
+      }
+    },
     "configMap": {
       "type": "object",
       "additionalProperties": true,

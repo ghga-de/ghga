@@ -192,6 +192,8 @@ serviceName: auth-service
 serviceInstanceId:
   fromPodName: false
 otelExcludedUrls: /health$
+otelResource:
+  podName: true
 configMap:
   enabled: true
   mountPath: /etc/config.yaml
