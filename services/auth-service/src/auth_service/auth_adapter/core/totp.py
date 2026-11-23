@@ -234,9 +234,10 @@ class TOTPHandler(TOTPHandlerPort[TOTPToken]):
     ) -> bool | None:
         """Verify a TOTP token with replay attack prevention and rate limiting.
 
-        A return value of True means that the code is valid.
-        If the return value is None, the usage parameters of the token have
-        been changed and the token should be saved back to the database.
+        A return value of True means that the code is valid, False that it is not.
+        In both cases, the usage counters of the token have changed, and the token
+        should be saved back to the database. A return value of None means that
+        the code has not been checked and the token is unchanged.
         """
         if self.is_invalid(token):
             # the maximum number of consecutive failed attempts has been reached

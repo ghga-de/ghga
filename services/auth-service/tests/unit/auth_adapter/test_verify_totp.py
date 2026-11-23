@@ -17,6 +17,7 @@
 """Test the application logic for verifying user TOTP tokens."""
 
 from contextlib import nullcontext
+from enum import StrEnum
 from typing import cast
 from unittest.mock import AsyncMock, Mock
 
@@ -340,7 +341,7 @@ async def _verify_in_new_session(
 
 @pytest.mark.asyncio()
 async def test_verify_totp_stores_usage_of_token():
-    """Test that a verified code cannot be used again in another session."""
+    """Test that a successful verification stores the usage counters of the token."""
     totp_handler = TOTPHandler(config=config)
     totp_token = totp_handler.generate_token()
     totp_token.total_attempts = 3  # failed attempts before
@@ -366,35 +367,52 @@ async def test_verify_totp_stores_usage_of_token():
     assert await verify() == status.HTTP_401_UNAUTHORIZED
 
 
-@pytest.mark.parametrize("limit_reached", [False, True], ids=["valid", "limit"])
-@pytest.mark.asyncio()
-async def test_verify_totp_with_concurrent_attempt(limit_reached: bool):
-    """Test that an attempt fails when a concurrent attempt changes the token.
+class ConcurrentChange(StrEnum):
+    """How a concurrent request changes the stored token."""
 
-    The concurrent attempt changes the token between reading and writing it back.
-    If the attempts limit has been reached, only the other attempt disables
-    the user account.
+    COUNTERS = "counters"  # a concurrent attempt updated the usage counters
+    SECRET = "secret"  # the token was replaced, with the same usage counters
+    DELETED = "deleted"  # the token was deleted
+
+
+@pytest.mark.parametrize("change", list(ConcurrentChange))
+@pytest.mark.parametrize("valid_code", [True, False], ids=["valid", "wrong"])
+@pytest.mark.asyncio()
+async def test_verify_totp_with_concurrent_change(
+    change: ConcurrentChange, valid_code: bool
+):
+    """Test that an attempt fails when the token changes concurrently.
+
+    The change happens between reading the token and writing it back. The attempt
+    fails without writing the token, whether its code was valid or not.
     """
     totp_handler = TOTPHandler(config=config)
     totp_token = totp_handler.generate_token()
-    if limit_reached:
-        totp_token.total_attempts = 10
-        assert totp_handler.is_invalid(totp_token)
     user_registry = MockUserRegistry(config=config)
     user_token_dao = MockUserTokenDao()
     await user_token_dao.upsert(UserToken(user_id=ID_OF_JOHN, totp_token=totp_token))
     code = totp_handler.generate_code(totp_token)
+    if not valid_code:
+        code = "000000" if code != "000000" else "111111"
 
     get_by_id = user_token_dao.get_by_id
+    changed_token: UserToken | None = None
 
     async def get_by_id_then_change(id_):
-        """Read the token, then let a concurrent attempt change it."""
+        """Read the token, then change it concurrently."""
+        nonlocal changed_token
         user_token = await get_by_id(id_)
-        concurrent = user_token.model_copy(deep=True)
-        concurrent.totp_token.last_counter = 1
-        concurrent.totp_token.counter_attempts = -1
-        concurrent.totp_token.total_attempts = 0
-        user_token_dao.user_tokens[id_] = concurrent
+        if change is ConcurrentChange.DELETED:
+            del user_token_dao.user_tokens[id_]
+            return user_token
+        changed_token = user_token.model_copy(deep=True)
+        if change is ConcurrentChange.COUNTERS:
+            changed_token.totp_token.last_counter = 1
+            changed_token.totp_token.total_attempts = 1
+        else:
+            new_token = totp_handler.generate_token()
+            changed_token.totp_token.encrypted_secret = new_token.encrypted_secret
+        user_token_dao.user_tokens[id_] = changed_token
         return user_token
 
     user_token_dao.get_by_id = get_by_id_then_change
@@ -405,14 +423,81 @@ async def test_verify_totp_with_concurrent_attempt(limit_reached: bool):
         user_token_dao=user_token_dao,
     )
 
-    if limit_reached:
-        assert outcome == status.HTTP_403_FORBIDDEN
-    else:
-        assert outcome == status.HTTP_401_UNAUTHORIZED
-    # the token is in the state the concurrent attempt has written
-    stored_token = user_token_dao.user_tokens[ID_OF_JOHN].totp_token
-    assert stored_token.last_counter == 1
-    assert stored_token.counter_attempts == -1
-    assert stored_token.total_attempts == 0
-    # the account has not been disabled by this attempt
+    assert outcome == status.HTTP_401_UNAUTHORIZED
+    # the token is as the concurrent request left it
+    assert user_token_dao.user_tokens.get(ID_OF_JOHN) == changed_token
     assert user_registry.dummy_user.status is UserStatus.ACTIVE
+
+
+@pytest.mark.parametrize("change", list(ConcurrentChange))
+@pytest.mark.asyncio()
+async def test_verify_totp_at_limit_with_concurrent_change(change: ConcurrentChange):
+    """Test the attempts limit when the token changes concurrently.
+
+    The account is disabled first, so it is disabled either way, but the cleared
+    token is written only if the token has not changed.
+    """
+    totp_handler = TOTPHandler(config=config)
+    totp_token = totp_handler.generate_token()
+    totp_token.total_attempts = 10
+    assert totp_handler.is_invalid(totp_token)
+    user_registry = MockUserRegistry(config=config)
+    user_token_dao = MockUserTokenDao()
+    await user_token_dao.upsert(UserToken(user_id=ID_OF_JOHN, totp_token=totp_token))
+
+    get_by_id = user_token_dao.get_by_id
+    changed_token: UserToken | None = None
+
+    async def get_by_id_then_change(id_):
+        """Read the token, then change it concurrently."""
+        nonlocal changed_token
+        user_token = await get_by_id(id_)
+        if change is ConcurrentChange.DELETED:
+            del user_token_dao.user_tokens[id_]
+            return user_token
+        changed_token = user_token.model_copy(deep=True)
+        if change is ConcurrentChange.COUNTERS:
+            changed_token.totp_token.total_attempts = 11
+        else:
+            new_token = totp_handler.generate_token()
+            changed_token.totp_token.encrypted_secret = new_token.encrypted_secret
+        user_token_dao.user_tokens[id_] = changed_token
+        return user_token
+
+    user_token_dao.get_by_id = get_by_id_then_change
+    outcome = await _verify_in_new_session(
+        "123456",
+        totp_handler=totp_handler,
+        user_registry=user_registry,
+        user_token_dao=user_token_dao,
+    )
+
+    assert outcome == status.HTTP_403_FORBIDDEN
+    assert user_registry.dummy_user.status is UserStatus.INACTIVE
+    # the cleared token has not been written
+    assert user_token_dao.user_tokens.get(ID_OF_JOHN) == changed_token
+
+
+@pytest.mark.asyncio()
+async def test_verify_totp_at_limit_keeps_token_if_disabling_fails():
+    """Test that the token stays at the limit if the account cannot be disabled."""
+    totp_handler = TOTPHandler(config=config)
+    totp_token = totp_handler.generate_token()
+    totp_token.total_attempts = 10
+    user_registry = MockUserRegistry(config=config)
+    user_registry.update_user = AsyncMock(
+        side_effect=user_registry.UserUpdateError(user_id=ID_OF_JOHN)
+    )
+    user_token_dao = MockUserTokenDao()
+    await user_token_dao.upsert(UserToken(user_id=ID_OF_JOHN, totp_token=totp_token))
+
+    with pytest.raises(user_registry.UserUpdateError):
+        await _verify_in_new_session(
+            "123456",
+            totp_handler=totp_handler,
+            user_registry=user_registry,
+            user_token_dao=user_token_dao,
+        )
+
+    stored = user_token_dao.user_tokens[ID_OF_JOHN].totp_token
+    assert totp_handler.is_invalid(stored)

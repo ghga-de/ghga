@@ -274,7 +274,8 @@ def check_precondition(
     for key, value in precondition.items():
         current: Any = data
         for part in key.split("."):
-            current = current[part]
+            # like MongoDB, a missing nested field matches only None
+            current = current.get(part) if isinstance(current, dict) else None
         if current != value:
             raise PreconditionFailedError(id_=id_, precondition=precondition)
 

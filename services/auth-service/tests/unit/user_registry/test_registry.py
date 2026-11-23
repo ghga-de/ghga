@@ -17,6 +17,8 @@
 """Unit tests for the core user and IVA registry."""
 
 from datetime import timedelta
+from typing import Any
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -169,45 +171,105 @@ async def test_update_modifiable_data_only_title():
     assert dummy_user.status_change is None
 
 
+def change_before_writes(
+    registry: MockUserRegistry, changes: dict[str, Any], writes: int = 1
+) -> list[int]:
+    """Change the stored user concurrently right before the first writes.
+
+    Returns a list whose length is the number of writes tried.
+    """
+    user_dao = registry.mock_user_dao
+    update = user_dao.update
+    calls: list[int] = []
+
+    async def update_after_change(dto, **kwargs):
+        """Change the stored user, then write."""
+        calls.append(1)
+        if len(calls) <= writes:
+            user_dao.users[-1] = user_dao.user.model_copy(update=changes)
+        await update(dto, **kwargs)
+
+    user_dao.update = update_after_change
+    return calls
+
+
 async def test_update_user_keeps_concurrent_status_change():
-    """Test that a user update does not undo a concurrent status change.
+    """Test that a user update keeps a concurrent status change.
 
     Here, the user changes the title while the account is being disabled.
     """
     registry = MockUserRegistry()
-    user_dao = registry.mock_user_dao
+    calls = change_before_writes(registry, {"status": UserStatus.INACTIVE})
     user_id = registry.dummy_user.id
-    update = user_dao.update
-    calls = 0
-
-    async def update_after_status_change(dto, **kwargs):
-        """Disable the account right before the first write."""
-        nonlocal calls
-        calls += 1
-        if calls == 1:
-            user_dao.users[-1] = user_dao.user.model_copy(
-                update={"status": UserStatus.INACTIVE}
-            )
-        await update(dto, **kwargs)
-
-    user_dao.update = update_after_status_change
     await registry.update_user(user_id, UserModifiableData(title=AcademicTitle.PROF))
 
-    assert calls == 2  # the first write failed and was repeated
+    assert len(calls) == 2  # the first write failed and was repeated
     dummy_user = registry.dummy_user
     assert dummy_user.title is AcademicTitle.PROF
     assert dummy_user.status is UserStatus.INACTIVE
 
 
-async def test_update_user_with_status_changing_all_the_time():
+async def test_update_status_keeps_concurrent_iva_counter():
+    """Test that a status change is repeated with the current user data.
+
+    Here, the user creates an IVA while the account is being disabled.
+    The repeated write records the status change as requested.
+    """
+    registry = MockUserRegistry()
+    counter = PeriodCounter(date=now_utc_ms_prec(), count=1)
+    calls = change_before_writes(registry, {"ivas_created_today": counter})
+    user_id = registry.dummy_user.id
+    await registry.update_user(
+        user_id,
+        UserModifiableData(status=UserStatus.INACTIVE),
+        changed_by=ID_OF_ROD_STEWARD,
+        context="Some context",
+    )
+
+    assert len(calls) == 2
+    dummy_user = registry.dummy_user
+    assert dummy_user.status is UserStatus.INACTIVE
+    assert dummy_user.ivas_created_today == counter
+    status_change = dummy_user.status_change
+    assert status_change
+    assert status_change.previous is UserStatus.ACTIVE
+    assert status_change.by == ID_OF_ROD_STEWARD
+    assert status_change.context == "Some context"
+
+
+async def test_update_status_after_concurrent_status_change():
+    """Test a status change when the same change happens concurrently.
+
+    The repeated write finds the status already changed and records no change.
+    """
+    registry = MockUserRegistry()
+    calls = change_before_writes(registry, {"status": UserStatus.INACTIVE})
+    user_id = registry.dummy_user.id
+    await registry.update_user(
+        user_id,
+        UserModifiableData(status=UserStatus.INACTIVE),
+        changed_by=ID_OF_ROD_STEWARD,
+    )
+
+    assert len(calls) == 2
+    dummy_user = registry.dummy_user
+    assert dummy_user.status is UserStatus.INACTIVE
+    assert dummy_user.status_change is None
+
+
+async def test_update_user_with_status_changing_all_the_time(
+    monkeypatch: pytest.MonkeyPatch,
+):
     """Test that a user update gives up if the status keeps changing."""
+    monkeypatch.setattr("hexkit.protocols.dao.sleep", AsyncMock())
     registry = MockUserRegistry()
     user_dao = registry.mock_user_dao
-    user_id = registry.dummy_user.id
     update = user_dao.update
+    calls: list[int] = []
 
-    async def update_after_status_change(dto, **kwargs):
-        """Toggle the status right before every write."""
+    async def toggle_then_update(dto, **kwargs):
+        """Toggle the status before every write."""
+        calls.append(1)
         status = user_dao.user.status
         status = (
             UserStatus.INACTIVE if status is UserStatus.ACTIVE else UserStatus.ACTIVE
@@ -215,12 +277,27 @@ async def test_update_user_with_status_changing_all_the_time():
         user_dao.users[-1] = user_dao.user.model_copy(update={"status": status})
         await update(dto, **kwargs)
 
-    user_dao.update = update_after_status_change
+    user_dao.update = toggle_then_update
     with pytest.raises(UserRegistry.UserUpdateError):
         await registry.update_user(
-            user_id, UserModifiableData(title=AcademicTitle.PROF)
+            registry.dummy_user.id, UserModifiableData(title=AcademicTitle.PROF)
         )
+    assert len(calls) == 3
     assert registry.dummy_user.title is None
+
+
+async def test_create_iva_keeps_concurrent_status_change():
+    """Test that counting a new IVA keeps a concurrent status change."""
+    registry = MockUserRegistry()
+    calls = change_before_writes(registry, {"status": UserStatus.INACTIVE})
+    iva_data = IvaBasicData(type=IvaType.PHONE, value=PHONE_OF_JOHN)
+    assert await registry.create_iva(ID_OF_JOHN, iva_data)
+
+    assert len(calls) == 2
+    dummy_user = registry.dummy_user
+    assert dummy_user.status is UserStatus.INACTIVE
+    assert dummy_user.ivas_created_today
+    assert dummy_user.ivas_created_today.count == 1
 
 
 async def test_update_modifiable_data_only_status():
