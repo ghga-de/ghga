@@ -931,17 +931,38 @@ def failing_complete_submission(self: SubmissionRegistry, *, id_: str) -> None:
 
 def test_list_pending(example_workdir: Path, capsys: pytest.CaptureFixture[str]):
     """Test that `list-pending` says so when nothing is pending, and otherwise prints
-    the study PID, the submission ID and the title of each pending submission.
+    the study PID, the submission ID and the title of each pending submission, with
+    a '-' padded to the width of the PIDs for one that holds no PID.
     """
     list_pending(config_path=METADATA_CONFIG_PATH)
     assert capsys.readouterr().out.splitlines() == ["No pending submissions."]
 
     reservations = [reserve(), reserve()]
+    # a `metadata submit` that fails validation leaves a pending submission without
+    # a PID behind
+    with pytest.raises(MetadataValidationError):
+        submit(
+            submission_title="Test Title",
+            submission_description="Test Description",
+            metadata_path=write_changed_metadata(
+                old="  - alias: test_sample_02\n", new="  - alias: test_sample_01\n"
+            ),
+            config_path=METADATA_CONFIG_PATH,
+        )
+    reserved_ids = {submission_id for submission_id, _ in reservations}
+    (stopped_id,) = {
+        path.stem for path in Path("submission_store").glob("*.json")
+    } - reserved_ids
+    width = len(reservations[0][1])
+    capsys.readouterr()
 
     list_pending(config_path=METADATA_CONFIG_PATH)
     assert capsys.readouterr().out.splitlines() == [
-        f"{study_pid}  {submission_id}  {INTERNAL_NAME}"
-        for submission_id, study_pid in reservations
+        *(
+            f"{study_pid}  {submission_id}  {INTERNAL_NAME}"
+            for submission_id, study_pid in reservations
+        ),
+        f"{'-':<{width}}  {stopped_id}  Test Title",
     ]
 
 
