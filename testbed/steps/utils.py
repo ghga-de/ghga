@@ -303,10 +303,13 @@ def parse_notifications(raw_data: dict) -> list[Notification]:
     ]
 
 
-def reset_user_token_counter(sub: str, fixtures: JointFixture) -> None:
+def reset_user_token_counter(
+    sub: str, fixtures: JointFixture, *, keep_failed_attempts: bool = False
+) -> None:
     """Forget the previous TOTP logins for the user with the given sub.
 
     This allows logging in again with the same TOTP counter.
+    Keep the failed attempts to reset only what limits the logins per time step.
     """
     config, mongo = fixtures.config, fixtures.mongo
 
@@ -331,7 +334,9 @@ def reset_user_token_counter(sub: str, fixtures: JointFixture) -> None:
 
     totp_token = user_token_document["totp_token"]
     assert {"last_counter", "counter_attempts", "total_attempts"}.issubset(totp_token)
-    totp_token.update({"last_counter": -1, "counter_attempts": -1, "total_attempts": 0})
+    totp_token.update({"last_counter": -1, "counter_attempts": -1})
+    if not keep_failed_attempts:
+        totp_token["total_attempts"] = 0
 
     # Update the TOTP token counter directly in the database
     mongo.upsert_document(
