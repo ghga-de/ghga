@@ -584,13 +584,15 @@ async def test_verify_totp_for_deleted_user(client_with_session: ClientWithSessi
     assert response.json() == {"detail": "Not logged in"}
 
 
-async def test_recreate_totp_token_clears_roles_of_all_sessions(
+async def test_recreate_totp_token_clears_roles_of_pending_sessions(
     client_with_session: ClientWithSession,
 ):
-    """Test that no session keeps its roles when the TOTP token is replaced.
+    """Test that sessions passing the second factor get the roles after a reset.
 
-    Replacing the token resets the verified IVAs that the roles depend on.
-    This must also hold for a second session that logged in before the reset.
+    Replacing the TOTP token resets the verified IVAs that the roles depend on.
+    This covers the session that replaces the token and a second session that
+    logged in before, but had not passed the second factor yet. Sessions that
+    had passed it already are not covered here.
     """
     client, session, user_registry, user_token_dao = client_with_session
     headers = headers_for_session(session)
