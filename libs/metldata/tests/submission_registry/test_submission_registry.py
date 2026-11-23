@@ -255,8 +255,9 @@ def test_check_study_pid(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
-    """Test that the check passes for the study PID a submission holds and refuses
-    the study PID of another submission.
+    """Test that the check passes for the study PID a pending submission holds,
+    refuses the study PID of another submission, and refuses the submission once it
+    is completed.
     """
     _, _, submission_registry = build_submission_registry(
         config=config_sub_fixture, event_fixture=file_system_event_fixture
@@ -271,6 +272,16 @@ def test_check_study_pid(
     with pytest.raises(SubmissionRegistry.StudyPidMismatchError):
         submission_registry.check_study_pid(
             submission_id=submission_id, study_pid=other_study_pid
+        )
+
+    submission_registry.upsert_submission_content(
+        submission_id=submission_id,
+        content=VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES[0],
+    )
+    submission_registry.complete_submission(id_=submission_id)
+    with pytest.raises(SubmissionRegistry.StatusError):
+        submission_registry.check_study_pid(
+            submission_id=submission_id, study_pid=study_pid
         )
 
 

@@ -171,16 +171,21 @@ class SubmissionRegistry:
         return self._submission_store.get_by_id(id_)
 
     def check_study_pid(self, *, submission_id: str, study_pid: str) -> None:
-        """Check that the existing submission with the specified id holds the provided
-        study PID, so that content meant for one study is not added to another.
+        """Check that the existing submission with the specified id is pending and holds
+        the provided study PID, so that content meant for one study is not added to
+        another, and a submission that cannot take content is refused up front.
 
         Raises:
             SubmissionRegistry.SubmissionDoesNotExistError:
                 when no submission with the specified ID exists.
+            SubmissionRegistry.StatusError:
+                when the status of the specified submission is not pending.
             SubmissionRegistry.StudyPidMismatchError:
                 when the submission does not hold the provided study PID.
         """
-        submission = self._submission_store.get_by_id(submission_id)
+        submission = self._get_submission_with_status(
+            id_=submission_id, expected_status=models.SubmissionStatus.PENDING
+        )
         held_study_pid = lookup_study_pid(
             anchor=self._study_anchor, accession_map=submission.accession_map
         )

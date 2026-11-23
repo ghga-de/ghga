@@ -143,7 +143,7 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
   All of it lives in dskit (`ghga_datasteward_kit/amendment/`); metldata provides the helpers in `submission_registry/identifiers.py` and the `AccessionRegistry` that dskit subclasses.
   **`dskit metadata reserve-study-pid` and `submit-pending` give a study its PID before the metadata arrives**, so the PID can be handed to the submitter.
   `reserve-study-pid` calls the registry's `reserve_study_pid`, a sibling of `init_submission`: it mints a study PID with `generate_study_accession`, which registers it under `years`, then stores a new pending submission without content whose map holds the PID under the PID itself as alias, since the study alias is not known yet; nothing is published.
-  `submit-pending --submission-id <id> --study-pid <pid>` calls the registry's `check_study_pid`, which refuses the submission unless it holds the given PID, so a mixed-up ID is caught.
+  `submit-pending --submission-id <id> --study-pid <pid>` calls the registry's `check_study_pid`, which refuses the submission unless it is pending and holds the given PID, so a mixed-up ID or a completed submission is caught before the question.
   It then shows the current title of the submission and asks the data steward to confirm that the metadata belongs there, since no check can tell.
   It then runs `upsert_submission_content` and `complete_submission` as `submit` does: `upsert` refuses a submission that is not pending, and `get_study_pid` keeps the PID whatever its alias, so the map files it under the real study alias and the dataset PIDs derive from it.
   The title and description replace the internal name through `update_submission_header`, only once the metadata has passed validation.

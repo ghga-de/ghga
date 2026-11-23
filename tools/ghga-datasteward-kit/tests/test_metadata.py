@@ -1034,6 +1034,34 @@ def test_submit_pending_unconfirmed_writes_nothing(
     assert read_submission(submission_id=submission_id) == submission_before
 
 
+def test_submit_pending_refuses_completed_submission_before_asking(
+    example_workdir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+):
+    """Test that a completed submission is refused before the question is asked,
+    and that it is then left as it was.
+    """
+    submission_id, study_pid = reserve()
+    pretend_terminal(monkeypatch)
+    monkeypatch.setattr(typer, "confirm", lambda *args, **kwargs: True)
+    submit_reserved(submission_id=submission_id, study_pid=study_pid)
+    submission_before = read_submission(submission_id=submission_id)
+    monkeypatch.setattr(typer, "confirm", _fail_if_asked)
+
+    with pytest.raises(typer.Abort):
+        submit_reserved(submission_id=submission_id, study_pid=study_pid)
+
+    assert capsys.readouterr().out.splitlines()[-1] == str(
+        SubmissionRegistry.StatusError(
+            submission_id=submission_id,
+            current_status="completed",
+            expected_status="pending",
+        )
+    )
+    assert read_submission(submission_id=submission_id) == submission_before
+
+
 @pytest.mark.usefixtures("confirm_submit_pending")
 def test_submit_pending_invalid_metadata_keeps_reservation(example_workdir: Path):
     """Test that metadata failing validation leaves the reservation as it was, the
