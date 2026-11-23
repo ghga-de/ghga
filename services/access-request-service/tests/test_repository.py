@@ -1018,19 +1018,17 @@ async def test_set_status_to_allowed_with_error_when_storing_request():
     assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == original_request
 
 
-def close_concurrently(
-    monkeypatch: pytest.MonkeyPatch, request_id: UUID4, status: AccessRequestStatus
+def change_concurrently(
+    monkeypatch: pytest.MonkeyPatch, request_id: UUID4, **changes: Any
 ) -> AccessRequest:
-    """Store the request with the given status, but serve the first read of it
+    """Store the request with the given changes, but serve the first read of it
     in its old state, as if another write happened right after that read.
 
     Returns the stored request.
     """
     stale = access_request_dao._requests[request_id]
-    closed = stale.model_copy(
-        update={"status": status, "status_changed": now_utc_ms_prec()}
-    )
-    access_request_dao._requests[request_id] = closed
+    changed = stale.model_copy(update=changes)
+    access_request_dao._requests[request_id] = changed
     stale_reads = [stale]
     get_by_id, find_all = access_request_dao.get_by_id, access_request_dao.find_all
 
@@ -1048,7 +1046,16 @@ def close_concurrently(
 
     monkeypatch.setattr(access_request_dao, "get_by_id", get_stale_by_id)
     monkeypatch.setattr(access_request_dao, "find_all", find_all_stale)
-    return closed
+    return changed
+
+
+def close_concurrently(
+    monkeypatch: pytest.MonkeyPatch, request_id: UUID4, status: AccessRequestStatus
+) -> AccessRequest:
+    """Close the request right after its first read, see `change_concurrently`."""
+    return change_concurrently(
+        monkeypatch, request_id, status=status, status_changed=now_utc_ms_prec()
+    )
 
 
 async def test_allow_request_denied_concurrently(monkeypatch: pytest.MonkeyPatch):
@@ -1085,6 +1092,29 @@ async def test_deny_request_allowed_concurrently(monkeypatch: pytest.MonkeyPatch
         )
 
     assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == closed
+
+
+async def test_allow_request_changed_concurrently(monkeypatch: pytest.MonkeyPatch):
+    """Test that allowing a request uses its access period as changed meanwhile."""
+    request = ACCESS_REQUESTS[3]
+    access_ends = request.access_ends - timedelta(days=100)
+    change_concurrently(monkeypatch, request.id, access_ends=access_ends)
+
+    await repository.update(
+        request.id,
+        patch_data=AccessRequestPatchData(
+            iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+        ),
+        auth_context=auth_context_steward,
+    )
+
+    # the grant from the stale read has been revoked and a new one registered
+    assert access_grants.last_revoked_id is not None
+    assert access_grants.last_grant_id != access_grants.last_revoked_id
+    assert access_grants.last_grant.endswith(f"until {access_ends}")
+    stored = await access_request_dao.get_by_id(request.id)
+    assert stored.status == AccessRequestStatus.ALLOWED
+    assert stored.access_ends == access_ends
 
 
 async def test_set_status_to_allowed_when_it_is_already_allowed():
@@ -1581,6 +1611,32 @@ async def test_keeps_processed_request_when_deleting_its_dataset(
 
 
 @pytest.mark.parametrize("deleted", [False, True], ids=["updated", "deleted"])
+async def test_keeps_concurrent_changes_when_changing_a_dataset(
+    deleted: bool, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that changing a dataset keeps changes made to a pending request
+    while the change was processed.
+    """
+    request = ACCESS_REQUESTS[3]
+    dataset = DATASET.model_copy(update={"id": request.dataset_id})
+    await dataset_dao.upsert(dataset)
+    access_ends = request.access_ends - timedelta(days=100)
+    change_concurrently(monkeypatch, request.id, access_ends=access_ends)
+
+    if deleted:
+        await repository.delete_dataset(dataset_id=dataset.id)
+    else:
+        await repository.register_dataset(dataset)
+
+    stored = await access_request_dao.get_by_id(request.id)
+    assert stored.access_ends == access_ends
+    if deleted:
+        assert stored.status == AccessRequestStatus.DENIED
+    else:
+        assert stored.dataset_title == dataset.title
+
+
+@pytest.mark.parametrize("deleted", [False, True], ids=["updated", "deleted"])
 async def test_keeps_request_allowed_concurrently_when_changing_its_dataset(
     deleted: bool,
     monkeypatch: pytest.MonkeyPatch,
@@ -1803,6 +1859,23 @@ async def test_send_verification_sms_for_request_closed_concurrently(
 
     assert not sms_notifier.sent
     assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == closed
+
+
+async def test_send_verification_sms_keeps_concurrent_note(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Test that the record of an SMS is appended to a note changed meanwhile."""
+    change_concurrently(monkeypatch, REQUEST_IDS[3], internal_note="Hello")
+
+    note = await repository.send_verification_sms(
+        REQUEST_IDS[3], sms_data=SMS_DATA, auth_context=auth_context_steward
+    )
+
+    assert note.startswith("Hello\n")
+    assert note.endswith("AB23CD sent to +49…6789 by Rod Steward.")
+    stored = await access_request_dao.get_by_id(REQUEST_IDS[3])
+    assert stored.internal_note == note
+    assert len(sms_notifier.sent) == 1
 
 
 async def test_send_verification_sms_for_non_existing_request():

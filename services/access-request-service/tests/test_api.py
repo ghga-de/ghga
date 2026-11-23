@@ -1007,6 +1007,16 @@ async def test_patch_everything_when_allowing_request(
     assert request["internal_note"] == "Some internal note"
     assert request["note_to_requester"] == "Some note to requester"
 
+    # the requester gets the request without the internal fields
+    response = await client.get(
+        f"/access-requests/{access_request_id}", headers=auth_headers_doe
+    )
+    assert response.status_code == 200
+    own_request = response.json()
+    assert own_request["changed_by"] is None
+    assert own_request["internal_note"] is None
+    assert own_request == {**request, "changed_by": None, "internal_note": None}
+
 
 async def test_patch_ticket_id_and_notes(
     rest: RestFixture,
