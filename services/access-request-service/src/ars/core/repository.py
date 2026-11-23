@@ -16,6 +16,7 @@
 
 """A repository for access requests."""
 
+import asyncio
 import logging
 from collections.abc import Mapping
 from datetime import timedelta
@@ -82,6 +83,11 @@ class AccessRequestConfig(BaseSettings):
 
 class AccessRequestRepository(AccessRequestRepositoryPort):
     """A repository for access requests."""
+
+    # how often and in which interval (in seconds) to try revoking a grant whose
+    # request could not be stored as allowed
+    _revoke_tries = 3
+    _revoke_interval = 1.0
 
     def __init__(
         self,
@@ -397,16 +403,43 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         try:
             await self._write_back(request, modified_request)
-        except Exception:
+        except BaseException:
             # a grant without an allowed request would be duplicated on a retry,
-            # or outlive a request that has been changed in the meantime
+            # or outlive a request that has been changed in the meantime;
+            # shielded so that it also completes when the request is cancelled
+            await asyncio.shield(self._revoke_unused_grant(grant_id))
+            raise
+
+    async def _revoke_unused_grant(self, grant_id: UUID4) -> None:
+        """Revoke a grant whose access request could not be stored as allowed.
+
+        The revocation is retried, since a grant left behind gives access without
+        an allowed request. If it still fails, it is logged as critical with the
+        grant ID, so that the grant can be revoked by hand.
+        """
+        for attempt in range(1, self._revoke_tries + 1):
             try:
                 await self._access_grants.revoke_download_access_grant(grant_id)
-            except self._access_grants.AccessGrantsError as revoke_error:
-                log.error(
-                    "Could not revoke the access grant %s: %s", grant_id, revoke_error
+            except self._access_grants.AccessGrantNotFoundError:
+                return  # nothing to revoke
+            except self._access_grants.AccessGrantsError as error:
+                if attempt >= self._revoke_tries:
+                    log.critical(
+                        "Could not revoke the access grant %s"
+                        " of an access request that was not allowed: %s",
+                        grant_id,
+                        error,
+                        extra={"grant_id": grant_id},
+                    )
+                    return
+                log.warning(
+                    "Could not revoke the access grant %s, trying again: %s",
+                    grant_id,
+                    error,
                 )
-            raise
+                await asyncio.sleep(self._revoke_interval)
+            else:
+                return
 
     async def send_verification_sms(
         self,
