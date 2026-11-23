@@ -1729,7 +1729,7 @@ wheels = [
 
 [[package]]
 name = "hexkit"
-version = "11.1.0"
+version = "11.0.0"
 source = { editable = "libs/hexkit" }
 dependencies = [
     { name = "opentelemetry-api" },
