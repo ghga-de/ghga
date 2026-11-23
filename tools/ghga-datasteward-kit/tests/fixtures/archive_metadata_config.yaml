@@ -113,6 +113,8 @@ workflow_config:
   add_accessions:
     accession_slot_name: accession
     accession_slot_description: The accession for an entity.
+  remove_excluded_files:
+    resources_to_delete: {}
   embed_restricted:
     embedding_profiles:
       - target_class: EmbeddedDataset

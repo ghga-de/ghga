@@ -28,6 +28,9 @@ from metldata.builtin_transformations.aggregate import AGGREGATE_TRANSFORMATION
 from metldata.builtin_transformations.custom_embeddings import (
     CUSTOM_EMBEDDING_TRANSFORMATION,
 )
+from metldata.builtin_transformations.delete_resources import (
+    RESOURCE_DELETION_TRANSFORMATION,
+)
 from metldata.builtin_transformations.delete_slots import SLOT_DELETION_TRANSFORMATION
 from metldata.builtin_transformations.infer_references import (
     REFERENCE_INFERENCE_TRANSFORMATION,
@@ -133,6 +136,7 @@ TRANSFORMATIONS_BY_NAME: dict[str, TransformationDefinition] = {
     "add_accessions": ACCESSION_ADDITION_TRANSFORMATION,
     "infer_references": REFERENCE_INFERENCE_TRANSFORMATION,
     "delete_slots": SLOT_DELETION_TRANSFORMATION,
+    "delete_resources": RESOURCE_DELETION_TRANSFORMATION,
     "custom_embedding": CUSTOM_EMBEDDING_TRANSFORMATION,
     "merge_slots": SLOT_MERGING_TRANSFORMATION,
     "aggregate": AGGREGATE_TRANSFORMATION,

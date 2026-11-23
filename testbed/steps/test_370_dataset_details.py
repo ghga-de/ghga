@@ -83,6 +83,19 @@ def check_dataset_details(ega_accession: str, response: Response, state: StateSt
         datasets = state.set_state("all available datasets", datasets)
 
 
+@then(parse('no file with alias "{alias}" is listed'))
+def check_file_not_listed(alias: str, response: Response):
+    result = response.json()
+    listed = {
+        file_["alias"]
+        for key, files in result.items()
+        if key.endswith("_files")
+        for file_ in files
+    }
+    assert listed  # otherwise the check passes on a response without file lists
+    assert alias not in listed
+
+
 @when(
     parse('I request an associated sample resource for "{ega_accession}" dataset'),
     target_fixture="response",

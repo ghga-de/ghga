@@ -1,0 +1,53 @@
+id: https://w3id.org/Minimal-Model
+name: Minimal-Model
+version: 0.9.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+imports:
+  - linkml:types
+
+default_range: string
+
+classes:
+  File:
+    description: >-
+      A file that a submission declares.
+    slots:
+      - alias
+      - name
+      - included_in_submission
+    slot_usage:
+      alias:
+        required: true
+        identifier: true
+      name:
+        required: true
+
+  Submission:
+    tree_root: true
+    description: >-
+      A grouping entity that represents information about one or more entities.
+    slots:
+      - files
+    slot_usage:
+      files:
+        required: true
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+
+slots:
+  alias:
+    description: The alias for an entity.
+
+  name:
+    description: The name of the file.
+
+  included_in_submission:
+    description: Whether the file is part of the submission.
+    range: boolean
+
+  files:
+    description: >-
+      The file associated with an entity.
+    range: File

@@ -144,6 +144,16 @@
 
       - **Items** *(string)*
 
+- <a id="definitions/ResourceDeletionConfig"></a>**`ResourceDeletionConfig`** *(object)*: Config containing the slot values that mark resources for deletion.
+  Cannot contain additional properties.
+
+  - **`resources_to_delete`** *(object, required)*: Per class, the slot values that mark a resource for deletion.
+    A resource is deleted when every listed slot equals the given value.
+    References to deleted resources are removed from all other classes.
+    Can contain additional properties.
+
+    - **Additional Properties** *(object)*: Can contain additional properties.
+
 - <a id="definitions/AggregationOperation"></a>**`AggregationOperation`** *(object)*: A model for a single aggregation operation executed on one or multiple branches in the data described by a path in the model.
 
   - **`input_paths`** *(array, required)*
@@ -180,6 +190,8 @@
   - **`normalize_model`**: Refer to *[#/definitions/NormalizationConfig](#definitions/NormalizationConfig)*.
 
   - **`add_accessions`**: Refer to *[#/definitions/AccessionAdditionConfig](#definitions/AccessionAdditionConfig)*.
+
+  - **`remove_excluded_files`**: Refer to *[#/definitions/ResourceDeletionConfig](#definitions/ResourceDeletionConfig)*.
 
   - **`embed_restricted`**: Refer to *[#/definitions/CustomEmbeddingConfig](#definitions/CustomEmbeddingConfig)*.
 
