@@ -26,7 +26,18 @@ async def get_file_dao(*, dao_factory: DaoFactoryProtocol) -> FileDao:
         name="files",
         dto_model=FileUnderInterrogation,
         id_field="id",
-        indexes=[MongoDbIndex(fields="object_id")],
+        indexes=[
+            MongoDbIndex(fields="object_id"),
+            MongoDbIndex(  # for the claim query
+                fields={
+                    "storage_alias": 1,
+                    "state": 1,
+                    "interrogated": 1,
+                    "leased_until": 1,
+                    "state_updated": 1,
+                }
+            ),
+        ],
     )
 
 
