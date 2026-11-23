@@ -109,7 +109,6 @@ def check_and_log_user_agent_header(
     tags=["FileIngestService"],
     status_code=200,
 )
-@TRACER.start_as_current_span("routes.health")
 async def health(
     request: Request,
     _dhfs_version_constraint: dummies.DhfsVersionConstraint,

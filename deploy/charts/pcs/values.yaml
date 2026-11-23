@@ -160,6 +160,7 @@ apiBasePath: /pcs/
 serviceName: pcs-rest
 serviceInstanceId:
   fromPodName: false
+otelExcludedUrls: /health$
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

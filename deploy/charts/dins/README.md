@@ -173,6 +173,7 @@ for the full set of configurable values.
 | `apiBasePath` | Public API path prefix; combined with apiBasePathPrefix (set by an aliasing umbrella) and injected into config.yaml as api_root_path | `"/dins/"` |
 | `serviceName` | Logical service name; combined with serviceNamePrefix and injected into config.yaml as service_name | `"dins-consumer"` |
 | `serviceInstanceId.fromPodName` | Inject a <CONFIG_PREFIX>_SERVICE_INSTANCE_ID env var sourced from the Kubernetes Downward API (metadata.name), overriding config.service_instance_id per-pod. Env vars beat the YAML config file in hexkit config_from_yaml priority order, so this makes the value genuinely unique per replica instead of the static per-member string every service currently hardcodes in its own chart-values.yaml config block (which collides across replicas once replicaCount > 1, contradicting hexkit KafkaConfig.service_instance_id's own "uniquely identifies this instance" contract). | `false` |
+| `otelExcludedUrls` | Comma-separated regexes of URLs that OpenTelemetry neither traces nor counts in its HTTP metrics, set as OTEL_PYTHON_EXCLUDED_URLS (read by the FastAPI and httpx instrumentations). Defaults to the health probes; empty turns it off. Skipped when envVars set OTEL_PYTHON_EXCLUDED_URLS themselves. | `"/health$"` |
 | `configMap.enabled` | Render the ConfigMap holding config.yaml and mount it into the container | `true` |
 | `configMap.mountPath` |  | `"/etc/config.yaml"` |
 | `configMap.subPath` |  | `"config.yaml"` |
