@@ -148,6 +148,7 @@ apiBasePath: /
 serviceName: ""
 serviceInstanceId:
   fromPodName: false
+otelExcludedUrls: /health$
 configMap:
   enabled: true
   mountPath: /app/data-portal.yaml

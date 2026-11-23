@@ -191,6 +191,7 @@ apiBasePath: /auth-ext/
 serviceName: auth-service
 serviceInstanceId:
   fromPodName: false
+otelExcludedUrls: /health$
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

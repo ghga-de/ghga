@@ -35,7 +35,6 @@ router = APIRouter()
     tags=["PurgeControllerService"],
     status_code=status.HTTP_200_OK,
 )
-@TRACER.start_as_current_span("routes.health")
 async def health():
     """Used to test if this service is alive"""
     return {"status": "OK"}

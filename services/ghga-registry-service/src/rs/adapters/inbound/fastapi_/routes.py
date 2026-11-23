@@ -26,7 +26,6 @@ from rs.adapters.inbound.fastapi_.routers.upload_boxes import (
     storage_router,
 )
 from rs.adapters.inbound.fastapi_.routers.upload_grants import upload_grant_router
-from rs.constants import TRACER
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +50,6 @@ router.include_router(
     summary="health",
     status_code=200,
 )
-@TRACER.start_as_current_span("routes.health")
 async def health():
     """Used to test if this service is alive"""
     return {"status": "OK"}
