@@ -307,7 +307,8 @@ A Data Steward uses that warning to decide whether to requeue the file through [
 
 `_requeue_file` must also set `leased_until`, `leased_by` and `claimed_at` to null, and `times_claimed` to 0.
 It already builds the new document from the event payload, which contains none of them, so this happens today by accident.
-Make it explicit, because the same accident applies to the cancelled, failed and archived branch of `process_file_upload`.
+Make it explicit, so a requeued file starts unclaimed and with its backoff reset.
+The cancelled, failed and archived branch of `process_file_upload` clears them by the same accident and needs no explicit reset, since the claim and renewal filters already exclude a file in those states.
 
 ### Configuration
 
