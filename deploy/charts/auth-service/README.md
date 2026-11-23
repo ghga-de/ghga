@@ -77,6 +77,7 @@ for the full set of configurable values.
 | `config.csrf_token_bytes` | Number of bytes to be used for a CSRF token. | `24` |
 | `config.session_timeout_seconds` | Session timeout in seconds | `3600` |
 | `config.session_max_lifetime_seconds` | Maximum lifetime of a session in seconds | `43200` |
+| `config.session_check_interval_seconds` | Seconds after which a session is checked again against the user account, i.e. its status, roles and TOTP token | `60` |
 | `config.auth_key` | internal public key for the auth service (key pair for auth adapter) | `null` |
 | `config.auth_algs` | A list of all algorithms used for signing GHGA internal tokens. | `["ES256"]` |
 | `config.auth_check_claims` | A dict of all GHGA internal claims that shall be verified. | `{"id": null, "name": null, "email": null, "iat": null, "exp": null}` |
