@@ -25,6 +25,7 @@ import pytest
 from fastapi import FastAPI, status
 from httpx2 import Response
 
+from auth_service.auth_adapter.core.session_store import SessionState
 from auth_service.auth_adapter.deps import (
     SESSION_COOKIE,
     get_session_store,
@@ -364,6 +365,32 @@ async def test_login_with_cookie_and_deactivated_user(bare_client: BareClient):
     response = await bare_client.post(LOGIN_PATH, headers=headers)
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == {"detail": "User account is disabled"}
+
+    # the session has been removed, and the client is told to delete the cookie
+    assert not await store.get_session(session.session_id)
+    assert_cookie_deleted(response)
+    assert "X-Session" not in response.headers
+
+
+async def test_login_with_cookie_and_deleted_user(bare_client: BareClient):
+    """Test that a login request with a session of a deleted user ends it."""
+    # the user DAO knows only James, so John counts as deleted
+    setup_daos(bare_client.app, id_=ID_OF_JAMES)
+
+    store = bare_client.app.dependency_overrides[get_session_store]()
+    session = await store.create_session(
+        ext_id="john@aai.org",
+        user_id=str(ID_OF_JOHN),
+        user_name="John Doe",
+        user_email="john@home.org",
+        roles=["data_steward"],
+    )
+    session.state = SessionState.AUTHENTICATED
+    await store.save_session(session)
+    headers = headers_for_session(session)
+    response = await bare_client.post(LOGIN_PATH, headers=headers)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "User account has been deleted"}
 
     # the session has been removed, and the client is told to delete the cookie
     assert not await store.get_session(session.session_id)

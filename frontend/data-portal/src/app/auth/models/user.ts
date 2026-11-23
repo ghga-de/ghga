@@ -27,6 +27,7 @@ export type TotpVerification =
   | 'verified' // the code is valid and the user is authenticated
   | 'invalid' // the code was rejected, the user may try again
   | 'locked' // too many failed attempts have ended the session
+  | 'ended' // the session has ended for another reason, e.g. the account was deleted
   | 'disabled'; // too many failed attempts have disabled the user account
 
 /**

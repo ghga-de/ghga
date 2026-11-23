@@ -809,7 +809,10 @@ not_implemented = NotImplementedError("Implemented by the auth adapter.")
     description="Endpoint used when a user wants to log in",
     status_code=204,
     responses={
-        401: {"description": "The access token is missing or invalid."},
+        401: {
+            "description": "The access token is missing or invalid,"
+            " or the user account has been deleted."
+        },
         403: {"description": "The user account is disabled."},
     },
 )

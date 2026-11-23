@@ -22,6 +22,7 @@ from contextlib import suppress
 from fastapi import HTTPException, status
 
 from auth_service.user_registry.models.users import (
+    User,
     UserModifiableData,
     UserStatus,
 )
@@ -31,7 +32,7 @@ from hexkit.protocols.dao import ResourceNotFoundError
 from ..ports.dao import UserToken, UserTokenDao
 from ..ports.session_store import SessionStorePort
 from ..ports.totp import TOTPHandlerPort
-from .session_store import Session, SessionState
+from .session_store import AsyncUserRoleFetcher, Session, SessionState
 
 __all__ = ["verify_totp"]
 
@@ -54,11 +55,13 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     totp_handler: TOTPHandlerPort,
     user_registry: UserRegistryPort,
     token_dao: UserTokenDao,
+    get_roles: AsyncUserRoleFetcher,
 ) -> None:
     """Verify the given TOTP code for the user with the given ID.
 
     As a side effect, the TOTP token is stored in the database if it is still only
-    available in the session, and possibly already verified IVAs are reset.
+    available in the session. In that case, already verified IVAs are reset.
+    The roles of the session are fetched again, since they depend on these IVAs.
     """
     user_id = session.user_id
     if not user_id:
@@ -68,9 +71,14 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
         )
     try:
         user = await user_registry.get_user(user_id)
-    except user_registry.UserDoesNotExistError:
-        user = None
-    if user and user.status is not UserStatus.ACTIVE:
+    except user_registry.UserDoesNotExistError as error:
+        # the account was deleted after the user logged in
+        await session_store.delete_session(session.session_id)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account has been deleted",
+        ) from error
+    if user.status is not UserStatus.ACTIVE:
         # the account was disabled after the user logged in
         await session_store.delete_session(session.session_id)
         raise _account_disabled()
@@ -79,13 +87,13 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
         # get not yet verified TOTP token from the session
         totp_token = session.totp_token
         # failed attempts with a token that is not stored yet end the session only
-        user = None
+        account_to_disable: User | None = None
     else:
         # get verified TOTP token from the database
-        if user:
-            with suppress(ResourceNotFoundError):
-                user_token = await token_dao.get_by_id(user.id)
+        with suppress(ResourceNotFoundError):
+            user_token = await token_dao.get_by_id(user.id)
         totp_token = user_token.totp_token if user_token else None
+        account_to_disable = user
     if totp_token and totp:
         if totp_handler.is_invalid(totp_token):
             limit = True
@@ -93,11 +101,11 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
             # reset the TOTP token again
             totp_handler.reset(totp_token)
             # too many invalid TOTP codes
-            if user:
+            if account_to_disable:
                 # disable the user account (only the specified fields will be changed)
                 modified_user_data = UserModifiableData(status=UserStatus.INACTIVE)
                 await user_registry.update_user(
-                    user.id,
+                    account_to_disable.id,
                     modified_user_data,
                     context="Too many failed TOTP login attempts",
                     changed_by=session.user_id,
@@ -108,8 +116,8 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     await token_dao.update(user_token)
                 log.warning(
                     "Too many failed TOTP login attempts for user %s (%s)",
-                    user.id,
-                    user.name,
+                    account_to_disable.id,
+                    account_to_disable.name,
                 )
             # remove the session (logging the user out)
             await session_store.delete_session(session.session_id)
@@ -124,7 +132,7 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
             await session_store.save_session(session)
             if user_token:
                 await token_dao.update(user_token)
-        if limit and user:
+        if limit and account_to_disable:
             # the account is disabled now, which login() will report as well
             raise _account_disabled()
         raise HTTPException(
@@ -149,6 +157,8 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
             await user_registry.notify_2fa_recreation(user_id)
         # insert or update the token
         await token_dao.upsert(user_token)
+    # the roles depend on the IVAs, which may have changed since login
+    session.roles = await get_roles(user)
     session.totp_token = None  # remove verified TOTP token from the session
     session.state = SessionState.AUTHENTICATED
     await session_store.save_session(session)

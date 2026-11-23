@@ -121,6 +121,8 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
 
     session_store.save_session = AsyncMock()
     session_store.delete_session = AsyncMock()
+    session.roles = ["role_from_login"]
+    get_roles = AsyncMock(return_value=["role_from_database"])
 
     with nullcontext() if should_verify else pytest.raises(HTTPException) as exc_info:
         await verify_totp(
@@ -130,10 +132,13 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
             totp_handler=totp_handler,
             user_registry=user_registry,
             token_dao=cast(UserTokenDao, user_token_dao),
+            get_roles=get_roles,
         )
     if should_verify:
         assert session.state is SessionState.AUTHENTICATED
         assert session.totp_token is None
+        get_roles.assert_awaited_once_with(user_dao.user)
+        assert session.roles == ["role_from_database"]
     else:
         assert exc_info
         if limit_reached and user_has_token:
@@ -151,6 +156,8 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
         assert exc_info.value.detail == expected_message
         assert session.state is session_state
         assert session.totp_token is totp_token
+        get_roles.assert_not_called()
+        assert session.roles == ["role_from_login"]
 
     if limit_reached and user_has_token:
         assert user_dao.user.status is UserStatus.INACTIVE
@@ -227,6 +234,8 @@ async def test_verify_totp_for_disabled_user(session_state: SessionState):
         UserToken(user_id=user_dao.user.id, totp_token=totp_token)
     )
 
+    get_roles = AsyncMock()
+
     with pytest.raises(HTTPException) as exc_info:
         await verify_totp(
             "423715",
@@ -235,6 +244,7 @@ async def test_verify_totp_for_disabled_user(session_state: SessionState):
             totp_handler=totp_handler,
             user_registry=user_registry,
             token_dao=cast(UserTokenDao, user_token_dao),
+            get_roles=get_roles,
         )
     assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
     assert exc_info.value.detail == "User account is disabled"
@@ -247,4 +257,49 @@ async def test_verify_totp_for_disabled_user(session_state: SessionState):
     # the stored token has not been replaced
     user_token = await user_token_dao.get_by_id(user_dao.user.id)
     assert user_token.totp_token is totp_token
+    assert not user_registry.published_events
+
+
+@pytest.mark.parametrize(
+    "session_state",
+    [
+        SessionState.NEW_TOTP_TOKEN,
+        SessionState.HAS_TOTP_TOKEN,
+        SessionState.AUTHENTICATED,
+    ],
+)
+@pytest.mark.asyncio()
+async def test_verify_totp_for_deleted_user(session_state: SessionState):
+    """Test that a user deleted after login cannot verify a TOTP code."""
+    session_store = MemorySessionStore(config=config)
+    session = await session_store.create_session(**SESSION_ARGS)
+    session.state = session_state
+
+    totp_handler = TOTPHandler(config=config)
+    totp_handler.verify_code = Mock(return_value=True)
+    if session_state is SessionState.NEW_TOTP_TOKEN:
+        session.totp_token = totp_handler.generate_token()
+
+    user_registry = MockUserRegistry(config=config)
+    user_registry.mock_user_dao.users.clear()
+    user_token_dao = MockUserTokenDao()
+    get_roles = AsyncMock()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await verify_totp(
+            "423715",
+            session_store=session_store,
+            session=session,
+            totp_handler=totp_handler,
+            user_registry=user_registry,
+            token_dao=cast(UserTokenDao, user_token_dao),
+            get_roles=get_roles,
+        )
+    assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
+    assert exc_info.value.detail == "User account has been deleted"
+
+    totp_handler.verify_code.assert_not_called()
+    get_roles.assert_not_called()
+    assert not await session_store.get_session(session.session_id)
+    assert not user_token_dao.user_tokens
     assert not user_registry.published_events
