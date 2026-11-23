@@ -325,6 +325,7 @@ class AccessGrantsDummy(AccessGrantsPort):
         self.last_grant_id = self.last_revoked_id = None
         self.simulate_error = False
         self.revoke_calls = self.revoke_failures = 0
+        self.revoke_error: Exception = self.AccessGrantsError("Service not available")
 
     async def grant_download_access(
         self,
@@ -382,7 +383,7 @@ class AccessGrantsDummy(AccessGrantsPort):
         self.revoke_calls += 1
         if self.revoke_failures:
             self.revoke_failures -= 1
-            raise self.AccessGrantsError("Access service not available")
+            raise self.revoke_error
         if grant_id == self.last_grant_id:
             self.last_revoked_id = grant_id
             return
@@ -1145,10 +1146,18 @@ async def test_revoke_unused_grant_is_retried(caplog: pytest.LogCaptureFixture):
     assert not any(record.levelname == "CRITICAL" for record in caplog.records)
 
 
-async def test_revoke_unused_grant_fails(caplog: pytest.LogCaptureFixture):
+@pytest.mark.parametrize(
+    "revoke_error",
+    [AccessGrantsPort.AccessGrantsError("Not available"), RuntimeError("Closed")],
+    ids=["grants_error", "other_error"],
+)
+async def test_revoke_unused_grant_fails(
+    revoke_error: Exception, caplog: pytest.LogCaptureFixture
+):
     """Test that a grant that cannot be revoked is logged as critical."""
     access_request_dao.simulate_error = True
     access_grants.revoke_failures = 3
+    access_grants.revoke_error = revoke_error
 
     with pytest.raises(RuntimeError, match="Database not available"):
         await repository.update(
@@ -1167,14 +1176,24 @@ async def test_revoke_unused_grant_fails(caplog: pytest.LogCaptureFixture):
 
 
 async def test_revoke_unused_grant_when_cancelled(monkeypatch: pytest.MonkeyPatch):
-    """Test that the grant is revoked when the request is cancelled while storing."""
-    stored = asyncio.Event()
+    """Test that the grant is revoked when the request is cancelled while storing,
+    even if it is cancelled again while revoking.
+    """
+    storing, revoking, may_revoke = asyncio.Event(), asyncio.Event(), asyncio.Event()
 
     async def update(*args, **kwargs):
-        stored.set()
+        storing.set()
         await asyncio.sleep(10)
 
+    revoke = access_grants.revoke_download_access_grant
+
+    async def revoke_later(grant_id: UUID4) -> None:
+        revoking.set()
+        await may_revoke.wait()
+        await revoke(grant_id)
+
     monkeypatch.setattr(access_request_dao, "update", update)
+    monkeypatch.setattr(access_grants, "revoke_download_access_grant", revoke_later)
     task = asyncio.create_task(
         repository.update(
             REQUEST_IDS[3],
@@ -1184,14 +1203,51 @@ async def test_revoke_unused_grant_when_cancelled(monkeypatch: pytest.MonkeyPatc
             auth_context=auth_context_steward,
         )
     )
-    await stored.wait()
+    await storing.wait()
+    task.cancel()
+    await revoking.wait()
     task.cancel()
 
     with pytest.raises(asyncio.CancelledError):
         await task
 
+    assert access_grants.last_revoked_id is None
+    may_revoke.set()
+    await asyncio.gather(*repository._discard_tasks)
     assert access_grants.last_grant_id is not None
     assert access_grants.last_revoked_id == access_grants.last_grant_id
+
+
+@pytest.mark.parametrize("cancelled", [False, True], ids=["error", "cancelled"])
+async def test_keep_grant_when_request_was_stored(
+    cancelled: bool, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that the grant is kept when the request has been stored as allowed,
+    but publishing the change failed or was cancelled.
+    """
+    store = access_request_dao.update
+
+    async def store_but_fail_to_publish(*args, **kwargs):
+        await store(*args, **kwargs)
+        if cancelled:
+            raise asyncio.CancelledError
+        raise RuntimeError("Cannot publish")
+
+    monkeypatch.setattr(access_request_dao, "update", store_but_fail_to_publish)
+
+    with pytest.raises(asyncio.CancelledError if cancelled else RuntimeError):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    stored = await access_request_dao.get_by_id(REQUEST_IDS[3])
+    assert stored.status == AccessRequestStatus.ALLOWED
+    assert access_grants.last_grant_id is not None
+    assert access_grants.revoke_calls == 0
 
 
 async def test_set_status_to_allowed_when_it_is_already_allowed():

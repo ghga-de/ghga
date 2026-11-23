@@ -43,6 +43,7 @@ from ars.ports.outbound.access_grants import AccessGrantsPort
 from ars.ports.outbound.daos import (
     AccessRequestDaoPort,
     DatasetDaoPort,
+    PreconditionFailedError,
     ResourceNotFoundError,
     race_condition_retries,
 )
@@ -109,6 +110,8 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         self._dataset_dao = dataset_dao
         self._access_grants = access_grants
         self._sms_notifier = sms_notifier
+        # keeps the tasks discarding unused grants alive until they are done
+        self._discard_tasks: set[asyncio.Task[None]] = set()
 
     async def create(
         self, creation_data: AccessRequestCreationData, *, auth_context: AuthContext
@@ -403,12 +406,48 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         try:
             await self._write_back(request, modified_request)
-        except BaseException:
+        except (Exception, asyncio.CancelledError) as error:
             # a grant without an allowed request would be duplicated on a retry,
             # or outlive a request that has been changed in the meantime;
             # shielded so that it also completes when the request is cancelled
-            await asyncio.shield(self._revoke_unused_grant(grant_id))
+            maybe_stored = not isinstance(
+                error, PreconditionFailedError | ResourceNotFoundError
+            )
+            task = asyncio.create_task(
+                self._discard_grant(
+                    grant_id, modified_request, check_stored=maybe_stored
+                )
+            )
+            self._discard_tasks.add(task)
+            task.add_done_callback(self._discard_tasks.discard)
+            await asyncio.shield(task)
             raise
+
+    async def _discard_grant(
+        self, grant_id: UUID4, allowed_request: AccessRequest, *, check_stored: bool
+    ) -> None:
+        """Revoke a grant registered for a request that may not have been stored.
+
+        With `check_stored`, the grant is kept if the request has been stored as
+        allowed nevertheless, e.g. when only publishing the change failed.
+        """
+        if check_stored:
+            try:
+                stored = await self._request_dao.get_by_id(allowed_request.id)
+            except Exception as error:
+                # revoke when in doubt, since the grant can be registered again
+                log.warning(
+                    "Could not check whether access request %s was stored: %s",
+                    allowed_request.id,
+                    error,
+                )
+            else:
+                if (
+                    stored.status == AccessRequestStatus.ALLOWED
+                    and stored.status_changed == allowed_request.status_changed
+                ):
+                    return
+        await self._revoke_unused_grant(grant_id)
 
     async def _revoke_unused_grant(self, grant_id: UUID4) -> None:
         """Revoke a grant whose access request could not be stored as allowed.
@@ -421,8 +460,11 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             try:
                 await self._access_grants.revoke_download_access_grant(grant_id)
             except self._access_grants.AccessGrantNotFoundError:
-                return  # nothing to revoke
-            except self._access_grants.AccessGrantsError as error:
+                if attempt == 1:
+                    # later, it can mean that the previous attempt succeeded
+                    log.warning("The access grant %s to revoke was not found", grant_id)
+                return
+            except Exception as error:
                 if attempt >= self._revoke_tries:
                     log.critical(
                         "Could not revoke the access grant %s"
