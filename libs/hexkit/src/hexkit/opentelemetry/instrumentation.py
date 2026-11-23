@@ -17,6 +17,7 @@
 
 import importlib
 import logging
+import uuid
 from collections.abc import Sequence
 from typing import Annotated
 
@@ -28,7 +29,7 @@ from opentelemetry.sdk.metrics.export import (
     MetricReader,
     PeriodicExportingMetricReader,
 )
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.resources import SERVICE_INSTANCE_ID, SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk.trace.sampling import ParentBasedTraceIdRatio
@@ -96,6 +97,22 @@ class OpenTelemetryConfig(BaseSettings):
     )
 
 
+def _build_resource(service_name: str) -> Resource:
+    """Build the resource that identifies this process in traces and metrics.
+
+    Each process needs its own `service.instance.id`: the metrics backend tells the
+    replicas and workers of a service apart by it, and without one their metrics
+    land in a single series that each push overwrites. `Resource.create` adds a
+    random one in recent SDK versions; it is added here for those that lack it.
+    `Resource.create` also merges `OTEL_RESOURCE_ATTRIBUTES`, so a deployment can
+    set `k8s.pod.name` or a fixed instance ID there.
+    """
+    resource = Resource.create({SERVICE_NAME: service_name})
+    if not resource.attributes.get(SERVICE_INSTANCE_ID):
+        resource = resource.merge(Resource({SERVICE_INSTANCE_ID: str(uuid.uuid4())}))
+    return resource
+
+
 def configure_opentelemetry(
     *,
     service_name: str,
@@ -120,7 +137,7 @@ def configure_opentelemetry(
         logger.info("OpenTelemetry disabled via config.")
         return
 
-    resource = Resource(attributes={SERVICE_NAME: service_name})
+    resource = _build_resource(service_name)
     # Replace the default static sampler with a probabilistic one that honors parent
     # span sampling decisions
     # This should consistently yield full traces within a service but not necessarily

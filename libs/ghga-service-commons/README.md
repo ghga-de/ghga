@@ -32,6 +32,23 @@ Thereby, you may specify following extra(s):
 - `auth`: dependencies needed for dealing with authentication and authorization
 - `metrics`: dependencies needed for `refresh_gauge`, which reports an async source such as a database count as an OpenTelemetry gauge
 
+`refresh_gauge` reads the source in a background task on the event loop and reports the last value from the gauge's callback, which the OpenTelemetry exporter calls on its own thread.
+Open it once, where the service wires up its dependencies:
+
+```python
+from ghga_service_commons.metrics import refresh_gauge
+
+async with refresh_gauge(
+    name="dlqs.dead_letters",
+    description="Events stored in the dead letter queue.",
+    unit="{event}",
+    read=dlq_manager.count_dead_letters,
+):
+    await run_server(app=app, config=config)
+```
+
+The values only leave the process once a `MeterProvider` is set, e.g. by hexkit's `configure_opentelemetry` with `enable_otel_metrics`.
+
 ### Development
 
 This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is developed from the repository root rather than on its own.

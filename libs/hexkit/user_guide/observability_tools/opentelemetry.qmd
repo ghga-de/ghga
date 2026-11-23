@@ -93,9 +93,14 @@ Keeping the default of `1.0` everywhere sidesteps this; lowering the rate per se
 
 ## Metrics
 
-With `enable_otel_metrics` on, `configure_opentelemetry` also sets up a `MeterProvider` with the same service name resource as the traces.
+With `enable_otel_metrics` on, `configure_opentelemetry` also sets up a `MeterProvider` with the same resource as the traces.
 It exports via OTLP over HTTP, configured through the same `OTEL_*` environment variables as the span exporter, every 60 seconds unless `OTEL_METRIC_EXPORT_INTERVAL` (in milliseconds) says otherwise.
 The collector receiving them needs a metrics pipeline, for example one that a Prometheus server scrapes.
+
+The resource gives every process its own random `service.instance.id`, which the Prometheus exporter of the collector turns into the `instance` label, next to `job` from `service.name`.
+Each replica and worker is therefore a separate series, and you aggregate at query time: `sum by (http_route) (rate(http_server_duration_count[5m]))` for counters and histograms, `max()` for a gauge that every replica reads from the same source.
+A restart starts a new series, and the old one expires.
+Attributes in `OTEL_RESOURCE_ATTRIBUTES` are merged into the resource, so a deployment can add a readable `k8s.pod.name`.
 
 Metrics are off by default because turning them on changes more than your own code: the instrumented libraries, such as FastAPI and httpx, start recording their own metrics on the same provider.
 
@@ -113,8 +118,31 @@ Until a `MeterProvider` is set, the API hands out no-op instruments, so this cod
 
 Record what happens in your code inline, with counters and histograms.
 For a value that has to be read, such as the number of documents in a collection, use an observable gauge, whose callback the exporter calls when it collects.
-That callback runs on the exporter's thread and cannot await, so it must not query an async database client itself.
-`refresh_gauge` in `ghga_service_commons.metrics` handles this: a background task on the event loop reads the value, and the callback only reports the last result.
+That callback runs on the exporter's thread and cannot await, so it must not query an async database client itself: bridging into the event loop from there blocks the exporter, and deadlocks once a collection runs on the loop's own thread.
+Split the work instead: a background task on the event loop awaits the read and caches the result, and the callback only reports the cached value.
+
+```python
+def start_document_gauge(meter: Meter, dao: Dao) -> asyncio.Task:
+    """Report the number of documents in the DAO's collection as a gauge."""
+    latest: int | None = None
+
+    def observe(options: CallbackOptions) -> Iterable[Observation]:
+        if latest is not None:  # runs on the exporter thread
+            yield Observation(latest)
+
+    async def refresh() -> None:
+        nonlocal latest
+        while True:  # runs on the event loop
+            latest = await dao.find_all(filter_={}).total_count()
+            await asyncio.sleep(30)
+
+    meter.create_observable_gauge("my_service.documents", callbacks=[observe])
+    return asyncio.create_task(refresh())
+```
+
+Keep the returned task and cancel it at shutdown.
+
+In a real service, also give the read a timeout, keep the last value when a read fails, and stop reporting a value once it is older than a few intervals, so the series goes absent rather than showing an outdated number.
 
 To check metrics in a test, pass an `InMemoryMetricReader` from `opentelemetry.sdk.metrics.export` as `metric_readers` to `configure_opentelemetry`.
 
