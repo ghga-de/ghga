@@ -68,8 +68,17 @@ class Session(BaseSession):
     totp_token: TOTPToken | None = Field(
         default=None, description="The TOTP token of the user if available"
     )
+    totp_token_hash: str | None = Field(
+        default=None,
+        description="Hash of the stored TOTP token that authenticated the session",
+    )
     created: UTCDatetime = Field(description="Time when the session was created")
     last_used: UTCDatetime = Field(description="Time when the session was last used")
+    last_checked: UTCDatetime | None = Field(
+        default=None,
+        description="Time when the session was last checked against the user account,"
+        " or None if a check is due",
+    )
 
 
 class SessionConfig(BaseSettings):
@@ -94,6 +103,12 @@ class SessionConfig(BaseSettings):
         default=12 * 60 * 60,
         title="Max. session duration",
         description="Maximum lifetime of a session in seconds",
+    )
+    session_check_interval_seconds: int = Field(
+        default=60,
+        title="Session check interval",
+        description="Seconds after which a session is checked again against the"
+        " user account, i.e. its status, roles and TOTP token",
     )
 
 
@@ -161,6 +176,7 @@ class SessionStore(SessionStorePort[Session]):
             csrf_token=csrf_token,
             created=created,
             last_used=created,
+            last_checked=created,
         )
 
     def _validate_session(self, session: Session) -> bool:
@@ -193,8 +209,12 @@ class SessionStore(SessionStorePort[Session]):
         user: User | None = None,
         get_roles: AsyncUserRoleFetcher | None = None,
         has_totp_token: AsyncUserPredicate | None = None,
+        checked: bool = False,
     ) -> None:
-        """Update the given user session."""
+        """Update the given user session.
+
+        Set "checked" if the session has just been checked against the user account.
+        """
         if user is not None and user.ext_id == session.ext_id:
             if session.state is SessionState.NEEDS_REGISTRATION:
                 session.user_id = user.id
@@ -215,7 +235,17 @@ class SessionStore(SessionStorePort[Session]):
                 and await has_totp_token(user)
             ):
                 session.state = SessionState.HAS_TOTP_TOKEN
-        session.last_used = self._now()
+        now = self._now()
+        session.last_used = now
+        if checked:
+            session.last_checked = now
+
+    def is_check_due(self, session: Session) -> bool:
+        """Check whether the session must be checked against the user account."""
+        if not session.last_checked:
+            return True
+        interval = self.config.session_check_interval_seconds
+        return (self._now() - session.last_checked).total_seconds() >= interval
 
     def timeouts(self, session: Session) -> tuple[int, int]:
         """Get the soft and hard timeouts of the given session in seconds."""

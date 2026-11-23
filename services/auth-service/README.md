@@ -519,6 +519,8 @@ The service requires the following configuration parameters:
   Default: `3600`.
 - <a id="properties/session_max_lifetime_seconds"></a>**`session_max_lifetime_seconds`** *(integer)*: Maximum lifetime of a session in seconds.
   Default: `43200`.
+- <a id="properties/session_check_interval_seconds"></a>**`session_check_interval_seconds`** *(integer)*: Seconds after which a session is checked again against the user account, i.e. its status, roles and TOTP token.
+  Default: `60`.
 - <a id="properties/auth_key"></a>**`auth_key`**: internal public key for the auth service (key pair for auth adapter).
   Default: `null`.
   - **Any of**

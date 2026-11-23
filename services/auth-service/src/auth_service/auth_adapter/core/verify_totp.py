@@ -32,19 +32,16 @@ from hexkit.protocols.dao import ResourceNotFoundError
 from ..ports.dao import UserToken, UserTokenDao
 from ..ports.session_store import SessionStorePort
 from ..ports.totp import TOTPHandlerPort
+from .session_check import (
+    account_deleted_error,
+    account_disabled_error,
+    totp_token_hash,
+)
 from .session_store import AsyncUserRoleFetcher, Session, SessionState
 
 __all__ = ["verify_totp"]
 
 log = logging.getLogger(__name__)
-
-
-def _account_disabled() -> HTTPException:
-    """Get the error for a user whose account is disabled."""
-    return HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="User account is disabled",
-    )
 
 
 async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
@@ -74,14 +71,11 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     except user_registry.UserDoesNotExistError as error:
         # the account was deleted after the user logged in
         await session_store.delete_session(session.session_id)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User account has been deleted",
-        ) from error
+        raise account_deleted_error() from error
     if user.status is not UserStatus.ACTIVE:
         # the account was disabled after the user logged in
         await session_store.delete_session(session.session_id)
-        raise _account_disabled()
+        raise account_disabled_error()
     user_token: UserToken | None = None
     if session.state == SessionState.NEW_TOTP_TOKEN:
         # get not yet verified TOTP token from the session
@@ -134,7 +128,7 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 await token_dao.update(user_token)
         if limit and account_to_disable:
             # the account is disabled now, which login() will report as well
-            raise _account_disabled()
+            raise account_disabled_error()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Too many failed attempts" if limit else "Invalid TOTP code",
@@ -159,6 +153,8 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
         await token_dao.upsert(user_token)
     # the roles depend on the IVAs, which may have changed since login
     session.roles = await get_roles(user)
+    # remember the token, so that the session ends when the token is replaced
+    session.totp_token_hash = totp_token_hash(totp_token) if totp_token else None
     session.totp_token = None  # remove verified TOTP token from the session
     session.state = SessionState.AUTHENTICATED
-    await session_store.save_session(session)
+    await session_store.save_session(session, checked=True)
