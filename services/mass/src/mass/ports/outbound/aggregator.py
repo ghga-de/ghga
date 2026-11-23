@@ -40,11 +40,16 @@ class AggregatorPort(ABC):
         facet_fields: list[models.FieldLabel],
         query: str,
         filters: list[models.Filter],
-        sorting_parameters: list[models.SortingParameter],
+        sort: list[str],
         skip: int = 0,
         limit: int | None = None,
     ) -> JsonObject:
-        """Applies an aggregation pipeline to a mongodb collection"""
+        """Applies an aggregation pipeline to a mongodb collection
+
+        The `sort` parameter is a list of field names, prefixed with "-" for
+        descending order, where `relevance` stands for the text score. It is
+        assumed to be validated by the caller.
+        """
         ...
 
 

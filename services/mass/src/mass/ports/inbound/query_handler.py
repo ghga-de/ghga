@@ -38,11 +38,8 @@ class QueryHandlerPort(ABC):
                 "Error executing search. Possibly a problem with the supplied parameters."
             )
 
-    class RelevanceSortingWithoutQueryError(RuntimeError):
-        """Raised when sorting by relevance is requested without a query"""
-
-        def __init__(self):
-            super().__init__("Sorting by relevance requires a query")
+    class SortError(RuntimeError):
+        """Raised when the requested sort order is invalid."""
 
     class ResourceNotFoundError(RuntimeError):
         """Raised when a matching resource ID can't be found in the database"""
@@ -80,17 +77,23 @@ class QueryHandlerPort(ABC):
         class_name: str,
         query: str = "",
         filters: list[models.Filter] | None = None,
-        sorting_parameters: list[models.SortingParameter] | None = None,
+        sort: list[str] | None = None,
         skip: int = 0,
         limit: int | None = None,
     ) -> models.QueryResults:
         """Processes a query
 
+        The `sort` parameter is a list of field names defining the sort order, where
+        field names prefixed with "-" indicate descending order. The reserved name
+        `relevance` sorts by how well a result matches the query, best first. If
+        `sort` is empty, results are sorted by relevance when a query is given. If
+        `sort` does not reference `id_`, it is appended as an ascending tiebreaker.
+
         Raises:
             ClassNotConfiguredError - when the class_name parameter does not
                 match any configured class
-            RelevanceSortingWithoutQueryError - when sorting by relevance is
-                requested without a non-blank query
+            SortError - when a field to sort by is malformed or repeated, or when
+                relevance is reversed or requested without a non-blank query
             SearchError - when the search operation fails
             ValidationError - when the results are malformed and fail model validation
         """

@@ -13,7 +13,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
-import { Hit, SearchResults } from '@app/metadata/models/search-results';
+import {
+  Hit,
+  SearchResults,
+  emptySearchResults,
+} from '@app/metadata/models/search-results';
 import { MetadataService } from '@app/metadata/services/metadata';
 import { ConfigService } from '@app/shared/services/config';
 import { NavigationTracker } from '@app/shared/services/navigation';
@@ -69,12 +73,12 @@ export class StudyDetails implements OnInit {
   datasets = computed(() =>
     this.#datasetsResource.hasValue()
       ? this.#datasetsResource.value()
-      : { hits: [], total: 0 },
+      : emptySearchResults,
   );
   datasetsLoading = computed(() => this.#datasetsResource.isLoading());
   datasetsError = computed(() => this.#datasetsResource.error());
 
-  #updateSourceEffect = effect(() => (this.source.data = this.datasets().hits));
+  #updateSourceEffect = effect(() => (this.source.data = this.datasets().items));
 
   /**
    * Called on component initialization

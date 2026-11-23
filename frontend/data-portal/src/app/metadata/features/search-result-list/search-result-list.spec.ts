@@ -84,7 +84,7 @@ describe('SearchResultList', () => {
   });
 
   it('should show a panel for every search result', () => {
-    for (const hit of searchResults.hits) {
+    for (const hit of searchResults.items) {
       const header = screen.getByRole('button', { name: new RegExp(`^${hit.id_}`) });
       expect(header).toHaveAttribute('aria-expanded', 'false');
     }
