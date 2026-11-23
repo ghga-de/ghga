@@ -177,8 +177,8 @@ class SubmissionRegistry:
         stopped before completing, each with the study PID it holds, or None if it
         holds none yet. The oldest comes first.
 
-        The submissions come without their metadata content, which is not loaded,
-        so that a store full of completed submissions is listed quickly.
+        The submissions come without their metadata content, which is read but not
+        validated, so that a store full of completed submissions is listed quickly.
         """
         pending_submissions = []
         for submission_id in self._submission_store.get_all_submission_ids():
@@ -194,7 +194,8 @@ class SubmissionRegistry:
 
         # oldest first, since submission IDs are random
         return sorted(
-            pending_submissions, key=lambda item: item[0].status_history[0].timestamp
+            pending_submissions,
+            key=lambda item: min(change.timestamp for change in item[0].status_history),
         )
 
     def check_study_pid(self, *, submission_id: str, study_pid: str) -> None:
