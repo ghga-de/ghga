@@ -347,6 +347,11 @@ def reset_user_token_counter(sub: str, fixtures: JointFixture) -> None:
     )
     assert document
 
+    # the auth service accepts a code of the same time step again now
+    token = fixtures.state.get_state(f"totp-token-{sub}")
+    if token:
+        fixtures.auth.forget_used_totp(token)
+
 
 def get_alias_from_ega_accession(state: StateStorage, ega_accession):
     dataset_accessions = state.get_state("dataset_accessions")

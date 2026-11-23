@@ -143,14 +143,14 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     context="Too many failed TOTP login attempts",
                     changed_by=session.user_id,
                 )
+                log.warning(
+                    "Too many failed TOTP login attempts for user %s (%s)",
+                    account_to_disable.id,
+                    account_to_disable.name,
+                )
                 # Then store the cleared token, so that users can work again after
-                # they have been reactivated. Only the attempt that does this logs.
-                if await _write_back_token(token_dao, user_token, token_state):
-                    log.warning(
-                        "Too many failed TOTP login attempts for user %s (%s)",
-                        account_to_disable.id,
-                        account_to_disable.name,
-                    )
+                # they have been reactivated, unless it has changed concurrently.
+                await _write_back_token(token_dao, user_token, token_state)
             # remove the session (logging the user out)
             await session_store.delete_session(session.session_id)
         else:

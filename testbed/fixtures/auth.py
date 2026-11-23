@@ -331,16 +331,25 @@ class TokenGenerator:
         waits for the next time step if a code has already been generated in the
         current one. It also waits if the step ends in less than 3 seconds, so
         that the code is verified in the same step in which it was generated.
+        After a wait, it leaves a second for a server clock that runs behind.
         """
         interval = self.totp_interval
         now = now_as_utc().timestamp()
         step = int(now // interval)
         step_end = (step + 1) * interval
         if self.used_totp_steps.get(token, -1) >= step or step_end - now < 3:
-            sleep(step_end - now + 0.1)
+            sleep(step_end - now + 1)
             step += 1
         self.used_totp_steps[token] = step
         return self.generate_totp(token)
+
+    def forget_used_totp(self, token: str) -> None:
+        """Forget the time step in which a code was last generated for the token.
+
+        Call this when the usage counters of the stored token have been reset,
+        since the auth service then accepts a code of the same step again.
+        """
+        self.used_totp_steps.pop(token, None)
 
     def generate_wrong_totp(self, totp_token: str) -> str:
         """Generate valid TOTP but with the wrong time window."""
