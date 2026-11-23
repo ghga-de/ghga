@@ -83,8 +83,8 @@ SEARCH_ALL_DATASETS = {
             "options": [{"value": "institute_a", "count": 3}],
         },
     ],
-    "count": 3,
-    "hits": [
+    "total_count": 3,
+    "items": [
         {
             "ega_accession": "EGADATASET000A",
             "title": "The complete-A dataset",
@@ -114,13 +114,13 @@ def search_with_invalid_query(fixtures: JointFixture):
     target_fixture="response",
 )
 def search_items_without_keyword(fixtures: JointFixture):
-    return search_dataset(fixtures=fixtures, sorts={"alias": "ascending"})
+    return search_dataset(fixtures=fixtures, sort="alias")
 
 
 @then("I get all the existing datasets")
 def check_search_without_keyword_results(state: StateStorage, response: Response):
     results = response.json()
-    hits = results["hits"]
+    hits = results["items"]
     assert isinstance(hits, list)
     datasets = {}  # mapping from alias to search summary
     for i, hit in enumerate(hits):
@@ -163,8 +163,8 @@ def search_dataset_with_keyword(fixtures: JointFixture, keyword: str):
 @then("I get the expected results from description search")
 def check_description_search_result(response: Response):
     results = response.json()
-    assert results["count"] == 1
-    hits = results["hits"]
+    assert results["total_count"] == 1
+    hits = results["items"]
     assert (
         hits[0]["content"]["description"]
         == "An interesting dataset B of complete example set"

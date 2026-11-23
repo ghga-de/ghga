@@ -6,8 +6,8 @@
 
 export interface SearchResults {
   facets: Facet[];
-  count: number;
-  hits: Hit[];
+  items: Hit[];
+  total_count: number;
 }
 
 export interface Facet {
@@ -33,8 +33,8 @@ interface HitContent {
 
 export const emptySearchResults: SearchResults = {
   facets: [],
-  count: 0,
-  hits: [],
+  items: [],
+  total_count: 0,
 };
 
 export const DEFAULT_PAGE_SIZE = 10;

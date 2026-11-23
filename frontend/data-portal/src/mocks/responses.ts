@@ -179,11 +179,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
    * MASS API
    */
 
-  'GET /api/mass/search*': {
-    facets: searchResults.facets,
-    count: searchResults.count,
-    hits: searchResults.hits,
-  },
+  // Pinning the limit serves the fixture as a canned page: the handler would
+  // otherwise paginate it and replace its total count with the number of items.
+  'GET /api/mass/search?limit=10': searchResults,
 
   /**
    * DINS API

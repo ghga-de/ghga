@@ -92,7 +92,7 @@ def check_embedded_datasets_in_metldata_database(config: Config, mongo: MongoFix
 def searching_yields_only_minimal_datasets(fixtures: JointFixture):
     response = search_dataset(fixtures=fixtures)
     results = response.json()
-    assert results["count"] == 0
+    assert results["total_count"] == 0
 
 
 @then("no datasets are known to the work package service")
