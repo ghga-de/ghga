@@ -150,6 +150,18 @@ def _role_fetcher(
     return get_roles
 
 
+def _session_ended_response(error: HTTPException) -> JSONResponse:
+    """Get the response for a session that the check has ended.
+
+    The session has been deleted, so the client is told to drop the cookie.
+    """
+    response = JSONResponse(
+        status_code=error.status_code, content={"detail": error.detail}
+    )
+    _delete_session_cookie(response)
+    return response
+
+
 def _delete_session_cookie(response: Response) -> None:
     """Tell the client to delete the session cookie."""
     response.delete_cookie(
@@ -189,11 +201,25 @@ async def login(  # noqa: C901, PLR0913
     """
     session_id = request.cookies.get(SESSION_COOKIE)
     session = await session_store.get_session(session_id) if session_id else None
+    checked = False
     if session:
         # We do not check the CSRF token here so that we can login
         # from a different browser tab which does not know the token.
         # This is ok since it is a request that does not modify state.
         session_created = False
+        # a page load must not show a session that the next API call would end
+        if session.user_id and session_store.is_check_due(session):
+            try:
+                await check_session(
+                    session,
+                    session_store=session_store,
+                    user_dao=user_dao,
+                    token_dao=token_dao,
+                    get_roles=_role_fetcher(iva_dao=iva_dao, claim_dao=claim_dao),
+                )
+            except HTTPException as error:
+                return _session_ended_response(error)
+            checked = True
     else:
         access_token = get_bearer_token(authorization, x_authorization)
         try:
@@ -254,6 +280,7 @@ async def login(  # noqa: C901, PLR0913
         user=user,
         get_roles=_role_fetcher(iva_dao=iva_dao, claim_dao=claim_dao),
         has_totp_token=_has_totp_token,
+        checked=checked,
     )
 
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -505,12 +532,7 @@ async def ext_auth(  # noqa: PLR0913
                     get_roles=_role_fetcher(iva_dao=iva_dao, claim_dao=claim_dao),
                 )
             except HTTPException as error:
-                # the session has been deleted, so the client must drop the cookie
-                denied = JSONResponse(
-                    status_code=error.status_code, content={"detail": error.detail}
-                )
-                _delete_session_cookie(denied)
-                return denied
+                return _session_ended_response(error)
         await session_store.save_session(session, checked=checked)
         if session.state is SessionState.AUTHENTICATED and is_api_request:
             log_auth_info(request, session)

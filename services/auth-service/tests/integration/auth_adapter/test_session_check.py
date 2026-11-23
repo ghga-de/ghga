@@ -40,6 +40,7 @@ from .fixtures import (
     ClientWithSession,
     fixture_bare_client,  # noqa: F401
     fixture_bare_client_with_session,  # noqa: F401
+    query_new_session,
 )
 
 pytestmark = pytest.mark.asyncio()
@@ -47,6 +48,7 @@ pytestmark = pytest.mark.asyncio()
 API_PATH = "/api/some/path"
 TOTP_TOKEN_PATH = AUTH_PATH + "/totp-token"
 VERIFY_TOTP_PATH = AUTH_PATH + "/rpc/verify-totp"
+LOGIN_PATH = AUTH_PATH + "/rpc/login"
 
 
 async def authenticate(client: BareClient, session: Session) -> str:
@@ -226,3 +228,49 @@ async def test_check_before_second_factor(client_with_session: ClientWithSession
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "User account has been deleted"}
     assert not await session_exists(client, session)
+
+
+async def test_check_after_token_replaced_in_other_session(
+    client_with_session: ClientWithSession,
+):
+    """Test that a session ends when another session replaces the TOTP token.
+
+    The other session passes the first factor and creates a new token, as a user
+    does who has lost the device with the old one. A page load already reports
+    the ended session, not only the next API call.
+    """
+    client, session_a, _, _ = client_with_session
+    await authenticate(client, session_a)
+    headers_a = headers_for_session(session_a)
+
+    # log in again, so that the second session passes the first factor only
+    client.cookies.clear()
+    session_b = await query_new_session(client)
+    client.cookies.clear()
+    assert session_b.state is SessionState.HAS_TOTP_TOKEN
+    headers_b = headers_for_session(session_b)
+    response = await client.post(TOTP_TOKEN_PATH + "?force=true", headers=headers_b)
+    assert response.status_code == status.HTTP_201_CREATED
+    secret = parse_qs(urlparse(response.json()["uri"]).query)["secret"][0]
+    code = pyotp.TOTP(secret).now()
+    response = await client.post(
+        VERIFY_TOTP_PATH,
+        headers={**headers_b, "X-Authorization": f"Bearer TOTP:{code}"},
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # the first session works until its next check
+    response = await client.get(API_PATH, headers=headers_a)
+    assert response.status_code == status.HTTP_200_OK
+    await let_check_become_due(client, session_a)
+    response = await client.post(LOGIN_PATH, headers=headers_a)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Session has ended"}
+    assert_cookie_deleted(response)
+    assert not await session_exists(client, session_a)
+
+    # the second session passes its check
+    await let_check_become_due(client, session_b)
+    response = await client.get(API_PATH, headers=headers_b)
+    assert response.status_code == status.HTTP_200_OK
+    assert await session_exists(client, session_b)

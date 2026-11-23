@@ -106,6 +106,7 @@ class SessionConfig(BaseSettings):
     )
     session_check_interval_seconds: int = Field(
         default=60,
+        ge=0,
         title="Session check interval",
         description="Seconds after which a session is checked again against the"
         " user account, i.e. its status, roles and TOTP token",
