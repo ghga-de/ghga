@@ -83,7 +83,7 @@ def validate_new_token(full_name: str, new_totp_token: str, fixtures: JointFixtu
     assert session, f"No session found for {full_name}"
     assert session.user_id, f"user_id is missing for {full_name}"
     session_headers = fixtures.auth.headers(session)
-    totp = fixtures.auth.generate_totp(new_totp_token)
+    totp = fixtures.auth.generate_unused_totp(new_totp_token)
     response = fixtures.auth.verify_totp(totp, session_headers)
     assert response.status_code == 204, response.text
     sub = fixtures.auth.get_sub(full_name)
