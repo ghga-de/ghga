@@ -1203,19 +1203,98 @@ async def test_revoke_unused_grant_when_cancelled(monkeypatch: pytest.MonkeyPatc
             auth_context=auth_context_steward,
         )
     )
-    await storing.wait()
-    task.cancel()
-    await revoking.wait()
-    task.cancel()
+    # fail instead of hanging if the cancellation is not handled
+    async with asyncio.timeout(5):
+        await storing.wait()
+        task.cancel()
+        await revoking.wait()
+        task.cancel()
 
-    with pytest.raises(asyncio.CancelledError):
-        await task
+        with pytest.raises(asyncio.CancelledError):
+            await task
 
-    assert access_grants.last_revoked_id is None
-    may_revoke.set()
-    await asyncio.gather(*repository._discard_tasks)
+        assert access_grants.last_revoked_id is None
+        may_revoke.set()
+        await repository.wait_for_discarded_grants()
     assert access_grants.last_grant_id is not None
     assert access_grants.last_revoked_id == access_grants.last_grant_id
+
+
+async def test_revoke_grant_when_another_change_was_stored(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Test that the grant is revoked when the request has been allowed by another
+    change, while storing this one failed.
+    """
+    request = ACCESS_REQUESTS[3]
+    other_change = request.model_copy(
+        update={
+            "status": AccessRequestStatus.ALLOWED,
+            "status_changed": now_utc_ms_prec() - timedelta(seconds=1),
+        }
+    )
+
+    async def store_other_change(*args, **kwargs):
+        access_request_dao._requests[request.id] = other_change
+        raise RuntimeError("Database not available")
+
+    monkeypatch.setattr(access_request_dao, "update", store_other_change)
+
+    with pytest.raises(RuntimeError, match="Database not available"):
+        await repository.update(
+            request.id,
+            patch_data=AccessRequestPatchData(
+                iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    assert access_grants.last_grant_id is not None
+    assert access_grants.last_revoked_id == access_grants.last_grant_id
+
+
+@pytest.mark.parametrize("hanging", [False, True], ids=["error", "hanging"])
+async def test_revoke_grant_when_read_back_fails(
+    hanging: bool,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+):
+    """Test that the grant is revoked when it is unknown whether the request
+    has been stored.
+    """
+    access_request_dao.simulate_error = True
+    get_by_id = access_request_dao.get_by_id
+    reads = 0
+
+    async def fail_to_read_back(id_: ID) -> AccessRequest:
+        nonlocal reads
+        reads += 1
+        if reads > 1:
+            if hanging:
+                await asyncio.sleep(3600)
+            raise RuntimeError("Database not available")
+        return await get_by_id(id_)
+
+    monkeypatch.setattr(access_request_dao, "get_by_id", fail_to_read_back)
+    monkeypatch.setattr(repository, "_read_back_timeout", 0.01)
+
+    with pytest.raises(RuntimeError, match="Database not available"):
+        async with asyncio.timeout(5):
+            await repository.update(
+                REQUEST_IDS[3],
+                patch_data=AccessRequestPatchData(
+                    iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+                ),
+                auth_context=auth_context_steward,
+            )
+
+    assert reads == 2
+    assert access_grants.last_grant_id is not None
+    assert access_grants.last_revoked_id == access_grants.last_grant_id
+    assert any(
+        message.startswith(f"Could not check whether access request {REQUEST_IDS[3]}")
+        for message in caplog.messages
+    )
 
 
 @pytest.mark.parametrize("cancelled", [False, True], ids=["error", "cancelled"])

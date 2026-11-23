@@ -89,6 +89,8 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
     # request could not be stored as allowed
     _revoke_tries = 3
     _revoke_interval = 1.0
+    # how long to wait (in seconds) for reading back a request that may be stored
+    _read_back_timeout = 10.0
 
     def __init__(
         self,
@@ -430,24 +432,47 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         With `check_stored`, the grant is kept if the request has been stored as
         allowed nevertheless, e.g. when only publishing the change failed.
+        A write still in flight can be stored only after it has been checked; the
+        request is then allowed without a grant, which denies access until a data
+        steward registers the grant again, but never gives unapproved access.
         """
-        if check_stored:
-            try:
+        try:
+            if check_stored and await self._is_stored(allowed_request):
+                return
+            await self._revoke_unused_grant(grant_id)
+        except asyncio.CancelledError:
+            log.critical(
+                "Revoking the unused access grant %s was cancelled",
+                grant_id,
+                extra={"grant_id": grant_id},
+            )
+            raise
+
+    async def _is_stored(self, allowed_request: AccessRequest) -> bool:
+        """Check whether the request has been stored as allowed by this change.
+
+        Returns False if that is unknown, so that the grant is revoked when in doubt.
+        """
+        try:
+            async with asyncio.timeout(self._read_back_timeout):
                 stored = await self._request_dao.get_by_id(allowed_request.id)
-            except Exception as error:
-                # revoke when in doubt, since the grant can be registered again
-                log.warning(
-                    "Could not check whether access request %s was stored: %s",
-                    allowed_request.id,
-                    error,
-                )
-            else:
-                if (
-                    stored.status == AccessRequestStatus.ALLOWED
-                    and stored.status_changed == allowed_request.status_changed
-                ):
-                    return
-        await self._revoke_unused_grant(grant_id)
+        except Exception as error:
+            log.warning(
+                "Could not check whether access request %s was stored: %s",
+                allowed_request.id,
+                error,
+            )
+            return False
+        # the status change date identifies this change, since it is set to the
+        # current time and stored with the same precision
+        return (
+            stored.status == AccessRequestStatus.ALLOWED
+            and stored.status_changed == allowed_request.status_changed
+        )
+
+    async def wait_for_discarded_grants(self) -> None:
+        """Wait until all unused grants have been revoked, e.g. before shutdown."""
+        await asyncio.gather(*self._discard_tasks, return_exceptions=True)
 
     async def _revoke_unused_grant(self, grant_id: UUID4) -> None:
         """Revoke a grant whose access request could not be stored as allowed.
@@ -467,8 +492,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             except Exception as error:
                 if attempt >= self._revoke_tries:
                     log.critical(
-                        "Could not revoke the access grant %s"
-                        " of an access request that was not allowed: %s",
+                        "Could not revoke the unused access grant %s: %s",
                         grant_id,
                         error,
                         extra={"grant_id": grant_id},

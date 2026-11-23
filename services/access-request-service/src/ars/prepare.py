@@ -75,13 +75,18 @@ async def prepare_core(
     ):
         dataset_dao = await get_dataset_dao(dao_factory=dao_factory)
         sms_notifier = SmsNotifier(config=config, event_publisher=event_publisher)
-        yield AccessRequestRepository(
+        repository = AccessRequestRepository(
             access_request_dao=access_request_dao,
             dataset_dao=dataset_dao,
             access_grants=access_grants,
             sms_notifier=sms_notifier,
             config=config,
         )
+        try:
+            yield repository
+        finally:
+            # revoke unused grants while the access grants adapter is still open
+            await repository.wait_for_discarded_grants()
 
 
 def _prepare_core_with_override(
