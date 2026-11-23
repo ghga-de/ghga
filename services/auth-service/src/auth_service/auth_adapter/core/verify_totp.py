@@ -18,6 +18,7 @@
 
 import logging
 from contextlib import suppress
+from typing import Any
 
 from fastapi import HTTPException, status
 
@@ -27,7 +28,7 @@ from auth_service.user_registry.models.users import (
     UserStatus,
 )
 from auth_service.user_registry.ports.registry import UserRegistryPort
-from hexkit.protocols.dao import ResourceNotFoundError
+from hexkit.protocols.dao import PreconditionFailedError, ResourceNotFoundError
 
 from ..ports.dao import UserToken, UserTokenDao
 from ..ports.session_store import SessionStorePort
@@ -47,6 +48,31 @@ def _account_disabled() -> HTTPException:
     )
 
 
+def _token_state(user_token: UserToken) -> dict[str, Any]:
+    """Get the state of a stored TOTP token as a precondition for writing it back."""
+    totp_token = user_token.totp_token
+    return {
+        "totp_token.encrypted_secret": totp_token.encrypted_secret,
+        "totp_token.last_counter": totp_token.last_counter,
+        "totp_token.counter_attempts": totp_token.counter_attempts,
+        "totp_token.total_attempts": totp_token.total_attempts,
+    }
+
+
+async def _write_back_token(
+    token_dao: UserTokenDao, user_token: UserToken, state: dict[str, Any]
+) -> bool:
+    """Write back a stored TOTP token if it still has the given state.
+
+    Returns False if another request has changed or replaced the token meanwhile.
+    """
+    try:
+        await token_dao.update(user_token, precondition=state)
+    except PreconditionFailedError, ResourceNotFoundError:
+        return False
+    return True
+
+
 async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     totp: str,
     *,
@@ -62,6 +88,8 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     As a side effect, the TOTP token is stored in the database if it is still only
     available in the session. In that case, already verified IVAs are reset.
     The roles of the session are fetched again, since they depend on these IVAs.
+    A token that was already stored is written back with its usage counters
+    after every attempt, unless a concurrent attempt has changed it meanwhile.
     """
     user_id = session.user_id
     if not user_id:
@@ -94,14 +122,24 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
             user_token = await token_dao.get_by_id(user.id)
         totp_token = user_token.totp_token if user_token else None
         account_to_disable = user
+    # The usage counters of a stored token change with every attempt.
+    # Concurrent attempts must not overwrite each other's counters,
+    # so the token is written back only if it is still in the state read here.
+    token_state = _token_state(user_token) if user_token else {}
     if totp_token and totp:
         if totp_handler.is_invalid(totp_token):
             limit = True
             verified = None
             # reset the TOTP token again
             totp_handler.reset(totp_token)
-            # too many invalid TOTP codes
-            if account_to_disable:
+            # too many invalid TOTP codes: store the cleared token in the database,
+            # so that users can work again after they have been reactivated,
+            # and disable the account, unless a concurrent attempt is doing that
+            if (
+                account_to_disable
+                and user_token
+                and await _write_back_token(token_dao, user_token, token_state)
+            ):
                 # disable the user account (only the specified fields will be changed)
                 modified_user_data = UserModifiableData(status=UserStatus.INACTIVE)
                 await user_registry.update_user(
@@ -110,10 +148,6 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     context="Too many failed TOTP login attempts",
                     changed_by=session.user_id,
                 )
-                # store the cleared token in the database so that the users can work
-                # again after they have been reactivated
-                if user_token:
-                    await token_dao.update(user_token)
                 log.warning(
                     "Too many failed TOTP login attempts for user %s (%s)",
                     account_to_disable.id,
@@ -127,11 +161,16 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     else:
         limit = False
         verified = None
+    if (
+        user_token
+        and verified is not None
+        and not await _write_back_token(token_dao, user_token, token_state)
+    ):
+        # a concurrent attempt has used the token, so this one fails
+        verified = False
     if not verified:
         if verified is not None:
             await session_store.save_session(session)
-            if user_token:
-                await token_dao.update(user_token)
         if limit and account_to_disable:
             # the account is disabled now, which login() will report as well
             raise _account_disabled()

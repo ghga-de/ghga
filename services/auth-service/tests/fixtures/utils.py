@@ -26,7 +26,7 @@ from uuid import UUID
 
 from fastapi import Request
 from jwcrypto import jwk, jwt
-from pydantic import UUID4
+from pydantic import UUID4, BaseModel
 
 from auth_service.auth_adapter.core.session_store import Session
 from auth_service.auth_adapter.ports.dao import UserToken
@@ -62,6 +62,7 @@ from hexkit.protocols.dao import (
     FindResult,
     MultipleHitsFoundError,
     NoHitsFoundError,
+    PreconditionFailedError,
     ResourceNotFoundError,
 )
 from hexkit.utils import now_utc_ms_prec
@@ -260,6 +261,24 @@ def _matches(data: Mapping[str, Any], filter_: Mapping[str, Any]) -> bool:
     return True
 
 
+def check_precondition(
+    resource: BaseModel, id_: Any, precondition: Mapping[str, Any] | None
+) -> None:
+    """Mimic the precondition check of the DAO update method.
+
+    Keys may use dot notation for fields of nested models.
+    """
+    if not precondition:
+        return
+    data = resource.model_dump()
+    for key, value in precondition.items():
+        current: Any = data
+        for part in key.split("."):
+            current = current[part]
+        if current != value:
+            raise PreconditionFailedError(id_=id_, precondition=precondition)
+
+
 def mock_find_all(
     items: list[Any],
     *,
@@ -366,10 +385,13 @@ class MockUserDao:
         user = User(**dto.model_dump())
         self.users.append(user)
 
-    async def update(self, dto: User) -> None:
+    async def update(
+        self, dto: User, *, precondition: Mapping[str, Any] | None = None
+    ) -> None:
         """Update the dummy user."""
         for index, user in enumerate(self.users):
             if dto.id == user.id:
+                check_precondition(user, dto.id, precondition)
                 self.users[index] = dto
                 break
         else:
@@ -467,14 +489,25 @@ class MockUserTokenDao:
         self.user_tokens = {}
 
     async def get_by_id(self, id_: UUID4) -> UserToken:
-        """Get the user token via the (user) ID."""
+        """Get a copy of the user token via the (user) ID.
+
+        Like the database, this returns a copy, so that changes to the token
+        take effect only when it is written back.
+        """
         try:
-            return self.user_tokens[id_]
+            return self.user_tokens[id_].model_copy(deep=True)
         except KeyError as error:
             raise ResourceNotFoundError(id_=id_) from error
 
-    async def update(self, dto: UserToken) -> None:
+    async def update(
+        self, dto: UserToken, *, precondition: Mapping[str, Any] | None = None
+    ) -> None:
         """Update a user token."""
+        try:
+            stored = self.user_tokens[dto.user_id]
+        except KeyError as error:
+            raise ResourceNotFoundError(id_=dto.user_id) from error
+        check_precondition(stored, dto.user_id, precondition)
         self.user_tokens[dto.user_id] = dto
 
     async def upsert(self, dto: UserToken) -> None:

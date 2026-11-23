@@ -169,6 +169,60 @@ async def test_update_modifiable_data_only_title():
     assert dummy_user.status_change is None
 
 
+async def test_update_user_keeps_concurrent_status_change():
+    """Test that a user update does not undo a concurrent status change.
+
+    Here, the user changes the title while the account is being disabled.
+    """
+    registry = MockUserRegistry()
+    user_dao = registry.mock_user_dao
+    user_id = registry.dummy_user.id
+    update = user_dao.update
+    calls = 0
+
+    async def update_after_status_change(dto, **kwargs):
+        """Disable the account right before the first write."""
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            user_dao.users[-1] = user_dao.user.model_copy(
+                update={"status": UserStatus.INACTIVE}
+            )
+        await update(dto, **kwargs)
+
+    user_dao.update = update_after_status_change
+    await registry.update_user(user_id, UserModifiableData(title=AcademicTitle.PROF))
+
+    assert calls == 2  # the first write failed and was repeated
+    dummy_user = registry.dummy_user
+    assert dummy_user.title is AcademicTitle.PROF
+    assert dummy_user.status is UserStatus.INACTIVE
+
+
+async def test_update_user_with_status_changing_all_the_time():
+    """Test that a user update gives up if the status keeps changing."""
+    registry = MockUserRegistry()
+    user_dao = registry.mock_user_dao
+    user_id = registry.dummy_user.id
+    update = user_dao.update
+
+    async def update_after_status_change(dto, **kwargs):
+        """Toggle the status right before every write."""
+        status = user_dao.user.status
+        status = (
+            UserStatus.INACTIVE if status is UserStatus.ACTIVE else UserStatus.ACTIVE
+        )
+        user_dao.users[-1] = user_dao.user.model_copy(update={"status": status})
+        await update(dto, **kwargs)
+
+    user_dao.update = update_after_status_change
+    with pytest.raises(UserRegistry.UserUpdateError):
+        await registry.update_user(
+            user_id, UserModifiableData(title=AcademicTitle.PROF)
+        )
+    assert registry.dummy_user.title is None
+
+
 async def test_update_modifiable_data_only_status():
     """Test updating just the status of an existing user."""
     registry = MockUserRegistry()

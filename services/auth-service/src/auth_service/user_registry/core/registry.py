@@ -28,6 +28,7 @@ from pydantic import UUID4
 from hexkit.protocols.dao import (
     Dao,
     NoHitsFoundError,
+    PreconditionFailedError,
     ResourceNotFoundError,
 )
 from hexkit.utils import now_utc_ms_prec
@@ -58,6 +59,9 @@ from .config import INITIAL_USER_STATUS, UserRegistryConfig
 from .verification_codes import generate_code, hash_code, validate_code
 
 log = logging.getLogger(__name__)
+
+# how often a user update is tried when the status changes concurrently
+MAX_USER_UPDATE_ATTEMPTS = 3
 
 __all__ = ["UserRegistry"]
 
@@ -214,26 +218,37 @@ class UserRegistry(UserRegistryPort):
         May raise UserDoesNotExistError or a UserUpdateError.
         """
         update_data = user_data.model_dump(exclude_unset=True)
-        try:
-            user = await self.get_user(user_id)
-        except self.UserRetrievalError as error:
-            raise self.UserUpdateError(user_id=user_id) from error
-        if "status" in update_data and user.status != update_data["status"]:
-            update_data["status_change"] = StatusChange(
-                previous=user.status,
-                by=changed_by or None,
-                context=(context or "").strip() or None,
-                change_date=now_utc_ms_prec(),
-            )
-        try:
-            user = user.model_copy(update=update_data)
-            await self._user_dao.update(user)
-        except ResourceNotFoundError as error:
-            log.warning("User not found: %s", error)
-            raise self.UserDoesNotExistError(user_id=user_id) from error
-        except Exception as error:
-            log.error("Could not update user: %s", error)
-            raise self.UserUpdateError(user_id=user_id) from error
+        # The write is conditional on the status that was read, so that it cannot
+        # undo a concurrent status change; it is repeated with the current data.
+        for _ in range(MAX_USER_UPDATE_ATTEMPTS):
+            try:
+                user = await self.get_user(user_id)
+            except self.UserRetrievalError as error:
+                raise self.UserUpdateError(user_id=user_id) from error
+            changes = dict(update_data)
+            if "status" in changes and user.status != changes["status"]:
+                changes["status_change"] = StatusChange(
+                    previous=user.status,
+                    by=changed_by or None,
+                    context=(context or "").strip() or None,
+                    change_date=now_utc_ms_prec(),
+                )
+            try:
+                await self._user_dao.update(
+                    user.model_copy(update=changes),
+                    precondition={"status": user.status},
+                )
+            except PreconditionFailedError:
+                continue
+            except ResourceNotFoundError as error:
+                log.warning("User not found: %s", error)
+                raise self.UserDoesNotExistError(user_id=user_id) from error
+            except Exception as error:
+                log.error("Could not update user: %s", error)
+                raise self.UserUpdateError(user_id=user_id) from error
+            return
+        log.error("Could not update user %s: its status kept changing", user_id)
+        raise self.UserUpdateError(user_id=user_id)
 
     async def delete_user(self, user_id: UUID4) -> None:
         """Delete a user.
