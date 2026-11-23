@@ -38,7 +38,7 @@ Look at the stored data, not the event, when choosing between the outbox and the
 - Give each inbound prepare function an optional override of the core port, compared with `is not None`, so tests can run the real adapter against a mock core.
 - Each entrypoint creates the config, calls `configure_logging` exactly once (a second call duplicates every line), and uses one prepare function.
   Call `configure_opentelemetry` before any app or client is constructed: a FastAPI app created earlier is silently left untraced.
-  Metrics need `enable_otel_metrics` as well as `enable_opentelemetry`; for a gauge read from the database, use `refresh_gauge` from `ghga_service_commons.metrics` instead of an observable gauge, whose callback cannot await.
+  Metrics need `enable_otel_metrics` as well as `enable_opentelemetry`; for a gauge read from the database, use `refresh_gauge` from `ghga_service_commons.metrics` rather than querying in an observable gauge's callback, which runs on the exporter thread and cannot await.
 
 ## Configuration
 

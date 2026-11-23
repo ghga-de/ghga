@@ -22,10 +22,11 @@ Until then the OpenTelemetry API records into a no-op meter.
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable
+import time
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from contextlib import asynccontextmanager, suppress
 
-from opentelemetry.metrics import Meter, get_meter
+from opentelemetry.metrics import CallbackOptions, Meter, Observation, get_meter
 
 __all__ = ["refresh_gauge"]
 
@@ -41,16 +42,21 @@ async def refresh_gauge(  # noqa: PLR0913
     unit: str = "",
     interval: float = 30,
     timeout: float = 10,
+    max_age: float | None = None,
     meter: Meter | None = None,
 ) -> AsyncIterator[None]:
-    """Keep a gauge set to the value of an async source while the context is open.
+    """Report the value of an async source as a gauge while the context is open.
 
-    `read` is awaited on entry and then every `interval` seconds in a background task
-    on the running event loop, so the source can be any coroutine, such as a database
-    count. An exporter only ever reads the last value set and never waits on `read`.
+    OpenTelemetry calls the callback of an observable gauge from its exporter thread,
+    where it cannot await, so it cannot query an async source such as a database
+    itself. Instead, `read` is awaited on entry and then every `interval` seconds in a
+    background task on the running event loop, and the callback only reports the last
+    value that task read.
 
     A call that fails or takes longer than `timeout` seconds is logged as a warning
-    and leaves the gauge at its previous value until the next call succeeds.
+    and keeps the previous value. Once the last successful read is older than
+    `max_age` seconds, the gauge reports nothing, so the series goes absent instead
+    of showing an outdated value. After the context closes it reports nothing either.
 
     Args:
         name: The metric name, e.g. `dlqs.dead_letters`.
@@ -59,21 +65,38 @@ async def refresh_gauge(  # noqa: PLR0913
         unit: The unit of the value, following the UCUM codes OpenTelemetry uses.
         interval: Seconds between the end of one call to `read` and the next.
         timeout: Seconds after which a call to `read` is abandoned.
+        max_age: Seconds after which a value is too old to report; defaults to three
+            intervals.
         meter: The meter to create the gauge with; defaults to one from the global
             MeterProvider.
     """
     meter = meter or get_meter(__name__)
-    gauge = meter.create_gauge(name, unit=unit, description=description)
+    max_age = 3 * interval if max_age is None else max_age
+
+    # The value and the monotonic time it was read at, replaced as one tuple, so the
+    # exporter thread never pairs a value with the time of another read
+    latest: tuple[float, float] | None = None
+
+    def observe(_options: CallbackOptions) -> Iterable[Observation]:
+        snapshot = latest
+        if snapshot is None:
+            return
+        value, read_at = snapshot
+        if time.monotonic() - read_at <= max_age:
+            yield Observation(value)
+
+    meter.create_observable_gauge(
+        name, callbacks=[observe], unit=unit, description=description
+    )
 
     async def refresh() -> None:
+        nonlocal latest
         while True:
             try:
                 async with asyncio.timeout(timeout):
-                    value = await read()
+                    latest = (await read(), time.monotonic())
             except Exception as error:
                 log.warning("Could not refresh gauge %s: %r", name, error)
-            else:
-                gauge.set(value)
             await asyncio.sleep(interval)
 
     task = asyncio.create_task(refresh(), name=f"refresh_gauge:{name}")
@@ -83,3 +106,5 @@ async def refresh_gauge(  # noqa: PLR0913
         task.cancel()
         with suppress(asyncio.CancelledError):
             await task
+        # OpenTelemetry cannot unregister the callback, so silence it instead
+        latest = None

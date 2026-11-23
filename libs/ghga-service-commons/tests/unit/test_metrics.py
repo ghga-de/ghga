@@ -17,11 +17,13 @@
 
 import asyncio
 import logging
+from collections.abc import Callable
 from typing import Any, cast
 
 import pytest
-from opentelemetry.metrics import Meter
+from opentelemetry.metrics import CallbackOptions, Meter
 
+from ghga_service_commons import metrics
 from ghga_service_commons.metrics import refresh_gauge
 
 pytestmark = pytest.mark.asyncio
@@ -29,28 +31,24 @@ pytestmark = pytest.mark.asyncio
 INTERVAL = 0.01
 
 
-class FakeGauge:
-    """Records every value it is set to."""
-
-    def __init__(self):
-        self.values: list[float] = []
-
-    def set(self, amount: float, attributes: Any = None, context: Any = None) -> None:
-        """Record the value."""
-        self.values.append(amount)
-
-
 class FakeMeter:
-    """Hands out one FakeGauge and remembers how it was created."""
+    """Keeps the callback of the one observable gauge created with it."""
 
     def __init__(self):
-        self.gauge = FakeGauge()
         self.created: dict[str, Any] = {}
+        self._callback: Callable | None = None
 
-    def create_gauge(self, name: str, unit: str = "", description: str = ""):
-        """Return the fake gauge."""
+    def create_observable_gauge(
+        self, name: str, callbacks=None, unit: str = "", description: str = ""
+    ):
+        """Remember how the gauge was created and its callback."""
         self.created = {"name": name, "unit": unit, "description": description}
-        return self.gauge
+        (self._callback,) = callbacks
+
+    def observe(self) -> list[float]:
+        """Collect like the exporter thread does and return the reported values."""
+        assert self._callback is not None
+        return [o.value for o in self._callback(CallbackOptions())]
 
 
 def new_meter() -> tuple[FakeMeter, Meter]:
@@ -59,39 +57,62 @@ def new_meter() -> tuple[FakeMeter, Meter]:
     return meter, cast(Meter, meter)
 
 
-async def test_gauge_is_set_on_entry_and_refreshed():
-    """The first value is there on entry, and later values follow on the interval."""
-    fake, meter = new_meter()
-    counter = iter(range(100))
+def counting_read() -> Callable:
+    """Return an async read that yields 0, 1, 2, ... on successive calls."""
+    counter = iter(range(1000))
 
     async def read() -> float:
         return next(counter)
+
+    return read
+
+
+async def test_reports_last_value_read():
+    """The callback reports the latest value, which follows the refresh interval."""
+    fake, meter = new_meter()
 
     async with refresh_gauge(
         name="test.items",
         description="Items.",
         unit="{item}",
-        read=read,
+        read=counting_read(),
         interval=INTERVAL,
         meter=meter,
     ):
         await asyncio.sleep(0)
-        assert fake.gauge.values == [0]
+        assert fake.observe() == [0]
         await asyncio.sleep(INTERVAL * 5)
+        (later,) = fake.observe()
 
+    assert later > 0
     assert fake.created == {
         "name": "test.items",
         "unit": "{item}",
         "description": "Items.",
     }
-    assert len(fake.gauge.values) > 1
-    assert fake.gauge.values == sorted(fake.gauge.values)
+
+
+async def test_nothing_before_first_read():
+    """Until a read has succeeded, the callback reports nothing."""
+    fake, meter = new_meter()
+    started = asyncio.Event()
+
+    async def read() -> float:
+        started.set()
+        await asyncio.sleep(60)
+        return 1
+
+    async with refresh_gauge(
+        name="test.items", description="Items.", read=read, meter=meter
+    ):
+        await started.wait()
+        assert fake.observe() == []
 
 
 async def test_failing_read_keeps_previous_value(caplog: pytest.LogCaptureFixture):
-    """A failing call is logged, leaves the gauge alone and does not stop the task."""
+    """A failing call is logged, keeps the last value and does not stop the task."""
     fake, meter = new_meter()
-    results: list[float | Exception] = [1, RuntimeError("database down"), 3]
+    results: list[float | Exception] = [1, RuntimeError("database down")]
 
     async def read() -> float:
         result = results.pop(0) if results else 3
@@ -107,9 +128,11 @@ async def test_failing_read_keeps_previous_value(caplog: pytest.LogCaptureFixtur
             interval=INTERVAL,
             meter=meter,
         ):
+            await asyncio.sleep(0)
+            assert fake.observe() == [1]
             await asyncio.sleep(INTERVAL * 5)
+            assert fake.observe() == [3]
 
-    assert fake.gauge.values[:2] == [1, 3]
     assert "database down" in caplog.text
 
 
@@ -134,26 +157,49 @@ async def test_slow_read_times_out():
         meter=meter,
     ):
         await asyncio.sleep(INTERVAL * 6)
+        (value,) = fake.observe()
 
-    assert fake.gauge.values
-    assert 1 not in fake.gauge.values
+    assert value > 1
 
 
-async def test_task_is_gone_after_exit():
-    """Leaving the context cancels and awaits the refresh task."""
-    _, meter = new_meter()
-
-    async def read() -> float:
-        return 1
+async def test_stale_value_is_not_reported(monkeypatch: pytest.MonkeyPatch):
+    """Once the last successful read is older than max_age, nothing is reported."""
+    fake, meter = new_meter()
+    now = 1000.0
+    monkeypatch.setattr(metrics.time, "monotonic", lambda: now)
 
     async with refresh_gauge(
         name="test.items",
         description="Items.",
-        read=read,
+        read=counting_read(),
+        interval=60,
+        max_age=90,
+        meter=meter,
+    ):
+        await asyncio.sleep(0)
+        assert fake.observe() == [0]
+
+        now += 90
+        assert fake.observe() == [0]
+
+        now += 1
+        assert fake.observe() == []
+
+
+async def test_silent_and_stopped_after_exit():
+    """Leaving the context stops the task and silences the callback."""
+    fake, meter = new_meter()
+
+    async with refresh_gauge(
+        name="test.items",
+        description="Items.",
+        read=counting_read(),
         interval=INTERVAL,
         meter=meter,
     ):
         await asyncio.sleep(0)
+        assert fake.observe() == [0]
 
+    assert fake.observe() == []
     names = [task.get_name() for task in asyncio.all_tasks()]
     assert "refresh_gauge:test.items" not in names

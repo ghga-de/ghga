@@ -111,9 +111,10 @@ uploads.add(1)
 
 Until a `MeterProvider` is set, the API hands out no-op instruments, so this code runs unchanged with metrics disabled.
 
-Prefer synchronous instruments such as counters and `create_gauge`.
-The callback of an observable instrument runs on the exporter's thread and cannot await, so it cannot read from an async database client without blocking a thread on the event loop.
-For a value read from such a source, `refresh_gauge` in `ghga_service_commons.metrics` sets a gauge from a background task on the event loop instead.
+Record what happens in your code inline, with counters and histograms.
+For a value that has to be read, such as the number of documents in a collection, use an observable gauge, whose callback the exporter calls when it collects.
+That callback runs on the exporter's thread and cannot await, so it must not query an async database client itself.
+`refresh_gauge` in `ghga_service_commons.metrics` handles this: a background task on the event loop reads the value, and the callback only reports the last result.
 
 To check metrics in a test, pass an `InMemoryMetricReader` from `opentelemetry.sdk.metrics.export` as `metric_readers` to `configure_opentelemetry`.
 
