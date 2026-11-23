@@ -64,6 +64,15 @@
 {{- if .Values.serviceInstanceId.fromPodName }}
 {{- $envVars = append $envVars (dict "name" (print .Values.configPrefix "_SERVICE_INSTANCE_ID" | upper) "valueFrom" (dict "fieldRef" (dict "fieldPath" "metadata.name"))) }}
 {{- end }}
+{{- /* Keep requests like the health probes out of traces and HTTP metrics, unless
+the values set OTEL_PYTHON_EXCLUDED_URLS themselves. */}}
+{{- if .Values.otelExcludedUrls }}
+{{- $ownExclusions := false }}
+{{- range $envVars }}{{ if eq .name "OTEL_PYTHON_EXCLUDED_URLS" }}{{ $ownExclusions = true }}{{ end }}{{ end }}
+{{- if not $ownExclusions }}
+{{- $envVars = append $envVars (dict "name" "OTEL_PYTHON_EXCLUDED_URLS" "value" .Values.otelExcludedUrls) }}
+{{- end }}
+{{- end }}
 {{- dict "envVars" $envVars | toYaml -}}
 {{- end -}}
 

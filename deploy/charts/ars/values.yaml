@@ -193,6 +193,7 @@ apiBasePath: /ars/
 serviceName: ars-consumer
 serviceInstanceId:
   fromPodName: false
+otelExcludedUrls: /health$
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

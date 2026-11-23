@@ -224,6 +224,7 @@ apiBasePath: /ga4gh/drs/v1/
 serviceName: dcs-consumer
 serviceInstanceId:
   fromPodName: false
+otelExcludedUrls: /health$
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

@@ -959,6 +959,11 @@
         }
       }
     },
+    "otelExcludedUrls": {
+      "type": "string",
+      "description": "Comma-separated regexes of URLs that OpenTelemetry neither traces nor counts in its HTTP metrics, set as OTEL_PYTHON_EXCLUDED_URLS (read by the FastAPI and httpx instrumentations). Defaults to the health probes; empty turns it off. Skipped when envVars set OTEL_PYTHON_EXCLUDED_URLS themselves.",
+      "default": "/health$"
+    },
     "configMap": {
       "type": "object",
       "additionalProperties": true,

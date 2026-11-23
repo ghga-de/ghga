@@ -169,6 +169,7 @@ apiBasePath: /fis/
 serviceName: fis-rest
 serviceInstanceId:
   fromPodName: false
+otelExcludedUrls: /health$
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

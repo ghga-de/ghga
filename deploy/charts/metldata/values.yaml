@@ -179,6 +179,7 @@ apiBasePath: /metldata/
 serviceName: metldata
 serviceInstanceId:
   fromPodName: false
+otelExcludedUrls: /health$
 configMap:
   enabled: true
   mountPath: /etc/config.yaml
