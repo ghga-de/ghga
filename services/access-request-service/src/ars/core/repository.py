@@ -41,6 +41,7 @@ from ars.ports.outbound.access_grants import AccessGrantsPort
 from ars.ports.outbound.daos import (
     AccessRequestDaoPort,
     DatasetDaoPort,
+    PreconditionFailedError,
     ResourceNotFoundError,
 )
 from ars.ports.outbound.sms import SmsNotifierPort
@@ -174,7 +175,8 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
     ) -> AccessRequest:
         """Get the an existing access requests with the given ID.
 
-        Only data stewards are able to get requests created by other users.
+        Only data stewards are able to get requests created by other users,
+        and only they see the internal fields of a request.
 
         Raises:
         - `AccessRequestNotFoundError` if the specified request was not found
@@ -185,12 +187,10 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             log.error(authorization_error)
             raise authorization_error
 
+        is_data_steward = has_role(auth_context, DATA_STEWARD_ROLE)
         try:
             request = await self._request_dao.get_by_id(access_request_id)
-            if (
-                not has_role(auth_context, DATA_STEWARD_ROLE)
-                and str(request.user_id) != auth_context.id
-            ):
+            if not is_data_steward and str(request.user_id) != auth_context.id:
                 # if the user does not have access, report this as not found
                 raise ResourceNotFoundError(id_=access_request_id)
         except ResourceNotFoundError as error:
@@ -198,7 +198,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             log.error(not_found_error, extra={"access_request_id": access_request_id})
             raise not_found_error from error
 
-        return request
+        return request if is_data_steward else self._hide_internals(request)
 
     async def find_all(
         self,
@@ -348,7 +348,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         modified_request = request.model_copy(update=update)
 
         if status != AccessRequestStatus.ALLOWED:
-            await self._request_dao.update(modified_request)
+            await self._update_pending(modified_request)
             return
 
         # Register the grant before storing the request, since storing it publishes
@@ -373,9 +373,10 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             raise server_error from error
 
         try:
-            await self._request_dao.update(modified_request)
+            await self._update_pending(modified_request)
         except Exception:
-            # a grant without an allowed request would be duplicated on a retry
+            # a grant without an allowed request would be duplicated on a retry,
+            # or outlive a request that has been closed in the meantime
             try:
                 await self._access_grants.revoke_download_access_grant(grant_id)
             except self._access_grants.AccessGrantsError as revoke_error:
@@ -436,9 +437,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         # Record before sending: a line for an SMS that never went out does no harm,
         # while a code that was sent but recorded nowhere cannot be verified.
-        await self._request_dao.update(
-            request.model_copy(update={"internal_note": note})
-        )
+        await self._update_pending(request.model_copy(update={"internal_note": note}))
         await self._sms_notifier.send_sms(
             phone=sms_data.phone, text=sms_data.text, key=str(access_request_id)
         )
@@ -451,10 +450,35 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         )
         return note
 
+    async def _update_pending(self, request: AccessRequest) -> None:
+        """Store the request only if it is still pending.
+
+        A request is read before it is written back as a whole, so without this
+        condition a concurrent status change could be overwritten.
+
+        Raises `AccessRequestClosed` if the stored request is no longer pending.
+        """
+        try:
+            await self._request_dao.update(
+                request, precondition={"status": AccessRequestStatus.PENDING}
+            )
+        except PreconditionFailedError as error:
+            invalid_state_error = self.AccessRequestClosed()
+            log.error(invalid_state_error, extra={"access_request_id": request.id})
+            raise invalid_state_error from error
+
     @staticmethod
     def _hide_internals(request: AccessRequest) -> AccessRequest:
         """Blank out internal information in the request"""
         return request.model_copy(update={"changed_by": None, "internal_note": None})
+
+    def _warn_if_allowed(self, request: AccessRequest, message: str) -> None:
+        """Log the message if the request allows access now or in the future."""
+        if (
+            request.status == AccessRequestStatus.ALLOWED
+            and request.access_ends > now_utc_ms_prec()
+        ):
+            log.warning(message, request.id, request.dataset_id)
 
     async def register_dataset(self, dataset: Dataset) -> None:
         """Register a dataset in the repository.
@@ -464,27 +488,28 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         await self._dataset_dao.upsert(dataset)
         dataset_id = dataset.id
 
+        warning = (
+            "A valid access request with ID %s already exists"
+            " for the updated dataset with ID %s."
+        )
+        update = {
+            "dataset_title": dataset.title,
+            "dataset_description": dataset.description,
+            "dac_alias": dataset.dac_alias,
+            "dac_email": dataset.dac_email,
+        }
         async for request in self._request_dao.find_all(
             filter_={"dataset_id": dataset_id}
         ):
             if request.status == AccessRequestStatus.PENDING:
-                update = {
-                    "dataset_title": dataset.title,
-                    "dataset_description": dataset.description,
-                    "dac_alias": dataset.dac_alias,
-                    "dac_email": dataset.dac_email,
-                }
-                updated_request = request.model_copy(update=update)
-                await self._request_dao.update(updated_request)
-            elif (
-                request.status == AccessRequestStatus.ALLOWED
-                and request.access_ends > now_utc_ms_prec()
-            ):
-                log.warning(
-                    "A valid access request with ID %s already exists for the updated dataset with ID %s.",
-                    request.id,
-                    dataset_id,
-                )
+                try:
+                    await self._update_pending(request.model_copy(update=update))
+                except self.AccessRequestClosed:
+                    # a data steward has processed the request in the meantime
+                    request = await self._request_dao.get_by_id(request.id)
+                else:
+                    continue
+            self._warn_if_allowed(request, warning)
 
     async def delete_dataset(self, dataset_id: str) -> None:
         """Remove the dataset with the given ID.
@@ -499,6 +524,10 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             log.error(dataset_not_found_error, extra={"dataset_id": dataset_id})
             raise dataset_not_found_error from error
 
+        warning = (
+            "A valid access request with ID %s still exists"
+            " for the deleted dataset with ID %s."
+        )
         async for request in self._request_dao.find_all(
             filter_={"dataset_id": dataset_id}
         ):
@@ -509,17 +538,14 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                     "note_to_requester": "This dataset has been deleted",
                     "changed_by": None,
                 }
-                updated_request = request.model_copy(update=update)
-                await self._request_dao.update(updated_request)
-            elif (
-                request.status == AccessRequestStatus.ALLOWED
-                and request.access_ends > now_utc_ms_prec()
-            ):
-                log.warning(
-                    "A valid access request with ID %s still exists for the deleted dataset with ID %s.",
-                    request.id,
-                    dataset_id,
-                )
+                try:
+                    await self._update_pending(request.model_copy(update=update))
+                except self.AccessRequestClosed:
+                    # a data steward has processed the request in the meantime
+                    request = await self._request_dao.get_by_id(request.id)
+                else:
+                    continue
+            self._warn_if_allowed(request, warning)
 
     async def get_dataset(self, dataset_id: str) -> Dataset:
         """Get the dataset with the given ID.

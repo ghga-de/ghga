@@ -1379,6 +1379,13 @@ async def test_send_verification_sms(
     assert note.endswith(": Verification code AB23CD sent to +49…6789 by Rod Steward.")
     assert returned_note == note
 
+    # the requester must not see the code
+    response = await client.get(
+        f"/access-requests/{access_request_id}", headers=auth_headers_doe
+    )
+    assert response.status_code == 200
+    assert response.json()["internal_note"] is None
+
 
 async def test_send_verification_sms_as_user(
     rest: RestFixture, auth_headers_doe: dict[str, str]
