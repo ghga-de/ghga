@@ -207,7 +207,7 @@ for the full set of configurable values.
 | `probe.hostname` | Public hostname the blackbox exporter probes (combined with the API base path and healthEndpoint below to build the target URL) | `"default.ghga.dev"` |
 | `healthEndpoint` | Path appended to the probe target URL (after the API base path) | `"/health"` |
 | `destinationRule.enabled` | Render an Istio DestinationRule for this service | `false` |
-| `authorizationPolicy.enabled` | Render an Istio ALLOW AuthorizationPolicy selecting this workload's pods | `false` |
+| `authorizationPolicy.enabled` | Render an Istio ALLOW AuthorizationPolicy for this workload, bound to its Service for the waypoint | `false` |
 | `authorizationPolicy.denyAll` | Render the policy with no rules, denying all traffic to the workload; overrides callers. Required to enable the policy without callers | `false` |
 | `authorizationPolicy.trustDomain` | Istio trust domain the callers' principals are built in | `"cluster.local"` |
 | `authorizationPolicy.callers` | Allowed callers, keyed by chart name | `{}` |

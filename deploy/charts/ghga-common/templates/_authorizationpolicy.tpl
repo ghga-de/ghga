@@ -45,6 +45,9 @@ environment, e.g. for a consumer instance that takes no calls at all. */}}
 {{- if $ap.denyAll }}
 {{- $rules = list }}
 {{- end }}
+{{- if and $rules (not .Values.service.enabled) }}
+{{- fail "authorizationPolicy.callers need the chart's Service, which the waypoint enforces the policy on: enable service, or set authorizationPolicy.denyAll=true" }}
+{{- end }}
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
@@ -59,9 +62,19 @@ metadata:
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
-  {{- /* The Deployment's own selector helper, so the policy cannot drift off the pods. */}}
+  {{- /* Ambient mode: rules with paths or methods need the waypoint, which enforces
+  policies bound to the Service; ztunnel would deny them. A policy without rules is
+  plain L4, so ztunnel enforces it on the pods, also for traffic to the pod IP. Both
+  refer to the workload through the same helpers as the Service and the Deployment. */}}
+  {{- if $rules }}
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: {{ include "common.names.fullname" . }}
+  {{- else }}
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+  {{- end }}
   action: ALLOW
   {{- if $rules }}
   rules:

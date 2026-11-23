@@ -1302,7 +1302,7 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render an Istio ALLOW AuthorizationPolicy selecting this workload's pods",
+          "description": "Render an Istio ALLOW AuthorizationPolicy for this workload, bound to its Service for the waypoint",
           "default": false
         },
         "denyAll": {

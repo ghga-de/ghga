@@ -402,16 +402,22 @@ def test_migration_init_container(rendered_chart):
 
 
 def test_authorization_policy(rendered_chart):
-    """The AuthorizationPolicy is off by default and, when on, selects the pods
-    with the Deployment's own selector labels, so the two cannot drift apart.
-    Each caller becomes one rule, in key order.
+    """The AuthorizationPolicy is off by default and, when on, binds to the chart's
+    own Service, which the ambient waypoint enforces it on. Each caller becomes one
+    rule, in key order.
     """
     assert "AuthorizationPolicy" not in rendered_chart("common.yaml")
 
     manifests = rendered_chart("common.yaml", "authorization_policy.yaml")
     spec = manifests["AuthorizationPolicy"]["spec"]
-    deployment_selector = manifests["Deployment"]["spec"]["selector"]["matchLabels"]
-    assert spec["selector"]["matchLabels"] == deployment_selector
+    assert spec["targetRefs"] == [
+        {
+            "kind": "Service",
+            "group": "",
+            "name": manifests["Service"]["metadata"]["name"],
+        }
+    ]
+    assert "selector" not in spec
     assert spec["action"] == "ALLOW"
     assert spec["rules"] == [
         {
@@ -447,7 +453,27 @@ def test_authorization_policy(rendered_chart):
     ]
 
     manifests = rendered_chart("common.yaml", "authorization_policy_deny_all.yaml")
-    assert "rules" not in manifests["AuthorizationPolicy"]["spec"]
+    spec = manifests["AuthorizationPolicy"]["spec"]
+    assert "rules" not in spec
+
+
+def test_authorization_policy_deny_all_selects_the_pods(rendered_chart):
+    """DenyAll has no L7 rules, so ztunnel enforces it on the pods themselves,
+    selected with the Deployment's own labels so the two cannot drift apart.
+    """
+    manifests = rendered_chart("common.yaml", "authorization_policy_deny_all.yaml")
+    spec = manifests["AuthorizationPolicy"]["spec"]
+    deployment_selector = manifests["Deployment"]["spec"]["selector"]["matchLabels"]
+    assert spec["selector"]["matchLabels"] == deployment_selector
+    assert "targetRefs" not in spec
+
+
+def test_authorization_policy_callers_need_a_service(rendered_chart):
+    """Without a Service the waypoint has nothing to enforce caller rules on."""
+    with pytest.raises(AssertionError, match="need the chart's Service"):
+        rendered_chart(
+            "common.yaml", "authorization_policy.yaml", "service_disabled.yaml"
+        )
 
 
 def test_authorization_policy_callers_merge_per_key(rendered_chart):
