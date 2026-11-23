@@ -94,6 +94,10 @@ class DLQManager(DLQManagerPort):
         self._publisher = publisher
         self._dao = dao
 
+    async def count_dead_letters(self) -> int:
+        """Count the events stored in the DLQ."""
+        return await self._dao.find_all(filter_={}).total_count()
+
     async def _get_next_event(
         self, *, service: str, topic: str
     ) -> StoredDLQEvent | None:

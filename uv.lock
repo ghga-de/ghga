@@ -1175,15 +1175,15 @@ name = "dlqs"
 version = "0.0.0"
 source = { editable = "services/dlq-service" }
 dependencies = [
-    { name = "ghga-service-commons", extra = ["api"] },
-    { name = "hexkit", extra = ["akafka", "mongodb"] },
+    { name = "ghga-service-commons", extra = ["api", "metrics"] },
+    { name = "hexkit", extra = ["akafka", "mongodb", "opentelemetry-akafka", "opentelemetry-fastapi", "opentelemetry-mongodb"] },
     { name = "typer" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "ghga-service-commons", extras = ["api"], editable = "libs/ghga-service-commons" },
-    { name = "hexkit", extras = ["akafka", "mongodb"], editable = "libs/hexkit" },
+    { name = "ghga-service-commons", extras = ["api", "metrics"], editable = "libs/ghga-service-commons" },
+    { name = "hexkit", extras = ["akafka", "mongodb", "opentelemetry-akafka", "opentelemetry-mongodb", "opentelemetry-fastapi"], editable = "libs/hexkit" },
     { name = "typer", specifier = ">=0.19" },
 ]
 

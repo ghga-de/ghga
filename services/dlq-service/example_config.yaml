@@ -8,6 +8,8 @@ cors_exposed_headers: null
 db_name: dlqs
 db_version_collection: dlqsDbVersions
 docs_url: /docs
+enable_opentelemetry: false
+enable_otel_metrics: false
 generate_correlation_id: true
 host: 127.0.0.1
 kafka_compression_type: null
@@ -31,6 +33,7 @@ migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: 300
 openapi_url: /openapi.json
+otel_trace_sampling_rate: 1.0
 port: 8080
 service_instance_id: '1'
 service_name: dlqs

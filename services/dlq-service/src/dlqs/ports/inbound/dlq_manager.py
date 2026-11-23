@@ -100,6 +100,10 @@ class DLQManagerPort(ABC):
             super().__init__("The value for skip and/or limit is invalid")
 
     @abstractmethod
+    async def count_dead_letters(self) -> int:
+        """Count the events stored in the DLQ."""
+
+    @abstractmethod
     async def store_event(self, *, event: RawDLQEvent) -> None:
         """Store an event in the database with its service name and event ID.
 
