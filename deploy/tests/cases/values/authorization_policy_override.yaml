@@ -1,0 +1,10 @@
+authorizationPolicy:
+  trustDomain: prod.example
+  callers:
+    caller:
+      serviceAccount: caller-prod
+    other-ns: null
+    gateway: null
+    raw: null
+    added: {}
+    multi: null

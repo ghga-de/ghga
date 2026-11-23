@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-06-30
+amended: 2026-11-23
 tags: [deploy]
 related: [ADR-0028, ADR-0032, ADR-0033, ADR-0035]
 ---
@@ -42,6 +43,12 @@ App charts own the resources that are one-to-one with a workload: `HTTPRoute`, `
 Each one can be switched off in the values, so the chart works with or without Istio, Envoy Gateway or Strimzi.
 
 The platform layer owns what is cluster-wide: the edge `Gateway`, the edge auth object (Istio `AuthorizationPolicy` in production, Envoy Gateway `SecurityPolicy` in the demo), extension-provider registration and per-environment values.
+
+**Amended 2026-11-23:** App charts also own the workload's Istio `AuthorizationPolicy`, an `ALLOW` policy whose selector comes from the same label helper as the Deployment's, so the two cannot drift apart.
+Which services call it, and on which paths, is a fact of the code, so the callee lists its callers in its chart values, as a map keyed by the caller's chart name.
+The platform layer enables the policy, sets what differs per environment (trust domain, namespaces, ServiceAccount names) and adds callers such as the ingress gateway; because the callers are a map, Helm merges each key, so it can also change or drop a single caller.
+An empty caller map fails the render unless `denyAll` asks for it, since an `ALLOW` policy without rules denies everything.
+The mesh-wide default deny, `PeerAuthentication`, and guardrails as `DENY` policies stay with the platform layer, and Istio evaluates `DENY` before `ALLOW`, so no app chart can override them.
 `devops-kubernetes-hub` stays outside this repo.
 
 App charts keep a binding contract, so the platform layer attaches its resources without patching templates.

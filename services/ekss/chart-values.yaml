@@ -11,3 +11,23 @@ config:
   enable_opentelemetry: false
 
 executableArgs: []
+
+# In-mesh callers, only the processes that call; the platform layer adds the gateway.
+# {*} matches one path segment.
+authorizationPolicy:
+  callers:
+    # serves envelopes for downloads
+    dcs:
+      methods: [GET]
+      paths: ["/secrets/{*}/envelopes/{*}"]
+    # deletes secrets on file deletion events
+    dcs-consumer:
+      methods: [DELETE]
+      paths: ["/secrets/{*}"]
+    # deposits secrets from interrogation reports, deletes one if storing the report fails
+    fis:
+      operations:
+        - methods: [POST]
+          paths: ["/secrets"]
+        - methods: [DELETE]
+          paths: ["/secrets/{*}"]

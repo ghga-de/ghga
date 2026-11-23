@@ -1,0 +1,23 @@
+authorizationPolicy:
+  enabled: true
+  callers:
+    caller:
+      paths: ["/health"]
+      methods: ["GET"]
+      ports: [8080]
+    other-ns:
+      namespace: elsewhere
+      serviceAccount: other-sa
+    gateway:
+      principals: ["cluster.local/ns/{{ .Release.Namespace }}-ingress/sa/gateway"]
+    raw:
+      rule:
+        when:
+          - key: request.headers[x-test]
+            values: ["yes"]
+    multi:
+      operations:
+        - methods: ["POST"]
+          paths: ["/items"]
+        - methods: ["DELETE"]
+          paths: ["/items/{*}"]

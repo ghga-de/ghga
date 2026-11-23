@@ -1305,6 +1305,97 @@
         }
       }
     },
+    "authorizationPolicy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render an Istio ALLOW AuthorizationPolicy selecting this workload's pods",
+          "default": false
+        },
+        "denyAll": {
+          "type": "boolean",
+          "description": "Render the policy with no rules, denying all traffic to the workload; overrides callers. Required to enable the policy without callers",
+          "default": false
+        },
+        "trustDomain": {
+          "type": "string",
+          "description": "Istio trust domain the callers' principals are built in",
+          "default": "cluster.local"
+        },
+        "callers": {
+          "type": "object",
+          "description": "Allowed callers, keyed by chart name",
+          "additionalProperties": true,
+          "properties": {
+            "dcs": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "methods": {
+                  "type": "array",
+                  "default": [
+                    "GET"
+                  ]
+                },
+                "paths": {
+                  "type": "array",
+                  "default": [
+                    "/secrets/{*}/envelopes/{*}"
+                  ]
+                }
+              }
+            },
+            "dcs-consumer": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "methods": {
+                  "type": "array",
+                  "default": [
+                    "DELETE"
+                  ]
+                },
+                "paths": {
+                  "type": "array",
+                  "default": [
+                    "/secrets/{*}"
+                  ]
+                }
+              }
+            },
+            "fis": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "operations": {
+                  "type": "array",
+                  "default": [
+                    {
+                      "methods": [
+                        "POST"
+                      ],
+                      "paths": [
+                        "/secrets"
+                      ]
+                    },
+                    {
+                      "methods": [
+                        "DELETE"
+                      ],
+                      "paths": [
+                        "/secrets/{*}"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "networkPolicy": {
       "type": "object",
       "additionalProperties": true,

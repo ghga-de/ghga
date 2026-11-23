@@ -180,6 +180,31 @@ probe:
 healthEndpoint: "/health"
 destinationRule:
   enabled: false
+authorizationPolicy:
+  enabled: false
+  denyAll: false
+  trustDomain: cluster.local
+  callers:
+    dcs:
+      methods:
+      - GET
+      paths:
+      - "/secrets/{*}/envelopes/{*}"
+    dcs-consumer:
+      methods:
+      - DELETE
+      paths:
+      - "/secrets/{*}"
+    fis:
+      operations:
+      - methods:
+        - POST
+        paths:
+        - "/secrets"
+      - methods:
+        - DELETE
+        paths:
+        - "/secrets/{*}"
 networkPolicy:
   enabled: false
   ingress:

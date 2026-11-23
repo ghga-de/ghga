@@ -399,3 +399,85 @@ def test_migration_init_container(rendered_chart):
         {"configMapRef": {"name": "my-env-configmap"}},
         {"secretRef": {"name": "my-env-secret"}},
     ]
+
+
+def test_authorization_policy(rendered_chart):
+    """The AuthorizationPolicy is off by default and, when on, selects the pods
+    with the Deployment's own selector labels, so the two cannot drift apart.
+    Each caller becomes one rule, in key order.
+    """
+    assert "AuthorizationPolicy" not in rendered_chart("common.yaml")
+
+    manifests = rendered_chart("common.yaml", "authorization_policy.yaml")
+    spec = manifests["AuthorizationPolicy"]["spec"]
+    deployment_selector = manifests["Deployment"]["spec"]["selector"]["matchLabels"]
+    assert spec["selector"]["matchLabels"] == deployment_selector
+    assert spec["action"] == "ALLOW"
+    assert spec["rules"] == [
+        {
+            "from": [{"source": {"principals": ["cluster.local/ns/test/sa/caller"]}}],
+            "to": [
+                {
+                    "operation": {
+                        "paths": ["/health"],
+                        "methods": ["GET"],
+                        "ports": ["8080"],
+                    }
+                }
+            ],
+        },
+        {
+            "from": [
+                {"source": {"principals": ["cluster.local/ns/test-ingress/sa/gateway"]}}
+            ]
+        },
+        {
+            "from": [{"source": {"principals": ["cluster.local/ns/test/sa/multi"]}}],
+            "to": [
+                {"operation": {"paths": ["/items"], "methods": ["POST"]}},
+                {"operation": {"paths": ["/items/{*}"], "methods": ["DELETE"]}},
+            ],
+        },
+        {
+            "from": [
+                {"source": {"principals": ["cluster.local/ns/elsewhere/sa/other-sa"]}}
+            ]
+        },
+        {"when": [{"key": "request.headers[x-test]", "values": ["yes"]}]},
+    ]
+
+    manifests = rendered_chart("common.yaml", "authorization_policy_deny_all.yaml")
+    assert "rules" not in manifests["AuthorizationPolicy"]["spec"]
+
+
+def test_authorization_policy_callers_merge_per_key(rendered_chart):
+    """An environment overlay adds, changes or drops single callers by key."""
+    manifests = rendered_chart(
+        "common.yaml",
+        "authorization_policy.yaml",
+        "authorization_policy_override.yaml",
+    )
+    principals = [
+        rule["from"][0]["source"]["principals"][0]
+        for rule in manifests["AuthorizationPolicy"]["spec"]["rules"]
+    ]
+    assert principals == [
+        "prod.example/ns/test/sa/added",
+        "prod.example/ns/test/sa/caller-prod",
+    ]
+
+
+def test_authorization_policy_without_callers_fails(rendered_chart):
+    """An ALLOW policy with no rules denies everything, so it must be asked for."""
+    with pytest.raises(AssertionError, match="would deny all traffic"):
+        rendered_chart("common.yaml", "authorization_policy_no_callers.yaml")
+
+
+def test_authorization_policy_deny_all_overrides_callers(rendered_chart):
+    """DenyAll drops the chart's callers, as for a consumer that takes no calls."""
+    manifests = rendered_chart(
+        "common.yaml",
+        "authorization_policy.yaml",
+        "authorization_policy_deny_all.yaml",
+    )
+    assert "rules" not in manifests["AuthorizationPolicy"]["spec"]

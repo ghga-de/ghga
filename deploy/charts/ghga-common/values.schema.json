@@ -800,6 +800,53 @@
         }
       }
     },
+    "authorizationPolicy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render an Istio ALLOW AuthorizationPolicy selecting this workload's pods"
+        },
+        "trustDomain": {
+          "type": "string",
+          "description": "Istio trust domain the callers' principals are built in"
+        },
+        "callers": {
+          "type": "object",
+          "description": "Allowed callers, keyed by chart name",
+          "additionalProperties": {
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "properties": {
+              "serviceAccount": {"type": "string"},
+              "namespace": {"type": "string"},
+              "principals": {"type": "array", "items": {"type": "string"}},
+              "paths": {"type": "array", "items": {"type": "string"}},
+              "methods": {"type": "array", "items": {"type": "string"}},
+              "ports": {"type": "array", "items": {"type": ["integer", "string"]}},
+              "operations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "paths": {"type": "array", "items": {"type": "string"}},
+                    "methods": {"type": "array", "items": {"type": "string"}},
+                    "ports": {"type": "array", "items": {"type": ["integer", "string"]}}
+                  }
+                }
+              },
+              "rule": {"type": "object"}
+            }
+          }
+        },
+        "denyAll": {
+          "type": "boolean",
+          "description": "Render the policy with no rules, denying all traffic to the workload; overrides callers. Required to enable the policy without callers"
+        }
+      }
+    },
     "networkPolicy": {
       "type": "object",
       "additionalProperties": true,
