@@ -108,7 +108,7 @@ async def test_create_session_with_bad_generator():
 
 async def test_save_session(store):
     """Test saving a session."""
-    session = store._create_session(**USER_KWARGS)
+    session = await store.create_session(**USER_KWARGS)
     await store.save_session(session)
     assert session.ext_id == USER_KWARGS["ext_id"]
     assert session.user_name == USER_KWARGS["user_name"]
@@ -118,6 +118,28 @@ async def test_save_session(store):
     assert session.last_used == store.now
     assert await store.get_size() == 1
     assert await store.get_session(session.session_id) is session
+
+
+async def test_save_session_that_is_not_stored(store):
+    """Test that saving a session does not add it to the store."""
+    session = store._create_session(**USER_KWARGS)
+    await store.save_session(session)
+    assert await store.get_size() == 0
+    assert await store.get_session(session.session_id) is None
+
+
+async def test_save_session_after_deletion(store):
+    """Test that a session deleted while a request used it is not saved again.
+
+    This happens when a logout ends the session during another request.
+    """
+    session = await store.create_session(**USER_KWARGS)
+    session_in_request = await store.get_session(session.session_id)
+    assert session_in_request
+    await store.delete_session(session.session_id)
+    await store.save_session(session_in_request)
+    assert await store.get_size() == 0
+    assert await store.get_session(session.session_id) is None
 
 
 async def test_update_session(store):
