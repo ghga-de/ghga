@@ -416,6 +416,40 @@ export class AuthService {
   }
 
   /**
+   * Forget the user after the backend has ended the session during an API call
+   *
+   * The backend checks sessions again against the user account at intervals,
+   * and ends them when the account was disabled or deleted, or when the TOTP
+   * token was replaced. Several requests may fail at once, so only the first
+   * one is handled.
+   * @param accountDisabled - whether the session ended because the account is disabled
+   */
+  async sessionEnded(accountDisabled: boolean): Promise<void> {
+    if (!this.#userSignal()) return;
+    this.#userSignal.set(null);
+    await this.#clearUser();
+    await this.#router.navigate(['/']);
+    if (accountDisabled) {
+      this.showAccountDisabled();
+    } else {
+      this.#notify.showError('Your session has ended, please log in again.');
+    }
+  }
+
+  /**
+   * Check whether a request goes to an endpoint that handles its own session errors
+   *
+   * Login, logout and the TOTP endpoints report an ended session themselves.
+   * @param url - the URL of the request
+   * @returns true if the request goes to such an endpoint
+   */
+  handlesSessionErrors(url: string): boolean {
+    return (
+      url.startsWith(`${this.#authUrl}/rpc/`) || url.startsWith(this.#totpTokenUrl)
+    );
+  }
+
+  /**
    * Tell the user that the account is disabled and whom to contact
    *
    * This is a dialog rather than a toast, since the user cannot log in again
