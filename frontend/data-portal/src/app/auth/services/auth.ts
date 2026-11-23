@@ -439,7 +439,8 @@ export class AuthService {
   /**
    * Check whether a request goes to an endpoint that handles its own session errors
    *
-   * Login, logout and the TOTP endpoints report an ended session themselves.
+   * These are the endpoints of the login flow, which the auth service runs itself:
+   * login and TOTP verification tell the user when the session has ended.
    * @param url - the URL of the request
    * @returns true if the request goes to such an endpoint
    */

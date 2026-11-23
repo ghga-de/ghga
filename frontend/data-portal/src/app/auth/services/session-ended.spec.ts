@@ -20,7 +20,7 @@ const API_URL = 'http://mock.dev/api/some/path';
  * Mock the auth service as needed by the interceptor
  */
 class MockAuthService {
-  sessionEnded = vitest.fn();
+  sessionEnded = vitest.fn().mockResolvedValue(undefined);
   handlesSessionErrors = vitest.fn(() => false);
 }
 

@@ -44,7 +44,9 @@ export const sessionEndedInterceptor: HttpInterceptorFn = (
         if (ended && ended.status === error.status) {
           const authService = injector.get(AuthService);
           if (!authService.handlesSessionErrors(req.url)) {
-            void authService.sessionEnded(ended.accountDisabled);
+            authService
+              .sessionEnded(ended.accountDisabled)
+              .catch((reason) => console.error('Failed to end the session:', reason));
           }
         }
       }
