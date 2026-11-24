@@ -1,5 +1,5 @@
 ---
-title: "OpenTelemetry Tracing"
+title: "OpenTelemetry Tracing and Metrics"
 ---
 
 <!--

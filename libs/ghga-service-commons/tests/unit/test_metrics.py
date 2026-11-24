@@ -203,3 +203,31 @@ async def test_silent_and_stopped_after_exit():
     assert fake.observe() == []
     names = [task.get_name() for task in asyncio.all_tasks()]
     assert "refresh_gauge:test.items" not in names
+
+
+def items_gauge(meter: Meter):
+    """Return a gauge named `test.items` on the given meter."""
+    return refresh_gauge(
+        name="test.items",
+        description="Items.",
+        read=counting_read(),
+        interval=INTERVAL,
+        meter=meter,
+    )
+
+
+async def test_same_name_twice_raises():
+    """A second gauge with the same name on the same meter raises, even after exit."""
+    _, meter = new_meter()
+
+    async with items_gauge(meter):
+        with pytest.raises(ValueError, match=r"test\.items"):
+            async with items_gauge(meter):
+                pass
+    with pytest.raises(ValueError, match=r"test\.items"):
+        async with items_gauge(meter):
+            pass
+
+    _, other_meter = new_meter()
+    async with items_gauge(other_meter):
+        pass

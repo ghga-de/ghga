@@ -25,12 +25,18 @@ import logging
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from contextlib import asynccontextmanager, suppress
+from weakref import WeakKeyDictionary
 
 from opentelemetry.metrics import CallbackOptions, Meter, Observation, get_meter
 
 __all__ = ["refresh_gauge"]
 
 log = logging.getLogger(__name__)
+
+# The gauge names each meter has been given. The SDK keeps the callback of the first
+# observable gauge with a name and ignores later ones, even after the first context
+# closed, so a second gauge with the same name would never report.
+_names_by_meter: WeakKeyDictionary[Meter, set[str]] = WeakKeyDictionary()
 
 
 @asynccontextmanager
@@ -49,14 +55,18 @@ async def refresh_gauge(  # noqa: PLR0913
 
     OpenTelemetry calls the callback of an observable gauge from its exporter thread,
     where it cannot await, so it cannot query an async source such as a database
-    itself. Instead, `read` is awaited on entry and then every `interval` seconds in a
-    background task on the running event loop, and the callback only reports the last
-    value that task read.
+    itself. Instead, a background task on the running event loop awaits `read` right
+    after entry and then every `interval` seconds, and the callback only reports the
+    last value that task read. Until the first call returns, the gauge reports nothing.
 
     A call that fails or takes longer than `timeout` seconds is logged as a warning
     and keeps the previous value. Once the last successful read is older than
     `max_age` seconds, the gauge reports nothing, so the series goes absent instead
     of showing an outdated value. After the context closes it reports nothing either.
+
+    Each name can be used once per meter and process: OpenTelemetry cannot remove a
+    gauge, so a second gauge with the same name would never report, and raises a
+    `ValueError` instead.
 
     Args:
         name: The metric name, e.g. `dlqs.dead_letters`.
@@ -71,6 +81,10 @@ async def refresh_gauge(  # noqa: PLR0913
             MeterProvider.
     """
     meter = meter or get_meter(__name__)
+    names = _names_by_meter.setdefault(meter, set())
+    if name in names:
+        raise ValueError(f"A gauge named {name!r} was already created on this meter")
+    names.add(name)
     max_age = 3 * interval if max_age is None else max_age
 
     # The value and the monotonic time it was read at, replaced as one tuple, so the
