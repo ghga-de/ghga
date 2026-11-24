@@ -161,9 +161,11 @@ async def test_invalid_algorithm(jwt_auth):
 async def test_corrupted_token(jwt_auth):
     """Test getting an auth context with corrupted token."""
     token = create_token()
-    last_chars = token[-3:]
-    last_chars = "bar" if last_chars == "foo" else "foo"
-    token = token[:-3] + last_chars
+    # Change the first character, not the last: the last one carries padding bits,
+    # and jwcrypto >= 1.6.2 rejects their non-canonical encoding before verifying.
+    head, signature = token.rsplit(".", 1)
+    signature = ("B" if signature[0] == "A" else "A") + signature[1:]
+    token = f"{head}.{signature}"
     expected_error = jwt_auth.AuthContextValidationError
     expected_message = "Not a valid token: Verification failed"
     with pytest.raises(expected_error, match=expected_message):
