@@ -297,4 +297,84 @@ describe('AuthService', () => {
       expect(service.sessionState()).toBe('LoggedOut');
     });
   });
+
+  describe('when the backend ends the session during an API call', () => {
+    let router: Router;
+    let notify: MockNotificationService;
+    let confirmation: MockConfirmationService;
+
+    beforeEach(async () => {
+      router = TestBed.inject(Router);
+      notify = TestBed.inject(Notifier) as unknown as MockNotificationService;
+      confirmation = TestBed.inject(
+        ConfirmationService,
+      ) as unknown as MockConfirmationService;
+      vitest.spyOn(OidcUserManager.prototype, 'removeUser').mockResolvedValue();
+      const session = {
+        ext_id: 'john@aai.org',
+        id: 'some-user-id',
+        name: 'John Doe',
+        email: 'john@home.org',
+        state: 'Authenticated',
+        roles: ['data_steward'],
+        csrf: 'some-csrf-token',
+      };
+      TestBed.inject(HttpTestingController)
+        .expectOne(LOGIN_URL)
+        .flush(null, {
+          status: 204,
+          statusText: 'No Content',
+          headers: { 'X-Session': JSON.stringify(session) },
+        });
+      expect(service.sessionState()).toBe('Authenticated');
+      await RouterTestingHarness.create('/other');
+    });
+
+    afterEach(() => {
+      vitest.restoreAllMocks();
+    });
+
+    it('should forget the user and ask to log in again', async () => {
+      await service.sessionEnded(false);
+      expect(service.sessionState()).toBe('LoggedOut');
+      expect(service.roles()).toEqual([]);
+      expect(router.url).toBe('/');
+      expect(notify.showError).toHaveBeenCalledExactlyOnceWith(
+        'Your session has ended, please log in again.',
+      );
+      expect(confirmation.confirm).not.toHaveBeenCalled();
+    });
+
+    it('should forget the user and tell that the account is disabled', async () => {
+      await service.sessionEnded(true);
+      expect(service.sessionState()).toBe('LoggedOut');
+      expect(confirmation.confirm).toHaveBeenCalledTimes(1);
+      expect(notify.showError).not.toHaveBeenCalled();
+    });
+
+    it('should handle only the first of several failed requests', async () => {
+      await Promise.all([service.sessionEnded(false), service.sessionEnded(false)]);
+      expect(notify.showError).toHaveBeenCalledTimes(1);
+    });
+
+    it('should know which endpoints handle session errors themselves', () => {
+      expect(service.handlesSessionErrors(LOGIN_URL)).toBe(true);
+      expect(service.handlesSessionErrors(VERIFY_TOTP_URL)).toBe(true);
+      expect(service.handlesSessionErrors('http://mock.dev/auth/rpc/logout')).toBe(
+        true,
+      );
+      expect(service.handlesSessionErrors('http://mock.dev/auth/totp-token')).toBe(
+        true,
+      );
+      expect(service.handlesSessionErrors('http://mock.dev/auth/users/some-id')).toBe(
+        false,
+      );
+      expect(service.handlesSessionErrors('http://mock.dev/api/some/path')).toBe(false);
+      expect(
+        service.handlesSessionErrors(
+          'http://mock.dev/auth/rpc/ivas/TEST123456/validate-code',
+        ),
+      ).toBe(false);
+    });
+  });
 });

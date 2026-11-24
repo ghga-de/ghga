@@ -84,6 +84,7 @@ provide_apis:
 second_factor_recreated_type: second_factor_recreated
 service_instance_id: '1'
 service_name: auth_service
+session_check_interval_seconds: 60
 session_id_bytes: 24
 session_max_lifetime_seconds: 43200
 session_timeout_seconds: 3600

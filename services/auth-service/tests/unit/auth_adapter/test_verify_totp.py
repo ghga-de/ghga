@@ -25,6 +25,7 @@ from fastapi import HTTPException, status
 from pydantic import SecretStr
 
 from auth_service.auth_adapter.adapters.memory_session_store import MemorySessionStore
+from auth_service.auth_adapter.core.session_check import totp_token_hash
 from auth_service.auth_adapter.core.session_store import SessionState
 from auth_service.auth_adapter.core.totp import TOTPHandler
 from auth_service.auth_adapter.core.verify_totp import verify_totp
@@ -139,6 +140,8 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
         assert session.totp_token is None
         get_roles.assert_awaited_once_with(user_dao.user)
         assert session.roles == ["role_from_database"]
+        assert totp_token
+        assert session.totp_token_hash == totp_token_hash(totp_token)
     else:
         assert exc_info
         if limit_reached and user_has_token:
@@ -188,7 +191,9 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
         totp_handler.verify_code.assert_called_once_with(totp_token, totp_code)
     else:
         totp_handler.verify_code.assert_not_called()
-    if should_verify is not None:
+    if should_verify:
+        session_store.save_session.assert_awaited_once_with(session, checked=True)
+    elif should_verify is not None:
         session_store.save_session.assert_awaited_once_with(session)
     else:
         session_store.save_session.assert_not_called()

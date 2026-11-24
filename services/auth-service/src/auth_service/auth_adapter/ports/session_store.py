@@ -77,6 +77,11 @@ class SessionStorePort[T: BaseSession](ABC):
         ...
 
     @abstractmethod
+    def is_check_due(self, session: T) -> bool:
+        """Check whether the session must be checked against the user account."""
+        ...
+
+    @abstractmethod
     def timeouts(self, session: T) -> tuple[int, int]:
         """Get the soft and hard expiration times of the given session in seconds."""
         ...
