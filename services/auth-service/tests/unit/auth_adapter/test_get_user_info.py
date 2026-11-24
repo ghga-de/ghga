@@ -46,10 +46,22 @@ def test_rejects_an_expired_access_token():
 
 
 @pytest.mark.parametrize("claim", ["sub", "aud", "scope"])
-def test_rejects_an_access_token_without_mandatory_claim(claim: str):
-    """Test that you cannot get user info with missing claims."""
+def test_rejects_an_access_token_with_null_mandatory_claim(claim: str):
+    """Test that you cannot get user info with null claims."""
     access_token = create_access_token(**{claim: None})  # type: ignore
-    with pytest.raises(auth.UserInfoError, match=f"Missing value for {claim} claim"):
+    with pytest.raises(auth.UserInfoError, match=f"Invalid Claim format for {claim}"):
+        auth.get_user_info(access_token)
+
+
+@pytest.mark.parametrize(
+    "claim, value", [("sub", ""), ("aud", ""), ("aud", []), ("scope", "")]
+)
+def test_rejects_an_access_token_with_empty_mandatory_claim(
+    claim: str, value: str | list[str]
+):
+    """Test that you cannot get user info with empty claims."""
+    access_token = create_access_token(**{claim: value})  # type: ignore
+    with pytest.raises(auth.UserInfoError, match=f"Empty value for {claim} claim"):
         auth.get_user_info(access_token)
 
 

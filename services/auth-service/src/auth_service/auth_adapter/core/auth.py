@@ -247,14 +247,14 @@ def _fetch_user_info(access_token: str) -> dict[str, Any]:
 def _assert_at_claims_not_empty(at_claims: dict[str, Any]) -> None:
     """Make sure that all important access token claims are not empty.
 
-    Note that JWT.validate() checks only whether claims exist, but we also
-    want to make sure that the copied claims are not null or empty strings.
+    jwcrypto already rejects missing and null claims, but accepts empty strings
+    and an empty audience list.
 
     Raises a TokenValidationError in case one of the claims is empty.
     """
     for claim in get_jwt_config().check_at_claims:
-        if not at_claims[claim]:
-            raise TokenValidationError(f"Missing value for {claim} claim.")
+        if at_claims[claim] in ("", []):
+            raise TokenValidationError(f"Empty value for {claim} claim.")
 
 
 def _assert_ui_claims_not_empty(ui_claims: dict[str, Any]) -> None:
@@ -300,12 +300,16 @@ def decode_and_validate_token(
 def sign_and_encode_token(claims: dict[str, Any], key: jwk.JWK | None = None) -> str:
     """Encode and sign the given payload as JSON Web Token.
 
+    Claims with the value None are left out, since jwcrypto rejects null claims
+    when validating a token.
+
     Returns the signed and encoded payload.
 
     Raises a TokenSigningError in case the payload could not be properly signed.
     """
     if not claims:
         raise TokenSigningError("No payload")
+    claims = {name: value for name, value in claims.items() if value is not None}
     if not key:
         key = get_jwt_config().internal_jwk
     header = {"alg": "ES256" if key["kty"] == "EC" else "RS256", "typ": "JWT"}
