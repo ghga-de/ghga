@@ -176,7 +176,7 @@ async def test_typical_journey(joint_fixture: JointFixture):
     assert recorder.recorded_events[0].payload["file_count"] == 1  # check one property
 
     # Query the box (should show updated file count and size)
-    access_api.on_check_box_access = respond(200)
+    access_api.on_check_box_access = respond(200, json=valid_until.isoformat())
     updated_box = await rdub_manager.get_research_data_upload_box(
         box_id=box_id,
         auth_context=user_auth_context,
