@@ -16,6 +16,7 @@
 
 """A repository for access requests."""
 
+import asyncio
 import logging
 from collections.abc import Mapping
 from datetime import timedelta
@@ -42,6 +43,7 @@ from ars.ports.outbound.access_grants import AccessGrantsPort
 from ars.ports.outbound.daos import (
     AccessRequestDaoPort,
     DatasetDaoPort,
+    PreconditionFailedError,
     ResourceNotFoundError,
     race_condition_retries,
 )
@@ -83,6 +85,13 @@ class AccessRequestConfig(BaseSettings):
 class AccessRequestRepository(AccessRequestRepositoryPort):
     """A repository for access requests."""
 
+    # how often and in which interval (in seconds) to try revoking a grant whose
+    # request could not be stored as allowed
+    _revoke_tries = 3
+    _revoke_interval = 1.0
+    # how long to wait (in seconds) for reading back a request that may be stored
+    _read_back_timeout = 10.0
+
     def __init__(
         self,
         *,
@@ -103,6 +112,8 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         self._dataset_dao = dataset_dao
         self._access_grants = access_grants
         self._sms_notifier = sms_notifier
+        # keeps the tasks discarding unused grants alive until they are done
+        self._discard_tasks: set[asyncio.Task[None]] = set()
 
     async def create(
         self, creation_data: AccessRequestCreationData, *, auth_context: AuthContext
@@ -397,16 +408,107 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         try:
             await self._write_back(request, modified_request)
-        except Exception:
+        except (Exception, asyncio.CancelledError) as error:
             # a grant without an allowed request would be duplicated on a retry,
-            # or outlive a request that has been changed in the meantime
+            # or outlive a request that has been changed in the meantime;
+            # shielded so that it also completes when the request is cancelled
+            maybe_stored = not isinstance(
+                error, PreconditionFailedError | ResourceNotFoundError
+            )
+            task = asyncio.create_task(
+                self._discard_grant(
+                    grant_id, modified_request, check_stored=maybe_stored
+                )
+            )
+            self._discard_tasks.add(task)
+            task.add_done_callback(self._discard_tasks.discard)
+            await asyncio.shield(task)
+            raise
+
+    async def _discard_grant(
+        self, grant_id: UUID4, allowed_request: AccessRequest, *, check_stored: bool
+    ) -> None:
+        """Revoke a grant registered for a request that may not have been stored.
+
+        With `check_stored`, the grant is kept if the request has been stored as
+        allowed nevertheless, e.g. when only publishing the change failed.
+        A write still in flight can be stored only after it has been checked; the
+        request is then allowed without a grant, which denies access but never gives
+        unapproved access. ARS cannot register that grant again: the user has to file
+        a new request, which a data steward allows.
+        """
+        try:
+            if check_stored and await self._is_stored(allowed_request):
+                return
+            await self._revoke_unused_grant(grant_id)
+        except asyncio.CancelledError:
+            log.critical(
+                "Revoking the unused access grant %s was cancelled",
+                grant_id,
+                extra={"grant_id": grant_id},
+            )
+            raise
+
+    async def _is_stored(self, allowed_request: AccessRequest) -> bool:
+        """Check whether the request has been stored as allowed by this change.
+
+        Returns False if that is unknown, so that the grant is revoked when in doubt.
+        """
+        try:
+            async with asyncio.timeout(self._read_back_timeout):
+                stored = await self._request_dao.get_by_id(allowed_request.id)
+        except Exception as error:
+            log.warning(
+                "Could not check whether access request %s was stored: %s."
+                + " Its grant is revoked, so if it was stored as allowed,"
+                + " the user has no access until a new request is allowed.",
+                allowed_request.id,
+                error,
+            )
+            return False
+        # the status change date identifies this change, since it is set to the
+        # current time and stored with the same precision
+        return (
+            stored.status == AccessRequestStatus.ALLOWED
+            and stored.status_changed == allowed_request.status_changed
+        )
+
+    async def wait_for_discarded_grants(self) -> None:
+        """Wait until all unused grants have been revoked, e.g. before shutdown."""
+        await asyncio.gather(*self._discard_tasks, return_exceptions=True)
+
+    async def _revoke_unused_grant(self, grant_id: UUID4) -> None:
+        """Revoke a grant whose access request could not be stored as allowed.
+
+        The revocation is retried, since a grant left behind gives access without
+        an allowed request. If it still fails, it is logged as critical with the
+        grant ID, so that the grant can be revoked by hand.
+        """
+        for attempt in range(1, self._revoke_tries + 1):
             try:
                 await self._access_grants.revoke_download_access_grant(grant_id)
-            except self._access_grants.AccessGrantsError as revoke_error:
-                log.error(
-                    "Could not revoke the access grant %s: %s", grant_id, revoke_error
+            except self._access_grants.AccessGrantNotFoundError:
+                if attempt == 1:
+                    # later, it can mean that the previous attempt succeeded
+                    log.warning("The access grant %s to revoke was not found", grant_id)
+                return
+            except Exception as error:
+                if attempt >= self._revoke_tries:
+                    log.critical(
+                        "Could not revoke the unused access grant %s: %s",
+                        grant_id,
+                        error,
+                        extra={"grant_id": grant_id},
+                    )
+                    return
+                log.warning(
+                    "Could not revoke the access grant %s, trying again: %s",
+                    grant_id,
+                    error,
                 )
-            raise
+                await asyncio.sleep(self._revoke_interval)
+            else:
+                return
 
     async def send_verification_sms(
         self,
