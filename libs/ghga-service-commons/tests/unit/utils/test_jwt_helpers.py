@@ -16,7 +16,7 @@
 """Test the utils.jwt_helpers module."""
 
 import pytest
-from jwcrypto.common import JWException
+from jwcrypto.jws import InvalidJWSSignature
 
 from ghga_service_commons.utils.jwt_helpers import (
     decode_and_validate_token,
@@ -49,7 +49,7 @@ def test_sign_and_validate():
     head, signature = token.rsplit(".", 1)
     signature = ("B" if signature[0] == "A" else "A") + signature[1:]
     token = f"{head}.{signature}"
-    with pytest.raises(JWException, match="Verification failed"):
+    with pytest.raises(InvalidJWSSignature):
         decode_and_validate_token(token, key)
 
 
