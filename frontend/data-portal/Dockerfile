@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for building a hardened image for the data portal
 
 # Define the non-dev base-image
-# Node is held at the LTS line, see docs/dependencies.md
+# Node stays on the LTS line; renovate.json5 bounds it and says when to move
 # renovate: track=node-base
 ARG NODE_BASE=26.13.1-alpine3.24
 ARG BASE=dhi.io/node:${NODE_BASE}
