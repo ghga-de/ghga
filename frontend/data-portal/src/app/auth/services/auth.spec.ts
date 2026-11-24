@@ -360,6 +360,9 @@ describe('AuthService', () => {
     it('should know which endpoints handle session errors themselves', () => {
       expect(service.handlesSessionErrors(LOGIN_URL)).toBe(true);
       expect(service.handlesSessionErrors(VERIFY_TOTP_URL)).toBe(true);
+      expect(service.handlesSessionErrors('http://mock.dev/auth/rpc/logout')).toBe(
+        true,
+      );
       expect(service.handlesSessionErrors('http://mock.dev/auth/totp-token')).toBe(
         true,
       );
@@ -367,6 +370,11 @@ describe('AuthService', () => {
         false,
       );
       expect(service.handlesSessionErrors('http://mock.dev/api/some/path')).toBe(false);
+      expect(
+        service.handlesSessionErrors(
+          'http://mock.dev/auth/rpc/ivas/TEST123456/validate-code',
+        ),
+      ).toBe(false);
     });
   });
 });

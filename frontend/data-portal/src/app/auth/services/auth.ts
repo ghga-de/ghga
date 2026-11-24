@@ -440,14 +440,19 @@ export class AuthService {
    * Check whether a request goes to an endpoint that handles its own session errors
    *
    * These are the endpoints of the login flow, which the auth service runs itself:
-   * login and TOTP verification tell the user when the session has ended.
+   * login and TOTP verification tell the user when the session has ended,
+   * and logout forgets the user anyway. Other calls under /rpc/, such as those
+   * for IVAs, are checked like any other API call and are not exempt.
    * @param url - the URL of the request
    * @returns true if the request goes to such an endpoint
    */
   handlesSessionErrors(url: string): boolean {
-    return (
-      url.startsWith(`${this.#authUrl}/rpc/`) || url.startsWith(this.#totpTokenUrl)
-    );
+    return [
+      this.#loginUrl,
+      this.#logoutUrl,
+      this.#verifyTotpUrl,
+      this.#totpTokenUrl,
+    ].includes(url);
   }
 
   /**

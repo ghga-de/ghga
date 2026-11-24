@@ -4,7 +4,13 @@
  * @license Apache-2.0
  */
 
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpErrorResponse,
+  HttpParams,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
@@ -87,6 +93,18 @@ describe('sessionEndedInterceptor', () => {
   it('should leave endpoints that handle session errors alone', async () => {
     authService.handlesSessionErrors.mockReturnValue(true);
     expect(await fail(401, 'Session has ended')).toBe(401);
+    expect(authService.handlesSessionErrors).toHaveBeenCalledWith(API_URL);
+    expect(authService.sessionEnded).not.toHaveBeenCalled();
+  });
+
+  it('should check the exemption against the URL without query parameters', async () => {
+    authService.handlesSessionErrors.mockReturnValue(true);
+    const params = new HttpParams().set('force', 'true');
+    const request = firstValueFrom(http.post(API_URL, null, { params }));
+    httpMock
+      .expectOne(`${API_URL}?force=true`)
+      .flush({ detail: 'Session has ended' }, { status: 401, statusText: 'Error' });
+    await expect(request).rejects.toBeInstanceOf(HttpErrorResponse);
     expect(authService.handlesSessionErrors).toHaveBeenCalledWith(API_URL);
     expect(authService.sessionEnded).not.toHaveBeenCalled();
   });
