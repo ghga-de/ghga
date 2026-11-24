@@ -23,7 +23,15 @@ from uuid import UUID
 
 import httpx2
 from jwcrypto import jwk
-from pydantic import UUID4, Field, HttpUrl, PositiveInt, SecretStr, TypeAdapter
+from pydantic import (
+    UUID4,
+    Field,
+    HttpUrl,
+    PositiveInt,
+    SecretStr,
+    TypeAdapter,
+    ValidationError,
+)
 from pydantic_settings import BaseSettings
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
@@ -67,6 +75,7 @@ log = logging.getLogger(__name__)
 DEFAULT_HTTPX_TIMEOUT = 60.0
 
 _file_state_counts_adapter = TypeAdapter(dict[UUID4, FileStateCounts])
+_box_access_valid_until_adapter = TypeAdapter(UTCDatetime | None)
 
 
 @asynccontextmanager
@@ -306,9 +315,27 @@ class AccessClient(AccessClientPort):
         try:
             response = await self._client.get(url, timeout=self._standard_timeout)
 
-            # 200 means user has access, 403/404 means no access
+            # A 200 body holds the date until which the user has access, or null if
+            # the user has no access. 403/404 also mean no access.
             if response.status_code == 200:
-                return True
+                try:
+                    valid_until = _box_access_valid_until_adapter.validate_json(
+                        response.content
+                    )
+                except ValidationError as err:
+                    log.warning(
+                        "Invalid response body when checking box access for user %s"
+                        + " and box %s.",
+                        user_id,
+                        box_id,
+                        extra={
+                            "user_id": user_id,
+                            "box_id": box_id,
+                            "response_body": response.text,
+                        },
+                    )
+                    raise self.AccessAPIError("Failed to check box access.") from err
+                return valid_until is not None
             if response.status_code in (403, 404):
                 return False
             log.warning(
