@@ -228,8 +228,15 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # ghcr.io can answer the tag lookup right after the manifest upload with a 404;
+      # re-pushing the same version is harmless, so retry.
       - name: Push
         run: |
+          target="oci://${CHART_REGISTRY}"
           for chart in dist/*.tgz; do
-            helm push "$chart" "oci://${CHART_REGISTRY}"
+            for wait in 2 4 8 16; do
+              helm push "$chart" "$target" && continue 2
+              sleep "$wait"
+            done
+            helm push "$chart" "$target"
           done
