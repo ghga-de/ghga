@@ -18,7 +18,7 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth';
-import { sessionEndedInterceptor } from './session-ended';
+import { isSessionEnded, sessionEndedInterceptor } from './session-ended';
 
 const API_URL = 'http://mock.dev/api/some/path';
 
@@ -107,5 +107,20 @@ describe('sessionEndedInterceptor', () => {
     await expect(request).rejects.toBeInstanceOf(HttpErrorResponse);
     expect(authService.handlesSessionErrors).toHaveBeenCalledWith(API_URL);
     expect(authService.sessionEnded).not.toHaveBeenCalled();
+  });
+});
+
+describe('isSessionEnded', () => {
+  it('should recognize errors with which the backend ends a session', () => {
+    const error = (status: number, detail: string) =>
+      new HttpErrorResponse({ status, error: { detail } });
+    expect(isSessionEnded(error(401, 'Session has ended'))).toBe(true);
+    expect(isSessionEnded(error(401, 'User account has been deleted'))).toBe(true);
+    expect(isSessionEnded(error(403, 'User account is disabled'))).toBe(true);
+    expect(isSessionEnded(error(401, 'User account is disabled'))).toBe(false);
+    expect(isSessionEnded(error(403, 'Not authorized'))).toBe(false);
+    expect(
+      isSessionEnded({ status: 401, error: { detail: 'Session has ended' } }),
+    ).toBe(false);
   });
 });

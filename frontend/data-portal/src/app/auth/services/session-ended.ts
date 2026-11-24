@@ -24,6 +24,31 @@ const SESSION_ENDED = new Map<string, { status: number; accountDisabled: boolean
 ]);
 
 /**
+ * Find out how the backend ended the session, if a failed API call says it did
+ * @param error - the error of the failed API call
+ * @returns the details of the ended session, or undefined if it was not ended
+ */
+function getSessionEnded(
+  error: unknown,
+): { status: number; accountDisabled: boolean } | undefined {
+  if (!(error instanceof HttpErrorResponse)) return undefined;
+  const ended = SESSION_ENDED.get(error.error?.detail);
+  return ended && ended.status === error.status ? ended : undefined;
+}
+
+/**
+ * Check whether an API call failed because the backend has ended the session
+ *
+ * The interceptor already tells the user why the session ended,
+ * so callers can use this to skip their own error message.
+ * @param error - the error of the failed API call
+ * @returns true if the backend has ended the session
+ */
+export function isSessionEnded(error: unknown): boolean {
+  return getSessionEnded(error) !== undefined;
+}
+
+/**
  * Forget the user when an API call fails because the backend has ended the session
  *
  * The error is passed on unchanged, so that callers still see the failed request.
@@ -39,15 +64,13 @@ export const sessionEndedInterceptor: HttpInterceptorFn = (
   const injector = inject(Injector);
   return next(req).pipe(
     catchError((error: unknown) => {
-      if (error instanceof HttpErrorResponse) {
-        const ended = SESSION_ENDED.get(error.error?.detail);
-        if (ended && ended.status === error.status) {
-          const authService = injector.get(AuthService);
-          if (!authService.handlesSessionErrors(req.url)) {
-            authService
-              .sessionEnded(ended.accountDisabled)
-              .catch((reason) => console.error('Failed to end the session:', reason));
-          }
+      const ended = getSessionEnded(error);
+      if (ended) {
+        const authService = injector.get(AuthService);
+        if (!authService.handlesSessionErrors(req.url)) {
+          authService
+            .sessionEnded(ended.accountDisabled)
+            .catch((reason) => console.error('Failed to end the session:', reason));
         }
       }
       return throwError(() => error);
