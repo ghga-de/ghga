@@ -155,6 +155,36 @@ async def list_uploads(
         raise error from err
 
 
+@router.get(
+    "/storages/{storage_alias}/validate-version",
+    summary="Check that FIS accepts the caller's DHFS version and token",
+    operation_id="validateVersion",
+    tags=["FileIngestService"],
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "No token was supplied"},
+        status.HTTP_403_FORBIDDEN: {"description": "The token was rejected"},
+        status.HTTP_426_UPGRADE_REQUIRED: {
+            "description": "The DHFS version is rejected"
+        },
+    },
+)
+@TRACER.start_as_current_span("routes.validate_version")
+async def validate_version(
+    storage_alias: str,
+    request: Request,
+    _token: Annotated[JWT, require_data_hub_jwt],
+    _dhfs_version_constraint: dummies.DhfsVersionConstraint,
+) -> None:
+    """Tell the caller whether FIS accepts its DHFS version and its token."""
+    check_and_log_user_agent_header(
+        request=request,
+        dhfs_version_constraint=_dhfs_version_constraint,
+        endpoint_description="validate_version",
+        storage_alias=storage_alias,
+    )
+
+
 @router.post(
     "/storages/{storage_alias}/uploads/can_remove",
     summary="Returns a list of IDs indicating which objects can be removed from the interrogation bucket",

@@ -331,5 +331,36 @@ paths:
         the interrogation bucket
       tags:
       - FileIngestService
+  /storages/{storage_alias}/validate-version:
+    get:
+      description: Tell the caller whether FIS accepts its DHFS version and its token.
+      operationId: validateVersion
+      parameters:
+      - in: path
+        name: storage_alias
+        required: true
+        schema:
+          title: Storage Alias
+          type: string
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          description: No token was supplied
+        '403':
+          description: The token was rejected
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '426':
+          description: The DHFS version is rejected
+      security:
+      - HTTPBearer: []
+      summary: Check that FIS accepts the caller's DHFS version and token
+      tags:
+      - FileIngestService
 tags:
 - name: FileIngestService
