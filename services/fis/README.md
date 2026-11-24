@@ -550,6 +550,18 @@ The service requires the following configuration parameters:
   "~=2.0"
   ```
 
+- <a id="properties/max_lease_hold_seconds"></a>**`max_lease_hold_seconds`** *(integer)*: Upper bound on how long one claim can be kept alive through renewals.
+  Defaults to three days.
+  Exclusive minimum: `0`.
+  Default: `259200`.
+- <a id="properties/claim_backoff_base_seconds"></a>**`claim_backoff_base_seconds`** *(integer)*: The first backoff after a release, in seconds.
+  It doubles with each further claim of the same file, up to claim_backoff_cap_seconds.
+  Exclusive minimum: `0`.
+  Default: `60`.
+- <a id="properties/claim_backoff_cap_seconds"></a>**`claim_backoff_cap_seconds`** *(integer)*: Upper bound on the backoff after a release, in seconds.
+  Exclusive minimum: `0`.
+  Default: `3600`.
+
 <!-- config-docs: end -->
 
 ## HTTP API

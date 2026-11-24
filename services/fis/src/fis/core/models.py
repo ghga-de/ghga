@@ -80,6 +80,19 @@ class FileUnderInterrogation(BaseFileInformation):
         default=False,
         description="Indicates whether the file can be deleted from the interrogation bucket",
     )
+    leased_until: UTCDatetime | None = Field(
+        default=None, description="The time at which the lease expires, if held"
+    )
+    leased_by: UUID4 | None = Field(
+        default=None,
+        description="The claimant ID of the DHFS instance holding the lease, if any",
+    )
+    claimed_at: UTCDatetime | None = Field(
+        default=None, description="Timestamp of when the file was last claimed"
+    )
+    times_claimed: int = Field(
+        default=0, description="The number of times the file has been claimed"
+    )
 
     @model_validator(mode="after")
     def validate_conditional_fields(self) -> FileUnderInterrogation:

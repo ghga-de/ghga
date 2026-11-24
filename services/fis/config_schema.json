@@ -573,6 +573,27 @@
       ],
       "title": "Dhfs Version Constraint",
       "type": "string"
+    },
+    "max_lease_hold_seconds": {
+      "default": 259200,
+      "description": "Upper bound on how long one claim can be kept alive through renewals. Defaults to three days.",
+      "exclusiveMinimum": 0,
+      "title": "Max Lease Hold Seconds",
+      "type": "integer"
+    },
+    "claim_backoff_base_seconds": {
+      "default": 60,
+      "description": "The first backoff after a release, in seconds. It doubles with each further claim of the same file, up to claim_backoff_cap_seconds.",
+      "exclusiveMinimum": 0,
+      "title": "Claim Backoff Base Seconds",
+      "type": "integer"
+    },
+    "claim_backoff_cap_seconds": {
+      "default": 3600,
+      "description": "Upper bound on the backoff after a release, in seconds.",
+      "exclusiveMinimum": 0,
+      "title": "Claim Backoff Cap Seconds",
+      "type": "integer"
     }
   },
   "required": [

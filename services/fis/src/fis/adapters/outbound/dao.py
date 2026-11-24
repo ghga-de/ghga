@@ -39,6 +39,15 @@ async def get_file_dao(*, dao_factory: DaoFactoryProtocol) -> FileDao:
             MongoDbIndex(fields="object_id"),
             # Serves the $match of the waiting files
             MongoDbIndex(fields={"storage_alias": 1, "state": 1, "interrogated": 1}),
+            MongoDbIndex(  # for the claim query
+                fields={
+                    "storage_alias": 1,
+                    "state": 1,
+                    "interrogated": 1,
+                    "leased_until": 1,
+                    "state_updated": 1,
+                }
+            ),
         ],
     )
 
