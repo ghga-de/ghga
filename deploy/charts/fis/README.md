@@ -34,6 +34,7 @@ for the full set of configurable values.
 | `config.http_request_timeout_seconds` | Request timeout setting in seconds. | `60.0` |
 | `config.file_upload_topic` | Topic containing published FileUpload outbox events | `null` |
 | `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
+| `config.enable_otel_metrics` | Also export metrics via OTLP. Requires `enable_opentelemetry` and a collector with a metrics pipeline. | `false` |
 | `config.log_level` | The minimum log level to capture. | `"INFO"` |
 | `config.service_name` | NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"fis"` |
 | `config.service_instance_id` | A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id. | `null` |
@@ -183,6 +184,7 @@ for the full set of configurable values.
 | `serviceName` | Logical service name; combined with serviceNamePrefix and injected into config.yaml as service_name | `"fis-rest"` |
 | `serviceInstanceId.fromPodName` | Inject a <CONFIG_PREFIX>_SERVICE_INSTANCE_ID env var sourced from the Kubernetes Downward API (metadata.name), overriding config.service_instance_id per-pod. Env vars beat the YAML config file in hexkit config_from_yaml priority order, so this makes the value genuinely unique per replica instead of the static per-member string every service currently hardcodes in its own chart-values.yaml config block (which collides across replicas once replicaCount > 1, contradicting hexkit KafkaConfig.service_instance_id's own "uniquely identifies this instance" contract). | `false` |
 | `otelExcludedUrls` | Comma-separated regexes of URLs that OpenTelemetry neither traces nor counts in its HTTP metrics, set as OTEL_PYTHON_EXCLUDED_URLS (read by the FastAPI and httpx instrumentations). Defaults to the health probes; empty turns it off. Skipped when envVars set OTEL_PYTHON_EXCLUDED_URLS themselves. | `"/health$"` |
+| `otelResource.podName` | Add the pod name as k8s.pod.name to the OpenTelemetry resource of traces and metrics, via OTEL_RESOURCE_ATTRIBUTES and the Kubernetes Downward API. Skipped when envVars already set OTEL_RESOURCE_ATTRIBUTES. | `true` |
 | `configMap.enabled` | Render the ConfigMap holding config.yaml and mount it into the container | `true` |
 | `configMap.mountPath` |  | `"/etc/config.yaml"` |
 | `configMap.subPath` |  | `"config.yaml"` |

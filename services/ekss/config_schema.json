@@ -16,6 +16,12 @@
       "title": "Otel Trace Sampling Rate",
       "type": "number"
     },
+    "enable_otel_metrics": {
+      "default": false,
+      "description": "Also export metrics via OTLP. Requires `enable_opentelemetry` and a collector with a metrics pipeline.",
+      "title": "Enable Otel Metrics",
+      "type": "boolean"
+    },
     "server_private_key_path": {
       "description": "Path to the Crypt4GH private key file",
       "examples": [

@@ -35,6 +35,7 @@ download_served_type: download_served
 drs_server_uri: drs://localhost:8080/
 ekss_base_url: http://localhost:8000/ekss
 enable_opentelemetry: false
+enable_otel_metrics: false
 file_deleted_topic: file-downloads
 file_deleted_type: file_deleted
 file_deletion_request_topic: file-deletion-requests

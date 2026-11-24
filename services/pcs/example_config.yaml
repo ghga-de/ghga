@@ -9,6 +9,7 @@ db_name: purge-controller
 db_version_collection: pcsDbVersions
 docs_url: /docs
 enable_opentelemetry: false
+enable_otel_metrics: false
 file_deletion_request_topic: file-deletion-requests
 file_deletion_request_type: file_deletion_requested
 generate_correlation_id: true

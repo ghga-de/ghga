@@ -230,6 +230,8 @@ exports:
       fromPodName: false
 
     otelExcludedUrls: /health$
+    otelResource:
+      podName: true
 
     configMap:
       enabled: true
