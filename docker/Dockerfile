@@ -31,8 +31,10 @@ FROM ${BASE}-sfw-dev AS workspace
 # Toolchain for source-building native wheels where musllinux wheels are unavailable.
 # No `apk upgrade` here: the runner stage starts from the plain base again and takes
 # only the venv, so an upgrade would never reach the image.
+# Alpine's python3-ndbm auto-installs next to the base's python-3.14, which already
+# ships its _dbm module, so the two collide; `!` keeps it out.
 # hadolint ignore=DL3018
-RUN apk add --no-cache build-base gcc g++ libffi-dev zlib-dev python3-dev
+RUN apk add --no-cache build-base gcc g++ libffi-dev zlib-dev python3-dev '!python3-ndbm'
 # uv ships a static (musl-compatible) binary.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
@@ -100,8 +102,9 @@ FROM venv-${VARIANT} AS builder
 # and does not appear in the image's package database.
 # hadolint ignore=DL3006
 FROM ${BASE}-sfw-dev AS allocator
+# `!python3-ndbm`: see the workspace stage.
 # hadolint ignore=DL3018
-RUN apk add --no-cache jemalloc
+RUN apk add --no-cache jemalloc '!python3-ndbm'
 
 # ---- runner: plain hardened base (non-root, no shell) -----------------------------------
 # hadolint ignore=DL3006
