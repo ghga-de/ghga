@@ -71,6 +71,9 @@ for the full set of configurable values.
 | `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
 | `config.data_hub_auth_keys` | Mapping of storage (data hub) aliases to their public token signature validation keys | `null` |
 | `config.dhfs_version_constraint` | A PEP 440 version specifier controlling which DHFS client versions are accepted. Requests where the reported version does not satisfy this specifier will be rejected with a 426 error. | `null` |
+| `config.max_lease_hold_seconds` | Upper bound on how long one claim can be kept alive through renewals. Defaults to three days. | `259200` |
+| `config.claim_backoff_base_seconds` | The first backoff after a release, in seconds. It doubles with each further claim of the same file, up to claim_backoff_cap_seconds. | `60` |
+| `config.claim_backoff_cap_seconds` | Upper bound on the backoff after a release, in seconds. | `3600` |
 
 ## Parameters
 

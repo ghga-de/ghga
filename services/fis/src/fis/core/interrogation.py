@@ -382,6 +382,7 @@ class InterrogationHandler(InterrogationHandlerPort):
         - Set `file.interrogated` to False
         - Set `file.can_remove` to False
         - Set `file.state` to `"inbox"`
+        - Reset the lease fields
         - Update `file.state_updated`
         """
         try:
@@ -401,6 +402,12 @@ class InterrogationHandler(InterrogationHandlerPort):
 
         file.interrogated = False
         file.can_remove = False
+
+        # Clear/reset the lease fields
+        file.leased_until = None
+        file.leased_by = None
+        file.claimed_at = None
+        file.times_claimed = 0
         file.state_updated = now_utc_ms_prec()
         await self._file_dao.update(file)
         log.info(

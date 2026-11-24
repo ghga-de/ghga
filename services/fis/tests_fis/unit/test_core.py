@@ -33,6 +33,25 @@ pytestmark = pytest.mark.asyncio()
 
 HUB1 = "HUB1"
 HUB2 = "HUB2"
+CLEARED_LEASE = {
+    "leased_until": None,
+    "leased_by": None,
+    "claimed_at": None,
+    "times_claimed": 0,
+}
+
+
+def give_lease(file: models.FileUnderInterrogation) -> None:
+    """Set the lease fields as a claim of the file would"""
+    file.leased_until = now_utc_ms_prec() + timedelta(minutes=22)
+    file.leased_by = uuid4()
+    file.claimed_at = now_utc_ms_prec()
+    file.times_claimed = 3
+
+
+def get_lease(file: models.FileUnderInterrogation) -> dict:
+    """Return the lease fields of the file"""
+    return file.model_dump(include=set(CLEARED_LEASE))
 
 
 async def test_check_if_removable(rig: JointRig):
@@ -301,7 +320,8 @@ async def test_process_file_upload_requeue(rig: JointRig, local_state: str):
     assert failed_file.state == "failed_interrogation"
     if local_state == "failed":
         failed_file.state = "failed"
-        await rig.file_dao.update(failed_file)
+    give_lease(failed_file)  # as left behind by the last claim
+    await rig.file_dao.update(failed_file)
     assert failed_file.interrogated is True
     assert failed_file.can_remove is True
     assert await rig.interrogation_report_dao.get_by_id(file.id)
@@ -322,6 +342,7 @@ async def test_process_file_upload_requeue(rig: JointRig, local_state: str):
     assert db_file.state == "inbox"
     assert db_file.interrogated is False
     assert db_file.can_remove is False
+    assert get_lease(db_file) == CLEARED_LEASE
 
     # Make sure the timestamp is updated
     assert failed_file.state_updated < event_timestamp < db_file.state_updated

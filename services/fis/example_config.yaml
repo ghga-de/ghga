@@ -1,5 +1,7 @@
 api_root_path: ''
 auto_reload: false
+claim_backoff_base_seconds: 60
+claim_backoff_cap_seconds: 3600
 client_exponential_backoff_max: 60
 client_num_retries: 3
 client_reraise_from_retry_error: true
@@ -47,6 +49,7 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+max_lease_hold_seconds: 259200
 migration_max_wait_sec: null
 migration_wait_sec: 10
 min_request_interval: 0.0

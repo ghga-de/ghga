@@ -15,7 +15,7 @@
 """Config Parameter Modeling and Parsing"""
 
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
-from pydantic import Field, field_validator
+from pydantic import Field, PositiveInt, field_validator
 
 from fis.adapters.inbound.event_sub import OutboxSubConfig
 from fis.adapters.outbound.event_pub import EventPubConfig
@@ -68,6 +68,27 @@ class Config(
             + " specifier will be rejected with a 426 error."
         ),
         examples=[">=1.0.0,<2.0.0", "~=2.0"],
+    )
+
+    max_lease_hold_seconds: PositiveInt = Field(
+        default=259200,
+        description=(
+            "Upper bound on how long one claim can be kept alive through renewals."
+            + " Defaults to three days."
+        ),
+    )
+
+    claim_backoff_base_seconds: PositiveInt = Field(
+        default=60,
+        description=(
+            "The first backoff after a release, in seconds. It doubles with each"
+            + " further claim of the same file, up to claim_backoff_cap_seconds."
+        ),
+    )
+
+    claim_backoff_cap_seconds: PositiveInt = Field(
+        default=3600,
+        description="Upper bound on the backoff after a release, in seconds.",
     )
 
     @field_validator("dhfs_version_constraint")
