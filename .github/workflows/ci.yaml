@@ -121,7 +121,7 @@ jobs:
           package_json_file: ${{ matrix.target }}/package.json
       - uses: actions/setup-node@v7
         with:
-          node-version: 24  # held at the LTS line, see docs/dependencies.md
+          node-version: 26  # held at the LTS line, see docs/dependencies.md
           cache: pnpm
           cache-dependency-path: ${{ matrix.target }}/pnpm-lock.yaml
       - uses: extractions/setup-just@v4

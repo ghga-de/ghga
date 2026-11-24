@@ -57,10 +57,10 @@ when you look at this issue.",
       allowedVersions: "/^3\\.14\\./",
     },
     {
-      // Node is held at the LTS line that CI, node:24-alpine and the devcontainer run;
+      // Node is held at the LTS line that CI, node:26-alpine and the devcontainer run;
       // docs/dependencies.md says when to lift it. Patch bumps still flow.
       matchDepNames: ["dhi.io/node"],
-      allowedVersions: "/^24\\./",
+      allowedVersions: "/^26\\./",
     },
     {
       groupName: "Chainguard MinIO images",

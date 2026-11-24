@@ -408,7 +408,7 @@ jobs:
           package_json_file: frontend/data-portal/package.json
       - uses: actions/setup-node@v7
         with:
-          node-version: 24  # held at the LTS line, see docs/dependencies.md
+          node-version: 26  # held at the LTS line, see docs/dependencies.md
       - name: Update the lockfile
         id: update
         working-directory: frontend/data-portal

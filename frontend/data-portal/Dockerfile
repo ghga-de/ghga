@@ -3,7 +3,7 @@
 # Define the non-dev base-image
 # Node is held at the LTS line, see docs/dependencies.md
 # renovate: track=node-base
-ARG NODE_BASE=24.22.3-alpine3.24
+ARG NODE_BASE=26.13.1-alpine3.24
 ARG BASE=dhi.io/node:${NODE_BASE}
 
 # BUILDER: a container to build the service dist directory
@@ -16,7 +16,7 @@ ARG BASE=dhi.io/node:${NODE_BASE}
 FROM --platform=$BUILDPLATFORM ${BASE}-sfw-ent-dev AS builder
 SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 # install pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@12.4.1 --activate
+RUN corepack enable && corepack prepare pnpm@12.23.0 --activate
 # hadolint ignore=DL3018
 RUN apk add --no-cache jq
 # build the service
