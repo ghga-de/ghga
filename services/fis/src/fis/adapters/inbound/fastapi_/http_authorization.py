@@ -58,7 +58,7 @@ async def _require_data_hub_jwt(
         )
 
     if provider is None:
-        log.warning(
+        log.info(
             "Rejected request for unknown storage_alias %s.",
             storage_alias,
             extra={"storage_alias": storage_alias},
