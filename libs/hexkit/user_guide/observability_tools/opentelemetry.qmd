@@ -121,6 +121,32 @@ For a value that has to be read, such as the number of documents in a collection
 That callback runs on the exporter's thread and cannot await, so it must not query an async database client itself: bridging into the event loop from there blocks the exporter, and deadlocks once a collection runs on the loop's own thread.
 Split the work instead: a background task on the event loop awaits the read and caches the result, and the callback only reports the cached value.
 
+```{mermaid}
+sequenceDiagram
+    participant DB as database
+    box Event loop thread
+        participant R as refresh()
+    end
+    participant C as cache (latest)
+    box Exporter thread
+        participant O as observe()
+        participant M as metric reader
+    end
+    participant X as OTel collector
+
+    loop every 30 s
+        R->>DB: await read
+        DB-->>R: 5
+        R->>C: latest = 5
+    end
+    loop every 60 s
+        M->>O: collect
+        O->>C: read latest
+        O-->>M: Observation(5)
+        M->>X: OTLP push
+    end
+```
+
 ```python
 def start_document_gauge(meter: Meter, dao: Dao) -> asyncio.Task:
     """Report the number of documents in the DAO's collection as a gauge."""

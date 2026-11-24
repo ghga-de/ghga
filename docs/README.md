@@ -87,6 +87,7 @@ The table is generated from each ADR's frontmatter by `just docs-check`; do not 
 | [0048](adrs/adr-0048-architecture-concepts.md) | Numbered architecture concepts with frontmatter | accepted | docs, process |
 | [0049](adrs/adr-0049-microservice-library-over-framework.md) | A library of building blocks instead of a microservice framework | accepted | backend |
 | [0050](adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md) | DHFS instances coordinate through file leases in FIS | proposed | backend, deploy |
+| [0051](adrs/adr-0051-metrics-through-opentelemetry.md) | Services export metrics through OpenTelemetry | proposed | backend, deploy |
 <!-- adr-index:end -->
 
 ## Phased roadmap (high level)
