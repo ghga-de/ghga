@@ -433,8 +433,9 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         With `check_stored`, the grant is kept if the request has been stored as
         allowed nevertheless, e.g. when only publishing the change failed.
         A write still in flight can be stored only after it has been checked; the
-        request is then allowed without a grant, which denies access until a data
-        steward registers the grant again, but never gives unapproved access.
+        request is then allowed without a grant, which denies access but never gives
+        unapproved access. ARS cannot register that grant again: the user has to file
+        a new request, which a data steward allows.
         """
         try:
             if check_stored and await self._is_stored(allowed_request):
@@ -458,7 +459,9 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                 stored = await self._request_dao.get_by_id(allowed_request.id)
         except Exception as error:
             log.warning(
-                "Could not check whether access request %s was stored: %s",
+                "Could not check whether access request %s was stored: %s."
+                + " Its grant is revoked, so if it was stored as allowed,"
+                + " the user has no access until a new request is allowed.",
                 allowed_request.id,
                 error,
             )
