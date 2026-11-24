@@ -430,7 +430,7 @@ async def test_get_upload_box_files_happy(rig: JointRig, populated_boxes: list[U
 
     # Mock the access client for non-data steward case
     box_id = populated_boxes[0]
-    rig.access_client.check_box_access.return_value = [box_id]  # type: ignore
+    rig.access_client.check_box_access.return_value = True  # type: ignore
 
     # Call the method
     result = await rig.rdub_manager.get_upload_box_files(
@@ -492,7 +492,7 @@ async def test_get_upload_box_files_sorted_by_accession(
     )
 
     box_id = populated_boxes[0]
-    rig.access_client.check_box_access.return_value = [box_id]  # type: ignore
+    rig.access_client.check_box_access.return_value = True  # type: ignore
 
     result = await rig.rdub_manager.get_upload_box_files(
         box_id=box_id, auth_context=USER1_AUTH_CONTEXT, sort=["accession"]
@@ -557,7 +557,7 @@ async def test_get_upload_box_files_sorted_by_accession_and_other_fields(
     )
 
     box_id = populated_boxes[0]
-    rig.access_client.check_box_access.return_value = [box_id]  # type: ignore
+    rig.access_client.check_box_access.return_value = True  # type: ignore
 
     result = await rig.rdub_manager.get_upload_box_files(
         box_id=box_id, auth_context=USER1_AUTH_CONTEXT, sort=["state", "accession"]
