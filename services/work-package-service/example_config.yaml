@@ -26,6 +26,7 @@ db_name: work-package
 db_version_collection: wpsDbVersions
 docs_url: /docs
 enable_opentelemetry: false
+enable_otel_metrics: false
 generate_correlation_id: true
 host: 127.0.0.1
 kafka_compression_type: null

@@ -23,6 +23,7 @@ db_name: registry
 db_version_collection: rsDbVersions
 docs_url: /docs
 enable_opentelemetry: false
+enable_otel_metrics: false
 file_upload_box_topic: file-upload-boxes
 generate_correlation_id: true
 host: 127.0.0.1

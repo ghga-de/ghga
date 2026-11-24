@@ -22,4 +22,5 @@ Before changing a model a service stores in MongoDB, read [the migrations rule](
 - A service whose DAO publishes through the outbox offers `publish-events`, which runs `publish_pending()` or, with `--all`, `republish()`.
 - An endpoint that checks its own token, or none, must be in the auth adapter's `allow_read_paths` or `allow_write_paths` (`deploy/charts/ghga-demo/values.yaml`), or the ext-auth response blanks its `Authorization` header.
 - A consumer is a second deployment of the image: an `alias` in `deploy/charts/ghga-demo/Chart.yaml` and its values block, such as `wps-consumer`.
+- For a metric read from the database, such as a collection's size, use `refresh_gauge` from `ghga_service_commons.metrics` in the composition root; count events inline with an OpenTelemetry counter instead ([hexkit Metrics](../libs/hexkit/user_guide/observability_tools/opentelemetry.qmd#metrics)).
 - `just service-docs` takes up a new service once it has a `config_schema.json`, and writes its `openapi.yaml` only when one exists; create both empty first.

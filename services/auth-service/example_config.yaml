@@ -41,6 +41,7 @@ db_name: auth-service
 db_version_collection: authDbVersions
 docs_url: /docs
 enable_opentelemetry: false
+enable_otel_metrics: false
 generate_correlation_id: true
 host: 0.0.0.0
 iva_send_code_type: iva_send_code

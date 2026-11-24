@@ -1,6 +1,7 @@
 db_name: internal-file-registry
 db_version_collection: ifrsDbVersions
 enable_opentelemetry: false
+enable_otel_metrics: false
 file_deleted_topic: file-deletions
 file_deleted_type: file_deleted
 file_deletion_request_topic: file-deletion-requests

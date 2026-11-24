@@ -1476,7 +1476,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "ghga-service-commons"
-version = "9.1.1"
+version = "9.2.0"
 source = { editable = "libs/ghga-service-commons" }
 dependencies = [
     { name = "pydantic" },
@@ -1489,6 +1489,7 @@ all = [
     { name = "hexkit", extra = ["s3"] },
     { name = "httpx2" },
     { name = "jwcrypto" },
+    { name = "opentelemetry-api" },
     { name = "pydantic", extra = ["email"] },
     { name = "pynacl" },
     { name = "requests" },
@@ -1515,6 +1516,9 @@ dev = [
 http = [
     { name = "httpx2" },
 ]
+metrics = [
+    { name = "opentelemetry-api" },
+]
 objectstorage = [
     { name = "hexkit", extra = ["s3"] },
 ]
@@ -1527,12 +1531,13 @@ transports = [
 requires-dist = [
     { name = "crypt4gh", marker = "extra == 'crypt'", specifier = ">=1.8.6,<2" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.128,<1" },
-    { name = "ghga-service-commons", extras = ["api", "auth", "crypt", "dev", "http", "objectstorage", "transports"], marker = "extra == 'all'" },
+    { name = "ghga-service-commons", extras = ["api", "auth", "crypt", "dev", "http", "metrics", "objectstorage", "transports"], marker = "extra == 'all'" },
     { name = "ghga-service-commons", extras = ["http"], marker = "extra == 'transports'" },
     { name = "ghga-service-commons", extras = ["http", "objectstorage"], marker = "extra == 'api'" },
     { name = "hexkit", extras = ["s3"], marker = "extra == 'objectstorage'", editable = "libs/hexkit" },
     { name = "httpx2", marker = "extra == 'http'", specifier = ">=2.9.1,<3" },
     { name = "jwcrypto", marker = "extra == 'auth'", specifier = ">=1.6.2,<2" },
+    { name = "opentelemetry-api", marker = "extra == 'metrics'", specifier = ">=1.44,<2" },
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "pydantic", extras = ["email"], marker = "extra == 'auth'", specifier = ">=2,<3" },
     { name = "pynacl", marker = "extra == 'crypt'", specifier = ">=1.6.2,<2" },
@@ -1540,7 +1545,7 @@ requires-dist = [
     { name = "tenacity", marker = "extra == 'transports'", specifier = ">=9.1.2,<10" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'api'", specifier = ">=0.40,<1" },
 ]
-provides-extras = ["api", "http", "auth", "crypt", "dev", "objectstorage", "transports", "all"]
+provides-extras = ["api", "http", "auth", "crypt", "dev", "metrics", "objectstorage", "transports", "all"]
 
 [[package]]
 name = "ghga-transpiler"
