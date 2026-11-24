@@ -254,6 +254,7 @@ paths:
       - FileIngestService
   /storages/{storage_alias}/uploads:
     get:
+      deprecated: true
       description: Return a list of not-yet-interrogated files for a Data Hub (storage_alias)
       operationId: listUploads
       parameters:

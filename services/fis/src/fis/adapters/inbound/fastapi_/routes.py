@@ -129,6 +129,7 @@ async def health(
     operation_id="listUploads",
     tags=["FileIngestService"],
     status_code=status.HTTP_200_OK,
+    deprecated=True,
 )
 @TRACER.start_as_current_span("routes.list_uploads")
 async def list_uploads(
