@@ -26,6 +26,7 @@ from dlqs.adapters.outbound.dao import EventDaoPort, get_event_dao
 from dlqs.config import Config
 from dlqs.core.dlq_manager import DLQManager
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
+from ghga_service_commons.metrics import refresh_gauge
 from hexkit.protocols.eventpub import EventPublisherProtocol
 from hexkit.providers.akafka.provider import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
@@ -91,10 +92,20 @@ async def prepare_rest_app(
     """
     app = get_configured_app(config=config)
 
-    async with prepare_core_with_override(
-        config=config,
-        dlq_manager_override=dlq_manager_override,
-    ) as dlq_manager:
+    async with (
+        prepare_core_with_override(
+            config=config,
+            dlq_manager_override=dlq_manager_override,
+        ) as dlq_manager,
+        refresh_gauge(
+            name="dlqs.dead_letters",
+            description="Events stored in the dead letter queue.",
+            unit="{event}",
+            read=dlq_manager.count_dead_letters,
+        )
+        if config.enable_otel_metrics
+        else nullcontext(),
+    ):
         app.dependency_overrides[dummies.config_dummy] = lambda: config
         app.dependency_overrides[dummies.dlq_manager_port] = lambda: dlq_manager
         yield app

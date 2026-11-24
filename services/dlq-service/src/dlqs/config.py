@@ -20,6 +20,7 @@ from pydantic import Field
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka.config import KafkaConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
 
@@ -27,7 +28,9 @@ SERVICE_NAME: str = "dlqs"
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
-class Config(ApiConfigBase, LoggingConfig, KafkaConfig, MigrationConfig):
+class Config(
+    ApiConfigBase, LoggingConfig, KafkaConfig, MigrationConfig, OpenTelemetryConfig
+):
     """Config parameters and their defaults."""
 
     service_name: str = Field(

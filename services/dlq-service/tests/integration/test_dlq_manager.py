@@ -168,3 +168,19 @@ async def test_preview_with_various_skip_and_limit_args(
         end = skip + limit if limit else None
         expected = prepopped_events[svc][topic][skip:end]
         assert results == expected
+
+
+async def test_count_dead_letters(joint_fixture: JointFixture, prepopped_events):
+    """Verify that every stored event is counted, across services and topics."""
+    expected = sum(
+        len(events)
+        for topics in prepopped_events.values()
+        for events in topics.values()
+    )
+    assert expected > 0
+    assert await joint_fixture.dlq_manager.count_dead_letters() == expected
+
+
+async def test_count_dead_letters_empty(joint_fixture: JointFixture):
+    """Verify that an empty DLQ counts zero events."""
+    assert await joint_fixture.dlq_manager.count_dead_letters() == 0
