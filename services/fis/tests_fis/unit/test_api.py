@@ -416,3 +416,27 @@ async def test_post_interrogation_report(
     assert DHFS_USER_AGENT_PREFIX in caplog.text
     assert "2.0.0" in caplog.text
     assert HUB1 in caplog.text
+
+
+@pytest.mark.parametrize(
+    "method, path, body",
+    [
+        ("GET", "uploads", None),
+        ("GET", "validate-version", None),
+        ("POST", "uploads/can_remove", []),
+        ("POST", "interrogation-reports", {}),
+    ],
+    ids=["list_uploads", "validate_version", "can_remove", "interrogation_reports"],
+)
+async def test_unknown_storage_alias(
+    rest_client: AsyncTestClient,
+    jwt_factory: JWTTestFactory,
+    method: str,
+    path: str,
+    body: list | dict | None,
+):
+    """Test that a storage alias without a configured auth key gets a 403, not a 500"""
+    url = f"/storages/UNKNOWN/{path}"
+    headers = {**jwt_factory.auth_header(HUB1), "User-Agent": TEST_USER_AGENT}
+    response = await rest_client.request(method, url, json=body, headers=headers)
+    assert response.status_code == 403

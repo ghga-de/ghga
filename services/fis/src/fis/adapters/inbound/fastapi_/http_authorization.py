@@ -14,6 +14,7 @@
 # limitations under the License.
 """Authorization specific code for FastAPI"""
 
+import logging
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Security, status
@@ -26,6 +27,8 @@ from ghga_service_commons.auth.jwt_auth import JWTAuthContextProvider
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 
 __all__ = ["AuthProviders", "require_data_hub_jwt"]
+
+log = logging.getLogger(__name__)
 
 
 class JWT(BaseModel):
@@ -55,7 +58,14 @@ async def _require_data_hub_jwt(
         )
 
     if provider is None:
-        raise RuntimeError(f"No auth provider found for storage_alias {storage_alias}")
+        log.info(
+            "Rejected request for unknown storage_alias %s.",
+            storage_alias,
+            extra={"storage_alias": storage_alias},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized"
+        )
 
     try:
         context = await provider.get_context(token)
