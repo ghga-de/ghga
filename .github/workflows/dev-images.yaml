@@ -232,13 +232,11 @@ jobs:
       # re-pushing the same version is harmless, so retry.
       - name: Push
         run: |
+          target="oci://${CHART_REGISTRY}"
           for chart in dist/*.tgz; do
-            for attempt in 1 2 3 4 5; do
-              helm push "$chart" "oci://${CHART_REGISTRY}" && break
-              if [ "$attempt" -eq 5 ]; then
-                echo "giving up on $chart after $attempt attempts" >&2
-                exit 1
-              fi
-              sleep $((attempt * 5))
+            for wait in 2 4 8 16; do
+              helm push "$chart" "$target" && continue 2
+              sleep "$wait"
             done
+            helm push "$chart" "$target"
           done
