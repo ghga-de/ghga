@@ -175,6 +175,47 @@ async def test_list_uploads(
     assert HUB1 in caplog.text
 
 
+async def test_validate_version(
+    rest_client: AsyncTestClient,
+    rig: JointRig,
+    jwt_factory: JWTTestFactory,
+    caplog: pytest.LogCaptureFixture,
+):
+    """Test the GET /storages/{storage_alias}/validate-version endpoint"""
+    url = f"/storages/{HUB1}/validate-version"
+    file = create_file_under_interrogation(HUB1)
+    await rig.file_dao.insert(file)
+
+    # Assert no auth returns a 401
+    response = await rest_client.get(url, headers={"User-Agent": TEST_USER_AGENT})
+    assert response.status_code == 401
+
+    # Assert improper auth returns a 403, even with an accepted DHFS version
+    wrong_hub_headers = {**jwt_factory.auth_header(HUB2), "User-Agent": TEST_USER_AGENT}
+    response = await rest_client.get(url, headers=wrong_hub_headers)
+    assert response.status_code == 403
+
+    # Verify wrong DHFS version but right auth header returns 426
+    right_auth_headers = {
+        **jwt_factory.auth_header(HUB1),
+        "User-Agent": WRONG_USER_AGENT,
+    }
+    response = await rest_client.get(url, headers=right_auth_headers)
+    assert response.status_code == 426
+
+    # Verify that right auth header and right DHFS version result in an empty 204
+    correct_headers = {**jwt_factory.auth_header(HUB1), "User-Agent": TEST_USER_AGENT}
+    with caplog.at_level(logging.INFO, logger=ROUTES_LOGGER):
+        response = await rest_client.get(url, headers=correct_headers)
+    assert response.status_code == 204
+    assert not response.content
+    assert "validate_version endpoint" in caplog.text
+    assert HUB1 in caplog.text
+
+    # Verify that the file is untouched
+    assert (await rig.file_dao.get_by_id(file.id)).model_dump() == file.model_dump()
+
+
 async def test_get_removable_files(
     rest_client: AsyncTestClient,
     rig: JointRig,
