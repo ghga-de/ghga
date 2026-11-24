@@ -161,8 +161,8 @@ async def test_invalid_algorithm(jwt_auth):
 async def test_corrupted_token(jwt_auth):
     """Test getting an auth context with corrupted token."""
     token = create_token()
-    # Change the first character, not the last: the last one carries padding bits,
-    # and jwcrypto >= 1.6.2 rejects their non-canonical encoding before verifying.
+    # Change the first character of the signature: changing the last one can
+    # leave non-canonical base64, which jwcrypto rejects before verifying.
     head, signature = token.rsplit(".", 1)
     signature = ("B" if signature[0] == "A" else "A") + signature[1:]
     token = f"{head}.{signature}"

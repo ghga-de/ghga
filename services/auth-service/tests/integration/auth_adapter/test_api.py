@@ -100,13 +100,15 @@ def assert_has_authorization_header(response, session):
     assert internal_token
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"id", "name", "email", "title", "roles", "exp", "iat"}
+    expected_claims = {"id", "name", "email", "roles", "exp", "iat"}
+    if session.user_title is not None:
+        expected_claims.add("title")
 
     assert set(claims) == expected_claims
     assert claims["id"] == str(session.user_id)
     assert claims["name"] == session.user_name
     assert claims["email"] == session.user_email
-    assert claims["title"] == session.user_title
+    assert claims.get("title") == session.user_title
     assert claims["roles"] == session.roles
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
@@ -360,13 +362,13 @@ async def test_post_user_with_session(
 
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"id", "name", "email", "title", "exp", "iat", "roles"}
+    expected_claims = {"id", "name", "email", "exp", "iat", "roles"}
 
     assert set(claims) == expected_claims
     assert claims["id"] == "john@aai.org"
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
-    assert claims["title"] is None
+    assert "title" not in claims
     assert claims["roles"] == []
 
     iat = claims["iat"]
@@ -457,13 +459,13 @@ async def test_put_registered_user_with_session(
 
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"id", "name", "email", "title", "exp", "iat", "roles"}
+    expected_claims = {"id", "name", "email", "exp", "iat", "roles"}
 
     assert set(claims) == expected_claims
     assert claims["id"] == str(ID_OF_JOHN)
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
-    assert claims["title"] is None
+    assert "title" not in claims
     assert claims["roles"] == []
 
     iat = claims["iat"]

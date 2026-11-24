@@ -406,7 +406,7 @@ requires-dist = [
     { name = "hexkit", extras = ["mongodb", "vault"], marker = "extra == 'dev'", editable = "libs/hexkit" },
     { name = "httpx", specifier = ">=0.28.1,<0.29" },
     { name = "hvac", specifier = "~=2.4.0" },
-    { name = "jwcrypto", specifier = "~=1.5.6" },
+    { name = "jwcrypto", specifier = "~=1.6.2" },
     { name = "pydantic", specifier = "~=2.12" },
     { name = "pydantic-settings", specifier = "~=2.12" },
     { name = "pymongo", specifier = "~=4.16" },
@@ -1476,7 +1476,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "ghga-service-commons"
-version = "9.1.0"
+version = "9.1.1"
 source = { editable = "libs/ghga-service-commons" }
 dependencies = [
     { name = "pydantic" },
@@ -1532,7 +1532,7 @@ requires-dist = [
     { name = "ghga-service-commons", extras = ["http", "objectstorage"], marker = "extra == 'api'" },
     { name = "hexkit", extras = ["s3"], marker = "extra == 'objectstorage'", editable = "libs/hexkit" },
     { name = "httpx2", marker = "extra == 'http'", specifier = ">=2.9.1,<3" },
-    { name = "jwcrypto", marker = "extra == 'auth'", specifier = ">=1.5.6,<2" },
+    { name = "jwcrypto", marker = "extra == 'auth'", specifier = ">=1.6.2,<2" },
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "pydantic", extras = ["email"], marker = "extra == 'auth'", specifier = ">=2,<3" },
     { name = "pynacl", marker = "extra == 'crypt'", specifier = ">=1.6.2,<2" },
@@ -2612,15 +2612,15 @@ wheels = [
 
 [[package]]
 name = "jwcrypto"
-version = "1.5.9"
+version = "1.6.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/09/c7/00b87b49ffec758a5a957e448c863f6c4bb6223b3fab22c8c5161362ddcf/jwcrypto-1.5.9.tar.gz", hash = "sha256:dbbbfcdad7a6fc40cf3d5a635b11115fc42591b7ab869a36ad347a516a6e1c5d", size = 115793, upload-time = "2026-08-26T12:54:09.689Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/56/94/039f7ec559e6028a4136c9b11505495baf2d3b627c06e8af7f0e23b8bb12/jwcrypto-1.6.2.tar.gz", hash = "sha256:47f3a880a0321ceefaab3e24c7b79e8c661beeaa47bdedc2ce686e9d9e440d8f", size = 120335, upload-time = "2026-11-23T19:29:55.063Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/54/b819eb2f8caedb1bccef0bf6188c051f0d898a177b271e1ed3a5cc0a8b66/jwcrypto-1.5.9-py3-none-any.whl", hash = "sha256:30b1c9afc898eefd112c31d836eb2d7a4c6febcac95d4aa727e963cd42911d8e", size = 120772, upload-time = "2026-08-26T12:54:08.637Z" },
+    { url = "https://files.pythonhosted.org/packages/81/b3/b03056a0a5904380547a1abf7447c159c77ef9c3935d55436a1738127ae9/jwcrypto-1.6.2-py3-none-any.whl", hash = "sha256:3fb14515fd2ee51cb35842154d358cc15138219c1e829e97ab510066e74dc464", size = 125108, upload-time = "2026-11-23T19:29:53.992Z" },
 ]
 
 [[package]]
