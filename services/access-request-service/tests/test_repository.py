@@ -425,11 +425,7 @@ repository = AccessRequestRepository(
 
 
 async def test_dao_dummy_honours_precondition():
-    """Test the dummy DAO's `update`.
-
-    No repository method passes a precondition yet, so this pins the dummy's
-    behaviour for when one does.
-    """
+    """Test that the dummy DAO's `update` honours a precondition like MongoDB."""
     request = ACCESS_REQUESTS[0]
     assert request.status == AccessRequestStatus.ALLOWED
     changed = request.model_copy(update={"request_text": "Changed"})
@@ -656,15 +652,23 @@ async def test_cannot_create_request_nonexistent_dataset():
 
 
 async def test_can_get_own_request_as_requester():
-    """Test that requesters can get their own request individually."""
+    """Test that requesters can get their own request individually,
+    but without the internal fields.
+    """
     for request in ACCESS_REQUESTS:
-        if str(request.user_id) == auth_context_doe.id:
+        if str(request.user_id) == auth_context_doe.id and request.changed_by:
             break
     else:
         assert False, "Test request cannot be found"
+    request = request.model_copy(update={"internal_note": "Steward only"})
+    await access_request_dao.update(request)
+    assert await repository.get(
+        access_request_id=request.id, auth_context=auth_context_doe
+    ) == request.model_copy(update={"changed_by": None, "internal_note": None})
+    # the stored request keeps the internal fields
     assert (
         await repository.get(
-            access_request_id=request.id, auth_context=auth_context_doe
+            access_request_id=request.id, auth_context=auth_context_steward
         )
         == request
     )
@@ -1012,6 +1016,105 @@ async def test_set_status_to_allowed_with_error_when_storing_request():
     assert access_grants.last_grant_id is not None
     assert access_grants.last_revoked_id == access_grants.last_grant_id
     assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == original_request
+
+
+def change_concurrently(
+    monkeypatch: pytest.MonkeyPatch, request_id: UUID4, **changes: Any
+) -> AccessRequest:
+    """Store the request with the given changes, but serve the first read of it
+    in its old state, as if another write happened right after that read.
+
+    Returns the stored request.
+    """
+    stale = access_request_dao._requests[request_id]
+    changed = stale.model_copy(update=changes)
+    access_request_dao._requests[request_id] = changed
+    stale_reads = [stale]
+    get_by_id, find_all = access_request_dao.get_by_id, access_request_dao.find_all
+
+    def read(request: AccessRequest) -> AccessRequest:
+        if request.id == request_id and stale_reads:
+            return stale_reads.pop()
+        return request
+
+    async def get_stale_by_id(id_: ID) -> AccessRequest:
+        return read(await get_by_id(id_))
+
+    async def find_all_stale(*, filter_: Mapping[str, Any]):
+        async for request in find_all(filter_=filter_):
+            yield read(request)
+
+    monkeypatch.setattr(access_request_dao, "get_by_id", get_stale_by_id)
+    monkeypatch.setattr(access_request_dao, "find_all", find_all_stale)
+    return changed
+
+
+def close_concurrently(
+    monkeypatch: pytest.MonkeyPatch, request_id: UUID4, status: AccessRequestStatus
+) -> AccessRequest:
+    """Close the request right after its first read, see `change_concurrently`."""
+    return change_concurrently(
+        monkeypatch, request_id, status=status, status_changed=now_utc_ms_prec()
+    )
+
+
+async def test_allow_request_denied_concurrently(monkeypatch: pytest.MonkeyPatch):
+    """Test that allowing a request that has been denied meanwhile fails
+    and revokes the access grant.
+    """
+    closed = close_concurrently(monkeypatch, REQUEST_IDS[3], AccessRequestStatus.DENIED)
+
+    with pytest.raises(repository.AccessRequestClosed):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    assert access_grants.last_grant_id is not None
+    assert access_grants.last_revoked_id == access_grants.last_grant_id
+    assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == closed
+
+
+async def test_deny_request_allowed_concurrently(monkeypatch: pytest.MonkeyPatch):
+    """Test that denying a request that has been allowed meanwhile fails."""
+    closed = close_concurrently(
+        monkeypatch, REQUEST_IDS[3], AccessRequestStatus.ALLOWED
+    )
+
+    with pytest.raises(repository.AccessRequestClosed):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(status=AccessRequestStatus.DENIED),
+            auth_context=auth_context_steward,
+        )
+
+    assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == closed
+
+
+async def test_allow_request_changed_concurrently(monkeypatch: pytest.MonkeyPatch):
+    """Test that allowing a request uses its access period as changed meanwhile."""
+    request = ACCESS_REQUESTS[3]
+    access_ends = request.access_ends - timedelta(days=100)
+    change_concurrently(monkeypatch, request.id, access_ends=access_ends)
+
+    await repository.update(
+        request.id,
+        patch_data=AccessRequestPatchData(
+            iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+        ),
+        auth_context=auth_context_steward,
+    )
+
+    # the grant from the stale read has been revoked and a new one registered
+    assert access_grants.last_revoked_id is not None
+    assert access_grants.last_grant_id != access_grants.last_revoked_id
+    assert access_grants.last_grant.endswith(f"until {access_ends}")
+    stored = await access_request_dao.get_by_id(request.id)
+    assert stored.status == AccessRequestStatus.ALLOWED
+    assert stored.access_ends == access_ends
 
 
 async def test_set_status_to_allowed_when_it_is_already_allowed():
@@ -1507,6 +1610,58 @@ async def test_keeps_processed_request_when_deleting_its_dataset(
     assert request.status_changed == status_changed
 
 
+@pytest.mark.parametrize("deleted", [False, True], ids=["updated", "deleted"])
+async def test_keeps_concurrent_changes_when_changing_a_dataset(
+    deleted: bool, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that changing a dataset keeps changes made to a pending request
+    while the change was processed.
+    """
+    request = ACCESS_REQUESTS[3]
+    dataset = DATASET.model_copy(update={"id": request.dataset_id})
+    await dataset_dao.upsert(dataset)
+    access_ends = request.access_ends - timedelta(days=100)
+    change_concurrently(monkeypatch, request.id, access_ends=access_ends)
+
+    if deleted:
+        await repository.delete_dataset(dataset_id=dataset.id)
+    else:
+        await repository.register_dataset(dataset)
+
+    stored = await access_request_dao.get_by_id(request.id)
+    assert stored.access_ends == access_ends
+    if deleted:
+        assert stored.status == AccessRequestStatus.DENIED
+    else:
+        assert stored.dataset_title == dataset.title
+
+
+@pytest.mark.parametrize("deleted", [False, True], ids=["updated", "deleted"])
+async def test_keeps_request_allowed_concurrently_when_changing_its_dataset(
+    deleted: bool,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+):
+    """Test that changing a dataset keeps a request that has been allowed
+    while the change was processed.
+    """
+    request = ACCESS_REQUESTS[3]
+    dataset = DATASET.model_copy(update={"id": request.dataset_id})
+    await dataset_dao.upsert(dataset)
+    closed = close_concurrently(monkeypatch, request.id, AccessRequestStatus.ALLOWED)
+
+    if deleted:
+        await repository.delete_dataset(dataset_id=dataset.id)
+    else:
+        await repository.register_dataset(dataset)
+
+    assert await access_request_dao.get_by_id(request.id) == closed
+    assert any(
+        message.startswith(f"A valid access request with ID {request.id}")
+        for message in caplog.messages
+    )
+
+
 async def test_can_get_all_access_grants():
     """Test that all access grants can be retrieved."""
     # first register all datasets
@@ -1689,6 +1844,38 @@ async def test_send_verification_sms_for_processed_request():
             ar.id, sms_data=SMS_DATA, auth_context=auth_context_steward
         )
     assert not sms_notifier.sent
+
+
+async def test_send_verification_sms_for_request_closed_concurrently(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Test that no SMS is sent for a request that has been denied meanwhile."""
+    closed = close_concurrently(monkeypatch, REQUEST_IDS[3], AccessRequestStatus.DENIED)
+
+    with pytest.raises(repository.AccessRequestClosed):
+        await repository.send_verification_sms(
+            REQUEST_IDS[3], sms_data=SMS_DATA, auth_context=auth_context_steward
+        )
+
+    assert not sms_notifier.sent
+    assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == closed
+
+
+async def test_send_verification_sms_keeps_concurrent_note(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Test that the record of an SMS is appended to a note changed meanwhile."""
+    change_concurrently(monkeypatch, REQUEST_IDS[3], internal_note="Hello")
+
+    note = await repository.send_verification_sms(
+        REQUEST_IDS[3], sms_data=SMS_DATA, auth_context=auth_context_steward
+    )
+
+    assert note.startswith("Hello\n")
+    assert note.endswith("AB23CD sent to +49…6789 by Rod Steward.")
+    stored = await access_request_dao.get_by_id(REQUEST_IDS[3])
+    assert stored.internal_note == note
+    assert len(sms_notifier.sent) == 1
 
 
 async def test_send_verification_sms_for_non_existing_request():
