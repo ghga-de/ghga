@@ -474,7 +474,7 @@ Typical sequence of events is as follows:
    3. Apply any filters supplied in the search parameters.
    4. Extract the facets.
    5. Keep only selected fields if some have been specified.
-   6. Transform the results structure into {facets, hits, hit count}.
+   6. Transform the results structure into {facets, items, total_count}.
 
 4. Once retrieved in the Aggregator, the results are passed back to the QueryHandler where they are shoved into a QueryResults Pydantic model for validation before finally being sent back to the API.
 

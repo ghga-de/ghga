@@ -16,7 +16,7 @@
 """Test the utils.jwt_helpers module."""
 
 import pytest
-from jwcrypto.common import JWException
+from jwcrypto.jws import InvalidJWSSignature
 
 from ghga_service_commons.utils.jwt_helpers import (
     decode_and_validate_token,
@@ -44,8 +44,19 @@ def test_sign_and_validate():
     assert isinstance(token_dict, dict)
     assert token_dict.pop("exp") - token_dict.pop("iat") == 300
     assert token_dict == claims
-    last_chars = token[-3:]
-    last_chars = "bar" if last_chars == "foo" else "foo"
-    token = token[:-3] + last_chars
-    with pytest.raises(JWException):
+    # Change the first character of the signature: changing the last one can
+    # leave non-canonical base64, which jwcrypto rejects before verifying.
+    head, signature = token.rsplit(".", 1)
+    signature = ("B" if signature[0] == "A" else "A") + signature[1:]
+    token = f"{head}.{signature}"
+    with pytest.raises(InvalidJWSSignature):
         decode_and_validate_token(token, key)
+
+
+def test_sign_leaves_out_none_claims():
+    """Test that claims with the value None are not put into the token."""
+    key = generate_jwk()
+    token = sign_and_serialize_token({"name": "John Doe", "title": None}, key)
+    token_dict = decode_and_validate_token(token, key)
+    assert "title" not in token_dict
+    assert token_dict["name"] == "John Doe"

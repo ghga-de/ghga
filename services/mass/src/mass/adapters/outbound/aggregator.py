@@ -47,7 +47,7 @@ class Aggregator(AggregatorPort):
         facet_fields: list[models.FieldLabel],
         query: str,
         filters: list[models.Filter],
-        sorting_parameters: list[models.SortingParameter],
+        sort: list[str],
         skip: int = 0,
         limit: int | None = None,
     ) -> JsonObject:
@@ -63,7 +63,7 @@ class Aggregator(AggregatorPort):
             selected_fields=selected_fields,
             skip=skip,
             limit=limit,
-            sorting_parameters=sorting_parameters,
+            sort=sort,
         )
 
         try:

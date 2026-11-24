@@ -56,6 +56,7 @@ from ..core.auth import (
     internal_token_from_session,
     log_auth_info,
 )
+from ..core.session_check import check_session
 from ..core.session_store import AsyncUserRoleFetcher, SessionState
 from ..core.verify_totp import verify_totp
 from ..deps import (
@@ -149,6 +150,18 @@ def _role_fetcher(
     return get_roles
 
 
+def _session_ended_response(error: HTTPException) -> JSONResponse:
+    """Get the response for a session that the check has ended.
+
+    The session has been deleted, so the client is told to drop the cookie.
+    """
+    response = JSONResponse(
+        status_code=error.status_code, content={"detail": error.detail}
+    )
+    _delete_session_cookie(response)
+    return response
+
+
 def _delete_session_cookie(response: Response) -> None:
     """Tell the client to delete the session cookie."""
     response.delete_cookie(
@@ -188,11 +201,25 @@ async def login(  # noqa: C901, PLR0913
     """
     session_id = request.cookies.get(SESSION_COOKIE)
     session = await session_store.get_session(session_id) if session_id else None
+    checked = False
     if session:
         # We do not check the CSRF token here so that we can login
         # from a different browser tab which does not know the token.
         # This is ok since it is a request that does not modify state.
         session_created = False
+        # a page load must not show a session that the next API call would end
+        if session.user_id and session_store.is_check_due(session):
+            try:
+                await check_session(
+                    session,
+                    session_store=session_store,
+                    user_dao=user_dao,
+                    token_dao=token_dao,
+                    get_roles=_role_fetcher(iva_dao=iva_dao, claim_dao=claim_dao),
+                )
+            except HTTPException as error:
+                return _session_ended_response(error)
+            checked = True
     else:
         access_token = get_bearer_token(authorization, x_authorization)
         try:
@@ -253,6 +280,7 @@ async def login(  # noqa: C901, PLR0913
         user=user,
         get_roles=_role_fetcher(iva_dao=iva_dao, claim_dao=claim_dao),
         has_totp_token=_has_totp_token,
+        checked=checked,
     )
 
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -474,21 +502,39 @@ async def rpc_verify_totp(  # noqa: PLR0913
     status_code=status.HTTP_200_OK,
 )
 @TRACER.start_as_current_span("router.ext_auth")
-async def ext_auth(
+async def ext_auth(  # noqa: PLR0913
     request: Request,
     session_store: SessionStoreDependency,
     session: SessionDependency,
+    user_dao: UserDaoDependency,
+    token_dao: UserTokenDaoDependency,
+    claim_dao: ClaimDaoDependency,
+    iva_dao: IvaDaoDependency,
 ) -> Response:
     """Implements the ExtAuth protocol to authenticate users via the API gateway.
 
     If a user session exists and is two-factor-authenticated, then an internal
     authentication token will be added to the response.
+
+    Before a request to the API, the session is checked again against the user
+    account once the configured interval has passed since the last check.
     """
     if session:
-        await session_store.save_session(session)
-        if session.state is SessionState.AUTHENTICATED and request.url.path.startswith(
-            auth_paths
-        ):
+        is_api_request = request.url.path.startswith(auth_paths)
+        checked = is_api_request and session_store.is_check_due(session)
+        if checked:
+            try:
+                await check_session(
+                    session,
+                    session_store=session_store,
+                    user_dao=user_dao,
+                    token_dao=token_dao,
+                    get_roles=_role_fetcher(iva_dao=iva_dao, claim_dao=claim_dao),
+                )
+            except HTTPException as error:
+                return _session_ended_response(error)
+        await session_store.save_session(session, checked=checked)
+        if session.state is SessionState.AUTHENTICATED and is_api_request:
             log_auth_info(request, session)
             internal_token = internal_token_from_session(session)
             return pass_auth_response(request, f"Bearer {internal_token}")

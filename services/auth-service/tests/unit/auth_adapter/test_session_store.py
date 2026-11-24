@@ -381,3 +381,29 @@ async def test_timeouts():
     assert store.timeouts(session) == (40 * 60, 10 * 60 * 60)
     session.created = now - timedelta(seconds=12 * 60 * 60 - 10 * 60)
     assert store.timeouts(session) == (10 * 60, 10 * 60)
+
+
+async def test_check_of_session():
+    """Test when a session must be checked against the user account."""
+    config = SessionConfig(session_check_interval_seconds=60)
+    store = CoreSessionStore(config=config)
+    now = store._now()
+    session = store._create_session(
+        ext_id=EXT_ID_OF_JOHN, user_name="John Doe", user_email="john@home.org"
+    )
+    assert session.last_checked == now
+    assert not store.is_check_due(session)
+    session.last_checked = now - timedelta(seconds=59)
+    assert not store.is_check_due(session)
+    session.last_checked = now - timedelta(seconds=60)
+    assert store.is_check_due(session)
+    session.last_checked = None
+    assert store.is_check_due(session)
+
+    # saving the session marks it as checked only if requested
+    session.last_checked = before = now - timedelta(seconds=90)
+    await store.save_session(session)
+    assert session.last_checked == before
+    await store.save_session(session, checked=True)
+    assert session.last_checked == now
+    assert not store.is_check_due(session)

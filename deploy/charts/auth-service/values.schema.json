@@ -1701,6 +1701,16 @@
             "null"
           ]
         },
+        "session_check_interval_seconds": {
+          "default": 60,
+          "description": "Seconds after which a session is checked again against the user account, i.e. its status, roles and TOTP token",
+          "minimum": 0,
+          "title": "Session check interval",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "auth_key": {
           "anyOf": [
             {

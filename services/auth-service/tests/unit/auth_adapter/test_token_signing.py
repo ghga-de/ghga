@@ -31,6 +31,12 @@ def test_signs_and_encodes_an_internal_token():
     assert get_claims_from_token(internal_token) == claims
 
 
+def test_leaves_out_none_claims():
+    """Test that claims with the value None are not put into the token."""
+    internal_token = auth.sign_and_encode_token({"foo": "bar", "title": None})
+    assert get_claims_from_token(internal_token) == {"foo": "bar"}
+
+
 def test_does_not_sign_an_empty_payload():
     """Test that an empty payload is rejected."""
     with pytest.raises(auth.TokenSigningError, match="No payload"):

@@ -34,11 +34,19 @@ def generate_jwk() -> jwk.JWK:
 def sign_and_serialize_token(
     claims: dict[str, Any], key: jwk.JWK, valid_seconds: int = 60 * 10
 ) -> str:
-    """Create a signed JSON Web Token that can be used for testing."""
+    """Create a signed JSON Web Token.
+
+    Claims with the value None are left out, since jwcrypto rejects null claims
+    when validating a token.
+    """
     header = {"alg": "ES256"}
     iat = int(now_as_utc().timestamp())
     exp = iat + valid_seconds
-    claims = {**claims, "iat": iat, "exp": exp}
+    claims = {
+        **{name: value for name, value in claims.items() if value is not None},
+        "iat": iat,
+        "exp": exp,
+    }
     token = jwt.JWT(header=header, claims=claims)
     token.make_signed_token(key)
     return token.serialize()

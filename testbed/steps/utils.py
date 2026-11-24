@@ -217,11 +217,11 @@ def verify_named_file(
             assert alias.startswith(first_line)
 
 
-def search_dataset(  # noqa: C901
+def search_dataset(
     fixtures: JointFixture,
     query: str | None = None,
     filters: Mapping[str, str | int | list[str | int]] | None = None,
-    sorts: Mapping[str, str] | None = None,
+    sort: str | None = None,
     limit: int | None = None,
     skip: int | None = None,
     class_name: str = "EmbeddedDataset",
@@ -248,13 +248,7 @@ def search_dataset(  # noqa: C901
             value = value[0]
         params["filter_by"] = filter_by
         params["value"] = value
-    if sorts:
-        order_by: Any = list(sorts)
-        sort: Any = list(sorts.values())
-        if len(order_by) == 1:
-            order_by = order_by[0]
-            sort = sort[0]
-        params["order_by"] = order_by
+    if sort:
         params["sort"] = sort
     url = f"{fixtures.config.mass_url}/search"
     return fixtures.http.get(url, params=params)

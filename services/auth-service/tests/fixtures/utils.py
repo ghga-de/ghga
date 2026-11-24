@@ -16,6 +16,7 @@
 """Utils for testing"""
 
 import json
+import time
 from collections.abc import AsyncIterator, Mapping
 from contextlib import suppress
 from datetime import timedelta
@@ -152,7 +153,7 @@ def create_access_token(
         "aud": CONFIG.oidc_client_id,
         "scope": "openid email profile",
     }
-    iat = int(now_utc_ms_prec().timestamp())
+    iat = int(time.time())
     if expired:
         exp = iat - 60 * 10  # expired 10 minutes ago
         iat = exp - 60 * 10  # created 20 minutes ago
@@ -189,7 +190,7 @@ def create_internal_token(
         "email": "john@home.org",
         "status": "active",
     }
-    iat = int(now_utc_ms_prec().timestamp())
+    iat = int(time.time())
     if expired:
         exp = iat - 60 * 10  # expired 10 minutes ago
         iat = exp - 60 * 10  # created 20 minutes ago
