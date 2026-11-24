@@ -231,3 +231,34 @@ async def test_same_name_twice_raises():
     _, other_meter = new_meter()
     async with items_gauge(other_meter):
         pass
+
+
+async def test_same_name_in_other_case_raises():
+    """Names are compared like the SDK compares them, ignoring case."""
+    _, meter = new_meter()
+
+    async with items_gauge(meter):
+        with pytest.raises(ValueError, match=r"Test\.Items"):
+            async with refresh_gauge(
+                name="Test.Items",
+                description="Items.",
+                read=counting_read(),
+                meter=meter,
+            ):
+                pass
+
+
+async def test_default_meter_shares_names(monkeypatch: pytest.MonkeyPatch):
+    """Calls without a meter share one set of names, though each gets a new proxy."""
+    monkeypatch.setattr(metrics, "_names_by_meter", metrics.WeakKeyDictionary())
+    monkeypatch.setattr(metrics, "get_meter", lambda _name: new_meter()[1])
+
+    async with refresh_gauge(
+        name="test.items", description="Items.", read=counting_read()
+    ):
+        pass
+    with pytest.raises(ValueError, match=r"test\.items"):
+        async with refresh_gauge(
+            name="test.items", description="Items.", read=counting_read()
+        ):
+            pass

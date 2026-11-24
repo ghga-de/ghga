@@ -33,10 +33,19 @@ __all__ = ["refresh_gauge"]
 
 log = logging.getLogger(__name__)
 
-# The gauge names each meter has been given. The SDK keeps the callback of the first
-# observable gauge with a name and ignores later ones, even after the first context
-# closed, so a second gauge with the same name would never report.
-_names_by_meter: WeakKeyDictionary[Meter, set[str]] = WeakKeyDictionary()
+
+class _DefaultMeter:
+    """Stands in for the meter from the global MeterProvider in `_names_by_meter`."""
+
+
+# Before a MeterProvider is set, every get_meter call returns a new proxy, and all of
+# them later forward to the same SDK meter, so they share one entry
+_DEFAULT_METER = _DefaultMeter()
+
+# The gauge names each meter has been given, lowercased as the SDK compares them. The
+# SDK keeps the callback of the first observable gauge with a name and ignores later
+# ones, even after the first context closed, so a second one would never report.
+_names_by_meter: WeakKeyDictionary[object, set[str]] = WeakKeyDictionary()
 
 
 @asynccontextmanager
@@ -64,9 +73,10 @@ async def refresh_gauge(  # noqa: PLR0913
     `max_age` seconds, the gauge reports nothing, so the series goes absent instead
     of showing an outdated value. After the context closes it reports nothing either.
 
-    Each name can be used once per meter and process: OpenTelemetry cannot remove a
-    gauge, so a second gauge with the same name would never report, and raises a
-    `ValueError` instead.
+    Each name can be used once per meter and process, ignoring case: OpenTelemetry
+    cannot remove a gauge, so a second gauge with the same name would never report,
+    and raises a `ValueError` instead. A meter passed as `meter` should come from the
+    MeterProvider the service uses, so set that provider up first.
 
     Args:
         name: The metric name, e.g. `dlqs.dead_letters`.
@@ -80,11 +90,11 @@ async def refresh_gauge(  # noqa: PLR0913
         meter: The meter to create the gauge with; defaults to one from the global
             MeterProvider.
     """
-    meter = meter or get_meter(__name__)
-    names = _names_by_meter.setdefault(meter, set())
-    if name in names:
+    names = _names_by_meter.setdefault(meter or _DEFAULT_METER, set())
+    if name.lower() in names:
         raise ValueError(f"A gauge named {name!r} was already created on this meter")
-    names.add(name)
+    names.add(name.lower())
+    meter = meter or get_meter(__name__)
     max_age = 3 * interval if max_age is None else max_age
 
     # The value and the monotonic time it was read at, replaced as one tuple, so the

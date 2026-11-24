@@ -98,7 +98,7 @@ It exports via OTLP over HTTP, configured through the same `OTEL_*` environment 
 The collector receiving them needs a metrics pipeline, for example one that a Prometheus server scrapes.
 
 The resource gives every process its own random `service.instance.id`, which the Prometheus exporter of the collector turns into the `instance` label, next to `job` from `service.name`.
-Each replica and worker is therefore a separate series, and you aggregate at query time: `sum by (http_route) (rate(http_server_duration_count[5m]))` for counters and histograms, `max()` for a gauge that every replica reads from the same source.
+Each replica and worker is therefore a separate series, and you aggregate at query time: `sum by (http_route) (rate(http_server_request_duration_seconds_count[5m]))` for counters and histograms, `max()` for a gauge that every replica reads from the same source.
 A restart starts a new series, and the old one expires.
 Attributes in `OTEL_RESOURCE_ATTRIBUTES` are merged into the resource, so a deployment can add a readable `k8s.pod.name`.
 
