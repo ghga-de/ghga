@@ -30,7 +30,7 @@ from .conftest import (
     then,
     when,
 )
-from .conftest_5x import _filter_manager_by_title, _open_manager_filter
+from .conftest_5x import _filter_manager_by_title
 from .utils import UI_TIMEOUT
 
 scenarios("../features/502_data_portal_uploads.feature")
@@ -172,16 +172,10 @@ def grant_upload_access(user_name: str, storage_name: str, fixtures: JointFixtur
     expect(grants_card).to_contain_text(name, timeout=UI_TIMEOUT)
 
 
-def _manager_table(fixtures: JointFixture):
-    """Return the table of the Upload Box Manager list."""
-    table = fixtures.playwright.page.locator("main table")
-    expect(table).to_be_visible(timeout=UI_TIMEOUT)
-    return table
-
-
 def _prio_cell(fixtures: JointFixture, storage_name: str):
     """Return the Prio cell of the box in the Upload Box Manager list."""
-    table = _manager_table(fixtures)
+    table = fixtures.playwright.page.locator("main table")
+    expect(table).to_be_visible(timeout=UI_TIMEOUT)
     headers = table.get_by_role("columnheader").all_text_contents()
     prio_index = [header.strip() for header in headers].index("Prio")
     row = table.get_by_role("row").filter(has_text=_box_title(storage_name))
@@ -194,39 +188,6 @@ def _reorder_mode(fixtures: JointFixture):
     return main.get_by_role("region", name="Priority order")
 
 
-def _reorder_rows(fixtures: JointFixture):
-    """Return the rows of the boxes in reorder mode, highest priority first."""
-    priority_list = _reorder_mode(fixtures).get_by_role("list", name="Priority order")
-    return priority_list.get_by_role("listitem")
-
-
-@when("I show the upload boxes in all states in the Upload Box Manager")
-def show_boxes_in_all_states(fixtures: JointFixture):
-    """Remove the state filter, which hides archived boxes at first."""
-    _manager_table(fixtures)
-    _open_manager_filter(fixtures)
-    main = fixtures.playwright.page.locator("main")
-    remove_filter = main.get_by_role(
-        "button", name="Remove filter for upload box state"
-    )
-    expect(remove_filter).to_be_visible(timeout=UI_TIMEOUT)
-    remove_filter.click()
-
-
-@then(parse('the Prio column shows "{position}" for the "{storage_name}" upload box'))
-def check_prio(position: str, storage_name: str, fixtures: JointFixture):
-    """Check the position of the box in the Prio column."""
-    expect(_prio_cell(fixtures, storage_name)).to_have_text(
-        position, timeout=UI_TIMEOUT
-    )
-
-
-@then(parse('the Prio column is empty for the "{storage_name}" upload box'))
-def check_prio_empty(storage_name: str, fixtures: JointFixture):
-    """Check that the box has no position in the Prio column."""
-    expect(_prio_cell(fixtures, storage_name)).to_have_text("", timeout=UI_TIMEOUT)
-
-
 @when("I open reorder mode in the Upload Box Manager")
 def open_reorder_mode(fixtures: JointFixture):
     """Open reorder mode, which loads the boxes and their order again."""
@@ -237,33 +198,33 @@ def open_reorder_mode(fixtures: JointFixture):
     expect(_reorder_mode(fixtures)).to_be_visible(timeout=UI_TIMEOUT)
 
 
-@then(
-    parse(
-        'reorder mode lists the "{first_storage_name}" upload box'
-        ' before the "{second_storage_name}"'
-    )
-)
-def check_reorder_rows(
-    first_storage_name: str, second_storage_name: str, fixtures: JointFixture
-):
-    """Check the order of the two boxes in reorder mode, and wait until they can be
-    moved, which they can once the boxes and the order have loaded again.
+@when(parse('I move the "{storage_name}" upload box down in reorder mode'))
+def move_box_down(storage_name: str, fixtures: JointFixture):
+    """Move the box down with its button, which is enabled once the boxes and the
+    order have loaded again.
     """
-    rows = _reorder_rows(fixtures)
-    expect(rows).to_have_count(2, timeout=UI_TIMEOUT)
-    first_title = _box_title(first_storage_name)
-    expect(rows.nth(0)).to_contain_text(first_title)
-    expect(rows.nth(1)).to_contain_text(_box_title(second_storage_name))
-    move_down = rows.nth(0).get_by_role("button", name=f"Move {first_title} down")
+    title = _box_title(storage_name)
+    move_down = _reorder_mode(fixtures).get_by_role("button", name=f"Move {title} down")
     expect(move_down).to_be_enabled(timeout=UI_TIMEOUT)
+    move_down.click()
 
 
-@then(parse('reorder mode lists only the "{storage_name}" upload box'))
-def check_single_reorder_row(storage_name: str, fixtures: JointFixture):
-    """Check that reorder mode lists only this box."""
-    rows = _reorder_rows(fixtures)
-    expect(rows).to_have_count(1, timeout=UI_TIMEOUT)
-    expect(rows.first).to_contain_text(_box_title(storage_name))
+@when("I save the order in reorder mode")
+def save_order(fixtures: JointFixture):
+    """Save the order shown in reorder mode, which closes only after RS stored it."""
+    main = fixtures.playwright.page.locator("main")
+    save_button = main.get_by_role("button", name="Save order")
+    expect(save_button).to_be_enabled(timeout=UI_TIMEOUT)
+    save_button.click()
+    expect(_reorder_mode(fixtures)).to_have_count(0, timeout=UI_TIMEOUT)
+
+
+@then(parse('the Prio column shows "{position}" for the "{storage_name}" upload box'))
+def check_prio(position: str, storage_name: str, fixtures: JointFixture):
+    """Check the position of the box in the Prio column."""
+    expect(_prio_cell(fixtures, storage_name)).to_have_text(
+        position, timeout=UI_TIMEOUT
+    )
 
 
 @then(parse('reorder mode says the boxes were last reordered by "{full_name}"'))
@@ -273,67 +234,6 @@ def check_last_reordered_by(full_name: str, fixtures: JointFixture):
     expect(_reorder_mode(fixtures)).to_contain_text(
         f"Last reordered by {full_name} on ", timeout=UI_TIMEOUT
     )
-
-
-@when(
-    parse(
-        'I drag the "{storage_name}" upload box below the "{other_storage_name}"'
-        " in reorder mode"
-    )
-)
-def drag_box_down(storage_name: str, other_storage_name: str, fixtures: JointFixture):
-    """Drag the box by its handle onto the box below it."""
-    page = fixtures.playwright.page
-    rows = _reorder_rows(fixtures)
-    target_row = rows.filter(has_text=_box_title(other_storage_name))
-    target_row.scroll_into_view_if_needed()
-    handle = rows.filter(has_text=_box_title(storage_name)).locator(".cdk-drag-handle")
-    handle_box, target_box = handle.bounding_box(), target_row.bounding_box()
-    assert handle_box and target_box, "The rows in reorder mode are not visible"
-    # The CDK starts dragging only after the pointer has moved a few pixels
-    x = handle_box["x"] + handle_box["width"] / 2
-    page.mouse.move(x, handle_box["y"] + handle_box["height"] / 2)
-    page.mouse.down()
-    page.mouse.move(x, target_box["y"] + target_box["height"] * 3 / 4, steps=10)
-    page.mouse.up()
-
-
-@when(parse('I move the "{storage_name}" upload box to the top in reorder mode'))
-def move_box_to_top(storage_name: str, fixtures: JointFixture):
-    """Move the box to the top with its button."""
-    title = _box_title(storage_name)
-    move_to_top = _reorder_rows(fixtures).get_by_role(
-        "button", name=f"Move {title} to top"
-    )
-    expect(move_to_top).to_be_enabled(timeout=UI_TIMEOUT)
-    move_to_top.click()
-
-
-@when("I save the order in reorder mode")
-def save_order(fixtures: JointFixture):
-    """Save the order shown in reorder mode, and check that RS stores it."""
-    page = fixtures.playwright.page
-    box_ids = [
-        row.get_attribute("data-box-id") for row in _reorder_rows(fixtures).all()
-    ]
-    save_button = page.locator("main").get_by_role("button", name="Save order")
-    expect(save_button).to_be_enabled(timeout=UI_TIMEOUT)
-    with page.expect_response(
-        lambda response: (
-            "/upload-box-priority" in response.url and response.request.method == "PUT"
-        )
-    ) as response_info:
-        save_button.click()
-    response = response_info.value
-    assert response.ok, f"Saving the order failed: {response.status}"
-    stored_box_ids = [
-        entry["research_data_upload_box_id"] for entry in response.json()["entries"]
-    ]
-    assert stored_box_ids == box_ids, "RS stored another order than reorder mode shows"
-    expect(page.locator("app-custom-snack-bar")).to_contain_text(
-        "Saved the new order", timeout=UI_TIMEOUT
-    )
-    expect(_reorder_mode(fixtures)).to_have_count(0)
 
 
 @when(parse('I create an upload token for "{storage_name}" storage'))

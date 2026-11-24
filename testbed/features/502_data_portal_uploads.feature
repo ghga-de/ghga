@@ -46,34 +46,24 @@ Feature: 502 Data Portal Uploads
       | primary   |
       | secondary |
 
-  # The two boxes joined the priority list in the order they were created.
+  # The two boxes joined the priority list in the order they were created. The
+  # drag and the other buttons are covered by the Data Portal's own tests; here the
+  # button only gives the steward an order to save to RS.
 
-  Scenario: Data Steward moves the primary box down by dragging it
+  Scenario: Data Steward changes the priority order in the portal
 
     When I load the admin page "Upload Box Manager"
     And I open reorder mode in the Upload Box Manager
-    Then reorder mode lists the "primary" upload box before the "secondary"
+    And I move the "primary" upload box down in reorder mode
+    And I save the order in reorder mode
+    Then the "primary" upload box is last in the priority list
 
-    When I drag the "primary" upload box below the "secondary" in reorder mode
-    Then reorder mode lists the "secondary" upload box before the "primary"
-
-    When I save the order in reorder mode
+    When I load the admin page "Upload Box Manager"
     Then the Prio column shows "1" for the "secondary" upload box
     And the Prio column shows "2" for the "primary" upload box
 
-  Scenario: Data Steward moves the primary box back to the top with a button
-
-    When I load the admin page "Upload Box Manager"
-    And I open reorder mode in the Upload Box Manager
-    Then reorder mode lists the "secondary" upload box before the "primary"
-    And reorder mode says the boxes were last reordered by "Data Steward"
-
-    When I move the "primary" upload box to the top in reorder mode
-    Then reorder mode lists the "primary" upload box before the "secondary"
-
-    When I save the order in reorder mode
-    Then the Prio column shows "1" for the "primary" upload box
-    And the Prio column shows "2" for the "secondary" upload box
+    When I open reorder mode in the Upload Box Manager
+    Then reorder mode says the boxes were last reordered by "Data Steward"
 
   Scenario: User creates an upload token for the primary box
 
@@ -131,11 +121,4 @@ Feature: 502 Data Portal Uploads
 
     When I confirm the mapping and archive the upload box
     Then the "primary" upload box is archived in the portal
-
-    When I load the admin page "Upload Box Manager"
-    And I show the upload boxes in all states in the Upload Box Manager
-    Then the Prio column shows "1" for the "secondary" upload box
-    And the Prio column is empty for the "primary" upload box
-
-    When I open reorder mode in the Upload Box Manager
-    Then reorder mode lists only the "secondary" upload box
+    And the "primary" upload box is no longer in the priority list

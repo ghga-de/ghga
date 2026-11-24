@@ -131,19 +131,13 @@ def open_dataset_details(fixtures: JointFixture, alias: str):
     expect(page).to_have_url(re.compile(f".*/dataset/{accession}"))
 
 
-def _open_manager_filter(fixtures: JointFixture):
-    """Open the manager filter if it is collapsed."""
-    filter_toggle = fixtures.playwright.page.get_by_role(
-        "button", name="Filter upload boxes"
-    )
-    if filter_toggle.is_visible():
-        filter_toggle.click()
-
-
 def _filter_manager_by_title(fixtures: JointFixture, title: str):
     """Open the manager filter (if collapsed) and filter the list by box title."""
-    _open_manager_filter(fixtures)
-    main = fixtures.playwright.page.locator("main")
+    page = fixtures.playwright.page
+    main = page.locator("main")
+    filter_toggle = page.get_by_role("button", name="Filter upload boxes")
+    if filter_toggle.is_visible():
+        filter_toggle.click()
     main.get_by_label("Upload box title").first.fill(title)
 
 
