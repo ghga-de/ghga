@@ -44,6 +44,11 @@ Counters and histograms are recorded inline where things happen.
 A value read from an async source, such as a database, is reported through `refresh_gauge` from ghga-service-commons: a task on the event loop awaits the read every interval and caches the value with its read time, and an observable gauge's callback, which runs on the exporter thread, only reports that cached value.
 The gauge reports nothing before the first read and once the value is older than three intervals, so the series goes absent instead of going stale.
 
+HTTP requests are recorded by contrib's `FastAPIInstrumentor`, which hexkit runs like the other instrumentors.
+FastAPI 0.162 brings its own telemetry, on by default, and steps back only when contrib's middleware is in the app.
+The instrumentor gets its middleware there by replacing `fastapi.FastAPI`, so a service builds its app from `fastapi.FastAPI` looked up at build time, not from a `FastAPI` it imported earlier.
+Otherwise FastAPI's telemetry records that app under other metric names and ignores `OTEL_PYTHON_EXCLUDED_URLS`, which the common chart sets to keep the health probes out.
+
 ### Consequences
 
 - The collector needs a metrics pipeline, for example the `prometheus` exporter that a Prometheus server scrapes.
@@ -51,6 +56,8 @@ The gauge reports nothing before the first read and once the value is older than
 - Turning metrics on also exports what the instrumented libraries record, such as FastAPI's and httpx's HTTP metrics.
 - A gauge lags its source by up to one interval, 30 seconds by default, and each replica runs the read.
 - A gauge name can be used once per meter and process, since OpenTelemetry cannot remove a gauge; `refresh_gauge` raises on a second one.
+- HTTP metrics keep contrib's older names, such as `http.server.duration`, unless a deployment sets `OTEL_SEMCONV_STABILITY_OPT_IN=http`.
+- A service whose app misses the instrumentor still exports HTTP metrics, under FastAPI's names and with the health probes, so the mistake shows on dashboards rather than as an error; a test that checks the app's class catches it.
 - The endpoint approach of #220 is not taken up again.
 
 ### Alternatives
@@ -62,3 +69,7 @@ The gauge reports nothing before the first read and once the value is older than
   The callback runs on the exporter thread and cannot await; bridging into the event loop blocks the exporter and deadlocks when a collection runs on the loop's thread.
 - **A synchronous gauge set by the background task.**
   It keeps the last value forever, so a failing read would show an outdated number as current.
+- **FastAPI's built-in telemetry instead of `FastAPIInstrumentor`.**
+  It records the stable names, with the mount prefix in `http.route`, and needs no class replacement, so no import order can bypass it.
+  But it ignores `OTEL_PYTHON_EXCLUDED_URLS` and takes its exclusion only as a callable on the app, which ghga-service-commons would have to set through FastAPI's private config.
+  It is the likely next step once that exclusion has a public way in.
