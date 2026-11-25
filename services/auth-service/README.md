@@ -525,10 +525,10 @@ The service requires the following configuration parameters:
 - <a id="properties/session_check_interval_seconds"></a>**`session_check_interval_seconds`** *(integer)*: Seconds after which a session is checked again against the user account, i.e. its status, roles and TOTP token.
   Minimum: `0`.
   Default: `60`.
-- <a id="properties/auth_key"></a>**`auth_key`**: internal public key for the auth service (key pair for auth adapter).
+- <a id="properties/auth_key"></a>**`auth_key`**: internal key: the public key for the users, claims and access APIs, the private key (full key pair) for the auth adapter.
   Default: `null`.
   - **Any of**
-    - <a id="properties/auth_key/anyOf/0"></a>*string*
+    - <a id="properties/auth_key/anyOf/0"></a>*string, format: password*
     - <a id="properties/auth_key/anyOf/1"></a>*null*
 - <a id="properties/auth_algs"></a>**`auth_algs`** *(array)*: A list of all algorithms used for signing GHGA internal tokens.
   Default: `["ES256"]`.
@@ -677,7 +677,7 @@ The service requires the following configuration parameters:
 - <a id="properties/basic_auth_credentials"></a>**`basic_auth_credentials`**: credentials for basic authentication, separated by whitespace.
   Default: `null`.
   - **Any of**
-    - <a id="properties/basic_auth_credentials/anyOf/0"></a>*string*
+    - <a id="properties/basic_auth_credentials/anyOf/0"></a>*string, format: password*
     - <a id="properties/basic_auth_credentials/anyOf/1"></a>*null*
 - <a id="properties/basic_auth_realm"></a>**`basic_auth_realm`** *(string)*: realm for basic authentication.
   Default: `"GHGA Data Portal"`.

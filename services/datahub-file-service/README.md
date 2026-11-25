@@ -149,7 +149,7 @@ The service requires the following configuration parameters:
   Only needed if the private key is encrypted.
   Default: `null`.
   - **Any of**
-    - <a id="properties/data_hub_crypt4gh_private_key_passphrase/anyOf/0"></a>*string*
+    - <a id="properties/data_hub_crypt4gh_private_key_passphrase/anyOf/0"></a>*string, format: password*
     - <a id="properties/data_hub_crypt4gh_private_key_passphrase/anyOf/1"></a>*null*
 - <a id="properties/central_api_crypt4gh_public_key"></a>**`central_api_crypt4gh_public_key`** *(string, required)*: The Crypt4GH public key used by the Central API.
   This is used to encrypt new file encryption secrets.

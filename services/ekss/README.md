@@ -86,7 +86,7 @@ The service requires the following configuration parameters:
   Only needed if the private key is encrypted.
   Default: `null`.
   - **Any of**
-    - <a id="properties/private_key_passphrase/anyOf/0"></a>*string*
+    - <a id="properties/private_key_passphrase/anyOf/0"></a>*string, format: password*
     - <a id="properties/private_key_passphrase/anyOf/1"></a>*null*
 - <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture.
   Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE".

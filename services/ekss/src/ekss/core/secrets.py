@@ -34,8 +34,10 @@ class SecretsHandler(SecretsHandlerPort):
 
     def __init__(self, config: Config, vault_client: VaultClientPort):
         self._config = config
+        passphrase = config.private_key_passphrase
         self._private_key = get_private_key(
-            config.server_private_key_path, lambda: config.private_key_passphrase
+            config.server_private_key_path,
+            lambda: passphrase.get_secret_value() if passphrase else None,
         )
         self._vault_client = vault_client
 

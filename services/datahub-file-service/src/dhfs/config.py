@@ -41,7 +41,7 @@ class Crypt4GHConfig(BaseSettings):
         examples=["./key.sec"],
         description="Path to the Data Hub's Crypt4GH private key file",
     )
-    data_hub_crypt4gh_private_key_passphrase: str | None = Field(
+    data_hub_crypt4gh_private_key_passphrase: SecretStr | None = Field(
         default=None,
         description=(
             "Passphrase needed to read the content of the private key file. "
