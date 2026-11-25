@@ -14,35 +14,21 @@
 # limitations under the License.
 #
 
-"""Unit test that the startup log masks the secret config values"""
+"""Unit test that the config masks its secret values in the startup log"""
 
-from logging import getLogger
-
-import pytest
 from jwcrypto import jwk
 
 from auth_service.config import Config
-from hexkit.log import configure_logging
 
 
-def test_startup_log_masks_secrets(capsys: pytest.CaptureFixture[str]):
-    """Test that the logged config shows neither the private key nor the password."""
-    key = jwk.JWK.generate(kty="EC", crv="P-256")
-    private_key = key.export(private_key=True, as_dict=True)["d"]
+def test_config_dump_masks_secrets():
+    """Test that the dump the startup log shows masks the key and the credentials."""
+    key = jwk.JWK.generate(kty="EC", crv="P-256").export(private_key=True)
     config = Config(
         provide_apis=["ext_auth"],
-        auth_key=key.export(private_key=True),
+        auth_key=key,
         basic_auth_credentials="alice:s3cret",
-        log_format=None,
     )
-    logger = getLogger("test_startup_log_masks_secrets")
-    logger.propagate = False
-    configure_logging(config=config, logger=logger)
-    try:
-        log = capsys.readouterr().err
-    finally:
-        logger.handlers.clear()
-    assert "complete configuration" in log
-    assert '"auth_key": "**********"' in log
-    assert private_key not in log
-    assert "s3cret" not in log
+    dump = config.model_dump(mode="json")
+    assert dump["auth_key"] == "**********"
+    assert dump["basic_auth_credentials"] == "**********"

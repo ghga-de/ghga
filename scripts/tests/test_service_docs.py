@@ -138,6 +138,9 @@ class PlannedConfig(BaseModel):
     private_key_path: str
     vault_secret_id: str
     vault_secrets_mount_point: str
+    mongo_dsn: str
+    s3_session_token: str
+    token_hashes: list[str]
     cors_allow_credentials: bool
     auth_key: str
     nested: Nested
@@ -148,6 +151,9 @@ def test_unmasked_secrets():
     assert sorted(found) == [
         "auth_key",
         "key_passphrase",
+        "mongo_dsn",
         "nested.password",
+        "s3_session_token",
         "signing_key",
+        "vault_secret_id",
     ]

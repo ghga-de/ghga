@@ -33,11 +33,8 @@ def get_allowed_credentials(config: Config) -> list[HTTPBasicCredentials]:
     User names and passwords must be separated with colons.
     Multiple credentials must be separated by whitespace.
     """
-    credentials = (
-        config.basic_auth_credentials.get_secret_value()
-        if config.basic_auth_credentials
-        else ""
-    )
+    secret = config.basic_auth_credentials
+    credentials = secret.get_secret_value() if secret else ""
     allowed_credentials: list[HTTPBasicCredentials] = []
     for user_and_password in credentials.split():
         try:

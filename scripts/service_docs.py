@@ -61,9 +61,10 @@ END_MARKER = "<!-- config-docs: end -->"
 BARE_URL = re.compile(r"(?<![<(])\bhttps?://\w[^\s<>)]*?(?=[.,;:]?(?:\s|$))")
 INLINE_CODE = re.compile(r"(`+).*?\1")
 
-# Names of string fields that hold a secret; an `_id` or a `_path` only points to one.
+# Names of string fields that hold a secret; a `_path` only points to one.
 SECRET_NAME = re.compile(
-    r"password|passphrase|credentials|secret(?!_id)|private_key(?!_path)|signing_key"
+    r"password|passphrase|credentials|secret|private_key(?!_path)|signing_key"
+    r"|encryption_key|token$|dsn$"
 )
 # Secrets whose name does not say so, by member.
 SECRET_FIELDS = {"auth-service": {"auth_key"}}
@@ -356,14 +357,17 @@ def main() -> int:
             " the name to NOT_SECRET in scripts/service_docs.py with the reason.",
             file=sys.stderr,
         )
-    if not stale:
-        return 1 if unmasked else 0
-    listing = "\n".join(f"  {path}" for path in stale)
-    if args.check:
-        print(f"\nOut of date; run `just service-docs`:\n{listing}", file=sys.stderr)
-        return 1
-    print(f"Updated:\n{listing}")
-    return 1 if unmasked else 0
+    failed = bool(unmasked)
+    if stale:
+        listing = "\n".join(f"  {path}" for path in stale)
+        if args.check:
+            print(
+                f"\nOut of date; run `just service-docs`:\n{listing}", file=sys.stderr
+            )
+            failed = True
+        else:
+            print(f"Updated:\n{listing}")
+    return int(failed)
 
 
 if __name__ == "__main__":

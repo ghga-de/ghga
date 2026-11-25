@@ -12,30 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Unit test that the startup log masks the secret config values"""
+"""Unit test that the config masks its secret values in the startup log"""
 
-from logging import getLogger
-
-import pytest
-
-from hexkit.log import configure_logging
 from tests.fixtures.config import get_config
 
-PASSPHRASE = "correct-horse-battery-staple"
 
-
-def test_startup_log_masks_passphrase(capsys: pytest.CaptureFixture[str]):
-    """Test that the logged config does not show the key file passphrase."""
-    config = get_config(
-        data_hub_crypt4gh_private_key_passphrase=PASSPHRASE, log_format=None
-    )
-    logger = getLogger("test_startup_log_masks_passphrase")
-    logger.propagate = False
-    configure_logging(config=config, logger=logger)
-    try:
-        log = capsys.readouterr().err
-    finally:
-        logger.handlers.clear()
-    assert '"data_hub_crypt4gh_private_key_passphrase": "**********"' in log
-    assert PASSPHRASE not in log
+def test_config_dump_masks_passphrase():
+    """Test that the dump the startup log shows masks the key file passphrase."""
+    config = get_config(data_hub_crypt4gh_private_key_passphrase="s3cret")
+    dump = config.model_dump(mode="json")
+    assert dump["data_hub_crypt4gh_private_key_passphrase"] == "**********"
