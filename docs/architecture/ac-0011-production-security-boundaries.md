@@ -67,10 +67,10 @@ Before `em-transformation-service` or any other service passes user-supplied sch
 
 ## Metadata artifacts
 
-The artifacts REST API of `metldata` serves every artifact listed in `artifact_infos`.
-Production lists only public artifacts, those derived after the `remove_restricted_metadata` step of the `ghga_archive` workflow.
-Restricted metadata is not served yet; serving it needs access control that is planned for later.
-Until then, an artifact derived before that step, such as `embedded_restricted` or `resolved_restricted`, does not go into `artifact_infos` or `publishable_artifacts`.
+The artifacts REST API of `metldata` serves, without access control, the resources of each artifact in `artifact_infos` that is not also in `publishable_artifacts`.
+An artifact in `publishable_artifacts`, by default `added_accessions`, is not served but stored whole and sent on the `artifacts` topic, which only `rts` consumes.
+Today all metadata GHGA holds is public, so every artifact is, including those the `ghga_archive` workflow names `embedded_restricted` and `resolved_restricted`.
+Non-public metadata arrives with the [Apollo epic](../epics/epic-0089-apollo.md); until the API checks access, an artifact that holds it does not go into `artifact_infos`.
 
 ## Data Steward Kit
 
