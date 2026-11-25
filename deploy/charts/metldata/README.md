@@ -198,7 +198,9 @@ for the full set of configurable values.
 | `authorizationPolicy.enabled` | Render an Istio ALLOW AuthorizationPolicy for this workload, bound to its Service for the waypoint | `false` |
 | `authorizationPolicy.denyAll` | Render the policy with no rules, denying all traffic to the workload; overrides callers. Required to enable the policy without callers | `false` |
 | `authorizationPolicy.trustDomain` | Istio trust domain the callers' principals are built in | `"cluster.local"` |
-| `authorizationPolicy.callers` | Allowed callers, keyed by chart name | `{}` |
+| `authorizationPolicy.callers` | Allowed callers, keyed by chart name, each a list of operations | `{}` |
+| `authorizationPolicy.identities` | Who each caller is, keyed like callers; defaults to the ServiceAccount named like the key, in this namespace | `{}` |
+| `authorizationPolicy.extraRules` | Raw Istio rules added as they are, such as the ingress gateway. Templated | `[]` |
 | `networkPolicy.enabled` | Render a NetworkPolicy restricting ingress traffic to the pod | `false` |
 | `networkPolicy.ingress` | Only allow traffic from namespaces labeled `ghga-ingress: allow`, on the Service's own ports | `[{"from": [{"namespaceSelector": {"matchLabels": {"ghga-ingress": "allow"}}}]}]` |
 | `strimziApiVersion` | apiVersion used for the rendered Strimzi KafkaUser resource | `"kafka.strimzi.io/v1"` |

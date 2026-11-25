@@ -1326,73 +1326,68 @@
         },
         "callers": {
           "type": "object",
-          "description": "Allowed callers, keyed by chart name",
+          "description": "Allowed callers, keyed by chart name, each a list of operations",
           "additionalProperties": true,
           "properties": {
             "dcs": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "methods": {
-                  "type": "array",
-                  "default": [
+              "type": "array",
+              "default": [
+                {
+                  "methods": [
                     "GET"
-                  ]
-                },
-                "paths": {
-                  "type": "array",
-                  "default": [
+                  ],
+                  "paths": [
                     "/secrets/{*}/envelopes/{*}"
                   ]
                 }
-              }
+              ]
             },
             "dcs-consumer": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "methods": {
-                  "type": "array",
-                  "default": [
+              "type": "array",
+              "default": [
+                {
+                  "methods": [
                     "DELETE"
-                  ]
-                },
-                "paths": {
-                  "type": "array",
-                  "default": [
+                  ],
+                  "paths": [
                     "/secrets/{*}"
                   ]
                 }
-              }
+              ]
             },
             "fis": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "operations": {
-                  "type": "array",
-                  "default": [
-                    {
-                      "methods": [
-                        "POST"
-                      ],
-                      "paths": [
-                        "/secrets"
-                      ]
-                    },
-                    {
-                      "methods": [
-                        "DELETE"
-                      ],
-                      "paths": [
-                        "/secrets/{*}"
-                      ]
-                    }
+              "type": "array",
+              "default": [
+                {
+                  "methods": [
+                    "POST"
+                  ],
+                  "paths": [
+                    "/secrets"
+                  ]
+                },
+                {
+                  "methods": [
+                    "DELETE"
+                  ],
+                  "paths": [
+                    "/secrets/{*}"
                   ]
                 }
-              }
+              ]
             }
           }
+        },
+        "identities": {
+          "type": "object",
+          "description": "Who each caller is, keyed like callers; defaults to the ServiceAccount named like the key, in this namespace",
+          "additionalProperties": true,
+          "default": {}
+        },
+        "extraRules": {
+          "type": "array",
+          "description": "Raw Istio rules added as they are, such as the ingress gateway. Templated",
+          "default": []
         }
       }
     },

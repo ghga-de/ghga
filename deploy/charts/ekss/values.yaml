@@ -186,25 +186,26 @@ authorizationPolicy:
   trustDomain: cluster.local
   callers:
     dcs:
-      methods:
+    - methods:
       - GET
       paths:
       - "/secrets/{*}/envelopes/{*}"
     dcs-consumer:
-      methods:
+    - methods:
       - DELETE
       paths:
       - "/secrets/{*}"
     fis:
-      operations:
-      - methods:
-        - POST
-        paths:
-        - "/secrets"
-      - methods:
-        - DELETE
-        paths:
-        - "/secrets/{*}"
+    - methods:
+      - POST
+      paths:
+      - "/secrets"
+    - methods:
+      - DELETE
+      paths:
+      - "/secrets/{*}"
+  identities: {}
+  extraRules: []
 networkPolicy:
   enabled: false
   ingress:

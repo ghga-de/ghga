@@ -266,40 +266,34 @@ auth-claims:
   enabled: true
   readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   nameOverride: auth-claims
-  # In-mesh callers of the access API, only the processes that call; off here (no
-  # Istio in the demo), kept with the instance so the platform layer only adds the
-  # gateway and enables it. {*} matches one path segment.
+  # In-mesh callers of the access API and what each may do, only the processes that
+  # call; off here (no Istio in the demo), kept with the instance so the platform
+  # layer only sets identities, adds the gateway and enables it. {*} matches one
+  # path segment.
   authorizationPolicy:
     callers:
       # checks download and upload access for work packages
       wps:
-        methods: [GET]
-        paths:
-          - /download-access/users/{*}/datasets
-          - /download-access/users/{*}/datasets/{*}
-          - /upload-access/users/{*}/boxes
-          - /upload-access/users/{*}/boxes/{*}
+        - methods: [GET]
+          paths:
+            - /download-access/users/{*}/datasets
+            - /download-access/users/{*}/datasets/{*}
+            - /upload-access/users/{*}/boxes
+            - /upload-access/users/{*}/boxes/{*}
       # grants, lists and revokes download access
       ars:
-        operations:
-          - methods: [POST]
-            paths: ["/download-access/users/{*}/ivas/{*}/datasets/{*}"]
-          - methods: [GET]
-            paths: ["/download-access/grants"]
-          - methods: [DELETE]
-            paths: ["/download-access/grants/{*}"]
+        - {methods: [POST], paths: ["/download-access/users/{*}/ivas/{*}/datasets/{*}"]}
+        - {methods: [GET], paths: ["/download-access/grants"]}
+        - {methods: [DELETE], paths: ["/download-access/grants/{*}"]}
       # grants, lists, checks and revokes upload access
       rs:
-        operations:
-          - methods: [POST]
-            paths: ["/upload-access/users/{*}/ivas/{*}/boxes/{*}"]
-          - methods: [GET]
-            paths:
-              - /upload-access/grants
-              - /upload-access/users/{*}/boxes
-              - /upload-access/users/{*}/boxes/{*}
-          - methods: [DELETE]
-            paths: ["/upload-access/grants/{*}"]
+        - {methods: [POST], paths: ["/upload-access/users/{*}/ivas/{*}/boxes/{*}"]}
+        - methods: [GET]
+          paths:
+            - /upload-access/grants
+            - /upload-access/users/{*}/boxes
+            - /upload-access/users/{*}/boxes/{*}
+        - {methods: [DELETE], paths: ["/upload-access/grants/{*}"]}
   config:
     provide_apis: ["claims", "access"]
     kafka_servers: ["ghga-kafka:9092"]

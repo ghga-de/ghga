@@ -404,7 +404,7 @@ def test_migration_init_container(rendered_chart):
 def test_authorization_policy(rendered_chart):
     """The AuthorizationPolicy is off by default and, when on, binds to the chart's
     own Service, which the ambient waypoint enforces it on. Each caller becomes one
-    rule, in key order.
+    rule, in key order, followed by the extra rules.
     """
     assert "AuthorizationPolicy" not in rendered_chart("common.yaml")
 
@@ -433,11 +433,6 @@ def test_authorization_policy(rendered_chart):
             ],
         },
         {
-            "from": [
-                {"source": {"principals": ["cluster.local/ns/test-ingress/sa/gateway"]}}
-            ]
-        },
-        {
             "from": [{"source": {"principals": ["cluster.local/ns/test/sa/multi"]}}],
             "to": [
                 {"operation": {"paths": ["/items"], "methods": ["POST"]}},
@@ -449,12 +444,13 @@ def test_authorization_policy(rendered_chart):
                 {"source": {"principals": ["cluster.local/ns/elsewhere/sa/other-sa"]}}
             ]
         },
+        {
+            "from": [
+                {"source": {"principals": ["cluster.local/ns/test-ingress/sa/gateway"]}}
+            ]
+        },
         {"when": [{"key": "request.headers[x-test]", "values": ["yes"]}]},
     ]
-
-    manifests = rendered_chart("common.yaml", "authorization_policy_deny_all.yaml")
-    spec = manifests["AuthorizationPolicy"]["spec"]
-    assert "rules" not in spec
 
 
 def test_authorization_policy_deny_all_selects_the_pods(rendered_chart):
@@ -466,44 +462,74 @@ def test_authorization_policy_deny_all_selects_the_pods(rendered_chart):
     deployment_selector = manifests["Deployment"]["spec"]["selector"]["matchLabels"]
     assert spec["selector"]["matchLabels"] == deployment_selector
     assert "targetRefs" not in spec
+    assert "rules" not in spec
 
 
-def test_authorization_policy_callers_need_a_service(rendered_chart):
-    """Without a Service the waypoint has nothing to enforce caller rules on."""
-    with pytest.raises(AssertionError, match="need the chart's Service"):
-        rendered_chart(
-            "common.yaml", "authorization_policy.yaml", "service_disabled.yaml"
-        )
-
-
-def test_authorization_policy_callers_merge_per_key(rendered_chart):
-    """An environment overlay adds, changes or drops single callers by key."""
-    manifests = rendered_chart(
-        "common.yaml",
-        "authorization_policy.yaml",
-        "authorization_policy_override.yaml",
-    )
-    principals = [
-        rule["from"][0]["source"]["principals"][0]
-        for rule in manifests["AuthorizationPolicy"]["spec"]["rules"]
-    ]
-    assert principals == [
-        "prod.example/ns/test/sa/added",
-        "prod.example/ns/test/sa/caller-prod",
-    ]
-
-
-def test_authorization_policy_without_callers_fails(rendered_chart):
-    """An ALLOW policy with no rules denies everything, so it must be asked for."""
-    with pytest.raises(AssertionError, match="would deny all traffic"):
-        rendered_chart("common.yaml", "authorization_policy_no_callers.yaml")
-
-
-def test_authorization_policy_deny_all_overrides_callers(rendered_chart):
-    """DenyAll drops the chart's callers, as for a consumer that takes no calls."""
+def test_authorization_policy_deny_all_overrides_rules(rendered_chart):
+    """DenyAll drops the chart's callers and the extra rules, as for a consumer
+    that takes no calls.
+    """
     manifests = rendered_chart(
         "common.yaml",
         "authorization_policy.yaml",
         "authorization_policy_deny_all.yaml",
     )
     assert "rules" not in manifests["AuthorizationPolicy"]["spec"]
+
+
+def test_authorization_policy_merges_per_key(rendered_chart):
+    """An environment overlay changes one caller's identity without touching its
+    operations, and adds or drops single callers by key.
+    """
+    manifests = rendered_chart(
+        "common.yaml",
+        "authorization_policy.yaml",
+        "authorization_policy_override.yaml",
+    )
+    rules = manifests["AuthorizationPolicy"]["spec"]["rules"]
+    assert [rule["from"][0]["source"]["principals"][0] for rule in rules] == [
+        "prod.example/ns/test/sa/added",
+        "prod.example/ns/test/sa/caller-prod",
+    ]
+    assert rules[1]["to"][0]["operation"]["paths"] == ["/health"]
+
+
+def _policy(**values):
+    return {"authorizationPolicy": {"enabled": True, **values}}
+
+
+@pytest.mark.parametrize(
+    "values, message",
+    [
+        (_policy(), "would deny all traffic"),
+        (_policy(callers={"c": []}), "has no operation"),
+        (_policy(callers={"c": {"methods": ["GET"]}}), "must be a list"),
+        (_policy(callers={"c": [{}]}), "restricts nothing"),
+        (_policy(callers={"c": [{"methods": []}]}), "restricts nothing"),
+        (_policy(callers={"c": [{"path": ["/x"]}]}), "unknown operation key"),
+        (
+            _policy(callers={"c": [{"allowAll": True}, {"methods": ["GET"]}]}),
+            "allowAll must be",
+        ),
+        (
+            _policy(
+                callers={"c": [{"methods": ["GET"]}]},
+                identities={"c": {"serviceaccount": "x"}},
+            ),
+            "unknown key",
+        ),
+        (
+            {
+                **_policy(callers={"c": [{"methods": ["GET"]}]}),
+                "service": {"enabled": False},
+            },
+            "need the chart's Service",
+        ),
+    ],
+)
+def test_authorization_policy_fails_closed(rendered_chart, values, message):
+    """Anything that would allow more than intended, or deny everything by
+    accident, stops the render instead.
+    """
+    with pytest.raises(AssertionError, match=message):
+        rendered_chart("common.yaml", values)

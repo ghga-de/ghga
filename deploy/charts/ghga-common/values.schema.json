@@ -808,42 +808,82 @@
           "type": "boolean",
           "description": "Render an Istio ALLOW AuthorizationPolicy for this workload, bound to its Service for the waypoint"
         },
+        "denyAll": {
+          "type": "boolean",
+          "description": "Render the policy with no rules, denying all traffic to the workload; overrides callers. Required to enable the policy without callers"
+        },
         "trustDomain": {
           "type": "string",
           "description": "Istio trust domain the callers' principals are built in"
         },
         "callers": {
           "type": "object",
-          "description": "Allowed callers, keyed by chart name",
+          "description": "Allowed callers, keyed by chart name, each a list of operations",
           "additionalProperties": {
-            "type": ["object", "null"],
-            "additionalProperties": false,
-            "properties": {
-              "serviceAccount": {"type": "string"},
-              "namespace": {"type": "string"},
-              "principals": {"type": "array", "items": {"type": "string"}},
-              "paths": {"type": "array", "items": {"type": "string"}},
-              "methods": {"type": "array", "items": {"type": "string"}},
-              "ports": {"type": "array", "items": {"type": ["integer", "string"]}},
-              "operations": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "paths": {"type": "array", "items": {"type": "string"}},
-                    "methods": {"type": "array", "items": {"type": "string"}},
-                    "ports": {"type": "array", "items": {"type": ["integer", "string"]}}
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
                   }
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "ports": {
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ]
+                  }
+                },
+                "allowAll": {
+                  "type": "boolean"
                 }
-              },
-              "rule": {"type": "object"}
+              }
             }
           }
         },
-        "denyAll": {
-          "type": "boolean",
-          "description": "Render the policy with no rules, denying all traffic to the workload; overrides callers. Required to enable the policy without callers"
+        "identities": {
+          "type": "object",
+          "description": "Who each caller is, keyed like callers; defaults to the ServiceAccount named like the key, in this namespace",
+          "additionalProperties": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "serviceAccount": {
+                "type": "string"
+              },
+              "namespace": {
+                "type": "string"
+              },
+              "principals": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "extraRules": {
+          "type": "array",
+          "description": "Raw Istio rules added as they are, such as the ingress gateway. Templated"
         }
       }
     },

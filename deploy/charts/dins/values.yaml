@@ -245,6 +245,8 @@ authorizationPolicy:
   denyAll: false
   trustDomain: cluster.local
   callers: {}
+  identities: {}
+  extraRules: []
 networkPolicy:
   enabled: false
   ingress:
