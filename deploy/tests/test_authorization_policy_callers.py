@@ -102,27 +102,14 @@ def test_caller_matches_the_api(source, callee, caller, operations):
                 )
 
 
-def test_environment_drops_a_chart_caller():
-    """Helm itself removes a caller the chart sets when an environment sets it to
-    null, together with its identity; the dummy chart cannot show this, since its
-    callers come from the test values, not from chart defaults.
-    """
+def _render_ekss(overlay: dict[str, Any]) -> dict[str, Any]:
+    """The ekss chart's AuthorizationPolicy, rendered with an environment overlay."""
     chart = CHARTS / "ekss"
     subprocess.run(
         ["helm", "dependency", "update", str(chart), "--skip-refresh"],
         check=True,
         capture_output=True,
     )
-    overlay = {
-        "authorizationPolicy": {
-            "enabled": True,
-            "callers": {"dcs-consumer": None},
-            "identities": {
-                "dcs": {"serviceAccount": "download-controller"},
-                "fis": {"serviceAccount": "file-ingest"},
-            },
-        }
-    }
     rendered = subprocess.run(
         ["helm", "template", "ekss", str(chart), "--namespace", "ns", "--values", "-"],
         check=True,
@@ -130,10 +117,39 @@ def test_environment_drops_a_chart_caller():
         text=True,
         input=yaml.safe_dump(overlay),
     ).stdout
-    policy = next(
+    return next(
         doc
         for doc in yaml.safe_load_all(rendered)
         if doc and doc["kind"] == "AuthorizationPolicy"
+    )
+
+
+def test_deny_all_needs_no_identities_for_chart_callers():
+    """A consumer instance of a chart with callers switches to denyAll without
+    naming them: the callers can open nothing there, so they are not checked.
+    """
+    policy = _render_ekss({"authorizationPolicy": {"enabled": True, "denyAll": True}})
+    assert "rules" not in policy["spec"]
+    assert "targetRefs" not in policy["spec"]
+    assert policy["spec"]["selector"]["matchLabels"]
+
+
+def test_environment_drops_a_chart_caller():
+    """Helm itself removes a caller the chart sets when an environment sets it to
+    null, together with its identity; the dummy chart cannot show this, since its
+    callers come from the test values, not from chart defaults.
+    """
+    policy = _render_ekss(
+        {
+            "authorizationPolicy": {
+                "enabled": True,
+                "callers": {"dcs-consumer": None},
+                "identities": {
+                    "dcs": {"serviceAccount": "download-controller"},
+                    "fis": {"serviceAccount": "file-ingest"},
+                },
+            }
+        }
     )
     assert [r["from"][0]["source"]["principals"] for r in policy["spec"]["rules"]] == [
         ["cluster.local/ns/ns/sa/download-controller"],

@@ -11,7 +11,10 @@
 cannot be matched to a caller, stops the render instead of opening the service.
 callers (from the chart) say what each caller may do, identities (from the platform)
 who it is. Both are maps, so Helm merges them key by key; an environment drops a
-caller by setting both its callers and its identities entry to null. */}}
+caller by setting both its callers and its identities entry to null.
+denyAll skips all of it: the chart's callers can open nothing under it, and an
+environment that turns a consumer instance off should not have to name them. */}}
+{{- if not $ap.denyAll }}
 {{- range $caller, $identity := $identities }}
 {{- if and (not (kindIs "invalid" $identity)) (or (not (hasKey $callers $caller)) (kindIs "invalid" (get $callers $caller))) }}
 {{- fail (printf "authorizationPolicy.identities.%s has no caller: check the key, or drop the identity together with the caller" $caller) }}
@@ -44,7 +47,7 @@ caller by setting both its callers and its identities entry to null. */}}
 {{- if not (kindIs "bool" $op.allowAll) }}
 {{- fail (printf "authorizationPolicy.callers.%s: allowAll must be true or false, not %q" $caller (toString $op.allowAll)) }}
 {{- end }}
-{{- if or (gt (len $operations) 1) (gt (len $op) 1) }}
+{{- if and $op.allowAll (or (gt (len $operations) 1) (gt (len $op) 1)) }}
 {{- fail (printf "authorizationPolicy.callers.%s: allowAll must be the caller's only operation, with no other keys" $caller) }}
 {{- end }}
 {{- end }}
@@ -52,6 +55,7 @@ caller by setting both its callers and its identities entry to null. */}}
 {{- $allowAll = true }}
 {{- else }}
 {{- $operation := dict }}
+{{- /* allowAll: false is the same as leaving it out. */}}
 {{- range $key := list "paths" "methods" "ports" }}
 {{- with (get $op $key) }}
 {{- $_ := set $operation $key (ternary (toStrings .) . (eq $key "ports")) }}
@@ -69,9 +73,15 @@ a guessed one would only show up as 403s. */}}
 {{- if or (kindIs "invalid" $identity) (not $identity) }}
 {{- fail (printf "authorizationPolicy.identities.%s is missing: set the caller's serviceAccount (and namespace if it differs) or principals" $caller) }}
 {{- end }}
-{{- range $key, $_ := $identity }}
-{{- if not (has $key $identityKeys) }}
-{{- fail (printf "authorizationPolicy.identities.%s: unknown key %q" $caller $key) }}
+{{- if not (kindIs "map" $identity) }}
+{{- fail (printf "authorizationPolicy.identities.%s must be a map, e.g. {serviceAccount: <name>}" $caller) }}
+{{- end }}
+{{- range $identityKey, $identityValue := $identity }}
+{{- if not (has $identityKey $identityKeys) }}
+{{- fail (printf "authorizationPolicy.identities.%s: unknown key %q" $caller $identityKey) }}
+{{- end }}
+{{- if empty $identityValue }}
+{{- fail (printf "authorizationPolicy.identities.%s: %s is empty; set it or remove the key" $caller $identityKey) }}
 {{- end }}
 {{- end }}
 {{- $principals := $identity.principals }}
@@ -102,17 +112,19 @@ every source, so both need saying. */}}
 {{- if and (hasKey $rule "allowAnySource") (not (kindIs "bool" $rule.allowAnySource)) }}
 {{- fail (printf "authorizationPolicy.extraRules[%d]: allowAnySource must be true or false" $i) }}
 {{- end }}
+{{- range $j, $from := (default list $rule.from) }}
+{{- if or (not (kindIs "map" $from)) (not (kindIs "map" $from.source)) (not $from.source) }}
+{{- fail (printf "authorizationPolicy.extraRules[%d].from[%d] needs a source with at least one field; an empty source matches every caller" $i $j) }}
+{{- end }}
+{{- end }}
 {{- if and (not $rule.from) (not $rule.allowAnySource) }}
 {{- fail (printf "authorizationPolicy.extraRules[%d] has no from, which would allow any source; add from, or allowAnySource: true if that is intended" $i) }}
 {{- end }}
 {{- $rules = append $rules (omit $rule "allowAnySource") }}
 {{- end }}
-{{- /* denyAll overrides the rules: they come from the chart, denyAll from the
-environment, e.g. for a consumer instance that takes no calls at all. */}}
-{{- if $ap.denyAll }}
-{{- $rules = list }}
-{{- else if not $rules }}
+{{- if not $rules }}
 {{- fail "authorizationPolicy.enabled with no callers or extraRules would deny all traffic to the workload: add them, or set authorizationPolicy.denyAll=true if that is intended" }}
+{{- end }}
 {{- end }}
 {{- if and $rules (not .Values.service.enabled) }}
 {{- fail "authorizationPolicy rules need the chart's Service, which the waypoint enforces the policy on: enable service, or set authorizationPolicy.denyAll=true" }}

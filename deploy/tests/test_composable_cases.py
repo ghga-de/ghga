@@ -543,7 +543,7 @@ GATEWAY = {"from": [{"source": {"principals": ["gw"]}}]}
             "unknown key",
         ),
         (
-            _policy(callers={"c": GET}, identities={"c": {"namespace": "n"}}),
+            _policy(callers={"c": GET}, identities={"c": {"namespace": "elsewhere"}}),
             "needs serviceAccount or principals",
         ),
         (
@@ -553,6 +553,14 @@ GATEWAY = {"from": [{"source": {"principals": ["gw"]}}]}
             ),
             "principals replaces",
         ),
+        (
+            _policy(
+                callers={"c": GET},
+                identities={"c": {"principals": [], "serviceAccount": "c"}},
+            ),
+            "principals is empty",
+        ),
+        (_policy(callers={"c": GET}, identities={"c": "ghga-c"}), "must be a map"),
         # extraRules
         (_policy(extraRules=[{}]), r"extraRules\[0\] is empty"),
         (_policy(extraRules=[{"allowAnySource": True}]), r"extraRules\[0\] is empty"),
@@ -560,6 +568,8 @@ GATEWAY = {"from": [{"source": {"principals": ["gw"]}}]}
             _policy(extraRules=[{"when": [{"key": "k", "values": ["v"]}]}]),
             "has no from",
         ),
+        (_policy(extraRules=[{"from": [{}]}]), r"from\[0\] needs a source"),
+        (_policy(extraRules=[{"from": [{"source": {}}]}]), r"from\[0\] needs a source"),
         (
             _policy(extraRules=[{**GATEWAY, "allowAnySource": "yes"}]),
             "allowAnySource must be",
@@ -580,3 +590,14 @@ def test_authorization_policy_fails_closed(rendered_chart, values, message):
     """
     with pytest.raises(AssertionError, match=message):
         rendered_chart("common.yaml", values)
+
+
+def test_authorization_policy_ignores_allow_all_false(rendered_chart):
+    """AllowAll: false next to real restrictions is the same as leaving it out."""
+    manifests = rendered_chart(
+        "common.yaml",
+        _policy(callers={"c": [{"allowAll": False, **GET[0]}]}, identities=SA),
+    )
+    assert manifests["AuthorizationPolicy"]["spec"]["rules"][0]["to"] == [
+        {"operation": {"methods": ["GET"], "paths": ["/x"]}}
+    ]
