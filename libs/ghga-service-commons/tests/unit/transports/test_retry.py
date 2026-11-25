@@ -255,6 +255,28 @@ async def test_exhausted_retries_close_last_response():
 
 
 @pytest.mark.asyncio
+async def test_exhausted_retries_leave_last_response_readable():
+    """Ensure the final response's body can still be read from the RetryError.
+
+    Callers report the server's error from it, but a streamed body closed unread
+    raises ResponseNotRead.
+    """
+    responses = [
+        httpx2.Response(RETRYABLE_STATUS_CODE, stream=httpx2.ByteStream(b"busy"))
+        for _ in range(3)
+    ]
+    transport = _mock_transport(responses)  # type: ignore[arg-type]
+
+    with pytest.raises(RetryError) as exc_info:
+        await _retry_transport(transport).handle_async_request(_REQUEST)
+
+    last_response = exc_info.value.last_attempt.result()
+    assert last_response is responses[-1]
+    assert last_response.is_closed
+    assert last_response.text == "busy"
+
+
+@pytest.mark.asyncio
 async def test_cleanup_close_error_does_not_mask_original_exception():
     """Ensure a failing aclose() during cleanup does not replace the underlying exception."""
     responses = [

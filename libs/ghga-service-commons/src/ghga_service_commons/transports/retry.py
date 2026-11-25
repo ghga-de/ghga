@@ -25,6 +25,7 @@ import httpx2
 from tenacity import (
     AsyncRetrying,
     RetryCallState,
+    RetryError,
     retry_if_exception_type,
     retry_if_result,
     stop_after_attempt,
@@ -152,15 +153,20 @@ class AsyncRetryTransport(httpx2.AsyncBaseTransport):
 
         try:
             return await self._retry_handler(_attempt)
-        except BaseException:
+        except BaseException as error:
             # Close the current connection on an exception. This should also deal with
             # the RetryError once all attempts are exhausted
             if latest_response is not None:
                 try:
+                    if isinstance(error, RetryError):
+                        # The caller takes this response from the RetryError, so read
+                        #  its body while the connection is still open
+                        await latest_response.aread()
                     await latest_response.aclose()
                 except Exception:
                     log.warning(
-                        "Failed to close response during cleanup.", exc_info=True
+                        "Failed to read or close response during cleanup.",
+                        exc_info=True,
                     )
             raise
 
