@@ -31,11 +31,13 @@ The demo has no mesh, so its traffic is plain HTTP ([ADR-0032](../adrs/adr-0032-
 
 Internal APIs, such as the claims API of `auth-service` and the key store (`ekss`), are not routed at the edge and do not check the caller themselves.
 What limits their callers is an Istio `AuthorizationPolicy` that each service chart renders for its own workload when `authorizationPolicy.enabled` is set.
-The allowed callers, with their methods and paths, are listed under `authorizationPolicy.callers` in the callee's `chart-values.yaml`; the platform layer adds the gateway.
+What each caller may do, its methods and paths, is listed under `authorizationPolicy.callers` in the callee's `chart-values.yaml`.
+Who each caller is, its ServiceAccount or principals, the platform layer sets under `authorizationPolicy.identities`, and it adds the gateway.
+A caller without an identity fails the render instead of opening the service.
 In ambient mode only a waypoint can check paths and methods, so a policy with callers binds to the chart's Service through `targetRefs`.
 A policy with `denyAll` has no path rules and selects the pods instead, where ztunnel enforces it.
 
-A service that starts calling another service, or a new path on it, adds itself to the callee's `callers`; otherwise production denies the call.
+A service that starts calling another service, or a new path on it, adds itself to the callee's `callers`, and the platform layer adds its identity; otherwise production denies the call.
 The charts' `networkPolicy` stays off; the `AuthorizationPolicy` does that job in the mesh.
 
 ## Kafka
