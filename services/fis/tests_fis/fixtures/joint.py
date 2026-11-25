@@ -39,6 +39,7 @@ from fis.ports.outbound.event_pub import EventPubTranslatorPort
 from fis.ports.outbound.interrogation_queue import InterrogationQueuePort
 from fis.ports.outbound.secrets import SecretsClientPort
 from ghga_service_commons.api.testing import AsyncTestClient
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -86,6 +87,31 @@ class FakeInterrogationQueue(InterrogationQueuePort):
         ]
         files.sort(key=lambda file: file.id)
         return [BaseFileInformation(**file.model_dump()) for file in files[:limit]]
+
+    async def get_claimable_files(
+        self, *, storage_alias: str, claim_time: UTCDatetime, limit: int
+    ) -> list[FileUnderInterrogation]:
+        """Return up to `limit` unleased waiting files of the storage alias,
+        never-claimed first, then by `leased_until` and `state_updated`.
+        """
+        return [
+            file
+            async for file in self._file_dao.find_all(
+                filter_={
+                    "storage_alias": storage_alias,
+                    "state": "inbox",
+                    "interrogated": False,
+                    # The null branch must come first: the in-memory DAO evaluates
+                    #  $or lazily, and its $lt raises TypeError on None (GSI-2689)
+                    "$or": [
+                        {"leased_until": None},
+                        {"leased_until": {"$lt": claim_time}},
+                    ],
+                },
+                sort=["leased_until", "state_updated"],
+                limit=limit,
+            )
+        ]
 
 
 @dataclass

@@ -17,7 +17,8 @@
 
 from abc import ABC, abstractmethod
 
-from fis.core.models import BaseFileInformation
+from fis.core.models import BaseFileInformation, FileUnderInterrogation
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 
 class InterrogationQueuePort(ABC):
@@ -35,4 +36,21 @@ class InterrogationQueuePort(ABC):
 
         Files of boxes in the upload box priority list come first, in list order.
         Files of the same box, and files without a listed box, come in `id` order.
+        """
+
+    @abstractmethod
+    async def get_claimable_files(
+        self, *, storage_alias: str, claim_time: UTCDatetime, limit: int
+    ) -> list[FileUnderInterrogation]:
+        """Return up to `limit` waiting and not leased files for the specified storage
+        alias. All of them come from the highest-priority box that has a claimable
+        file.
+
+        Boxes go by the upload box priority list. Within the box, files not yet claimed
+        come first. Then come files whose lease ran out, earliest first. Ties go by
+        `state_updated`.
+
+        If for any reason a file can't be ranked (problem with the prio list, or
+        box ID is missing, etc.), it gets lumped into a placeholder box with lowest
+        priority.
         """

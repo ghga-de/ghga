@@ -18,13 +18,19 @@ InterrogationReports.
 """
 
 import logging
+import random
 from contextlib import suppress
+from datetime import timedelta
 from typing import cast
 
 from pydantic import UUID4, SecretBytes
 
 from fis.config import Config
-from fis.constants import MAX_FILES_PER_REQUEST
+from fis.constants import (
+    CLAIM_CANDIDATE_COUNT,
+    LEASE_SECONDS,
+    MAX_FILES_PER_REQUEST,
+)
 from fis.core import models
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
 from fis.ports.outbound.dao import (
@@ -41,6 +47,7 @@ from hexkit.protocols.dao import (
     NoHitsFoundError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
+    race_condition_retries,
 )
 from hexkit.utils import now_utc_ms_prec
 
@@ -453,6 +460,83 @@ class InterrogationHandler(InterrogationHandlerPort):
             "Fetched list of %i files for storage_alias %s.", len(files), storage_alias
         )
         return files
+
+    async def claim_file(
+        self, *, storage_alias: str, claimant_id: UUID4
+    ) -> models.BaseFileInformation | None:
+        """Lease the next waiting file of a Data Hub to the caller.
+
+        Files are claimed in this order:
+        1. By box priority. All files of the top box go first, then the next box's,
+           and so on.
+        2. Within a box, files not yet claimed go first. Then come files whose lease
+           ran out, earliest first.
+
+        Up to `CLAIM_CANDIDATE_COUNT` files of the top box are read, and one is picked
+        at random. That way, claims made at the same time rarely pick the same file.
+        Returns `None` if no file is waiting.
+
+        Optimistic locking is used to carry out the database write. In the case of a
+        conflict, e.g. the file gets leased to another DHFS instance in the gap between
+        read and write, the query is run fresh after a short wait. If this fails
+        multiple times, FileClaimError is raised.
+
+        Raises:
+        - FileClaimError if other claims keep changing the chosen file first.
+        """
+        async for attempt in race_condition_retries(
+            description=f"claim a file for storage alias {storage_alias}",
+            error_on_failure=lambda: self.FileClaimError(storage_alias=storage_alias),
+            logger=log,
+        ):
+            with attempt:
+                # Get the candidate pool
+                claim_time = now_utc_ms_prec()
+                candidates = await self._interrogation_queue.get_claimable_files(
+                    storage_alias=storage_alias,
+                    claim_time=claim_time,
+                    limit=CLAIM_CANDIDATE_COUNT,
+                )
+                if not candidates:
+                    log.debug("No files waiting for storage alias %s.", storage_alias)
+                    return None
+
+                # Pick a random file from the pool to reduce contention
+                file = random.choice(candidates)  # noqa: S311
+
+                # We don't modify `state_updated` here because
+                # A) FIS would then discard the next event and
+                # B) Leasing doesn't constitute a state change
+                claimed_file = file.model_copy(
+                    update={
+                        "leased_until": claim_time + timedelta(seconds=LEASE_SECONDS),
+                        "leased_by": claimant_id,
+                        "claimed_at": claim_time,
+                        "times_claimed": file.times_claimed + 1,
+                    }
+                )
+                precondition = file.model_dump()
+                # A file stored before the lease fields existed lacks times_claimed,
+                #  which reads as 0 but doesn't match 0. None matches a missing field.
+                if file.times_claimed == 0:
+                    precondition["times_claimed"] = {"$in": [0, None]}
+                await self._file_dao.update(claimed_file, precondition=precondition)
+
+                log.info(
+                    "Claimed file %s for claimant %s.",
+                    file.id,
+                    claimant_id,
+                    extra={
+                        "file_id": file.id,
+                        "storage_alias": storage_alias,
+                        "claimant_id": claimant_id,
+                        "times_claimed": claimed_file.times_claimed,
+                    },
+                )
+                return models.BaseFileInformation(**claimed_file.model_dump())
+
+        # Not reached, since the loop raises this after the last try, but mypy can't tell
+        raise self.FileClaimError(storage_alias=storage_alias)
 
     async def delete_file(self, *, file_id: UUID4) -> None:
         """Delete a file and its interrogation report (if any) from the database.
