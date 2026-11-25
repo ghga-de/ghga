@@ -301,10 +301,11 @@ class UploadController(UploadControllerPort):
         except S3ClientPort.S3OperationError as err:
             raise self.S3OperationError(details=str(err)) from err
 
-    async def _remove_incomplete_file_upload(self, *, file_upload: FileUpload) -> None:
+    async def _remove_incomplete_file_upload(self, *, file_upload: FileUpload) -> bool:
         """Abort an incomplete S3 multipart upload.
 
         Does not delete any data from the DB and does not update box stats.
+        Returns False if S3 had no such upload, True if it was aborted.
 
         Raises:
         - `UnknownStorageAliasError` if the storage alias is not known.
@@ -313,7 +314,7 @@ class UploadController(UploadControllerPort):
         - `S3OperationError` if S3 returns any other unexpected error.
         """
         try:
-            await self._s3_client.abort_multipart_upload(
+            return await self._s3_client.abort_multipart_upload(
                 storage_alias=file_upload.storage_alias,
                 object_id=str(file_upload.object_id),
                 s3_upload_id=file_upload.s3_upload_id,
@@ -528,7 +529,6 @@ class UploadController(UploadControllerPort):
         Raises:
         - `FileUploadNotFound` if the FileUpload is not found.
         - `UnknownStorageAliasError` if the storage alias is not known.
-        - `UploadSessionNotFoundError` if the upload session can't be found.
         """
         try:
             file_upload = await self._file_upload_dao.get_by_id(file_id)
@@ -540,7 +540,6 @@ class UploadController(UploadControllerPort):
             )
             raise error from err
 
-        s3_upload_id = file_upload.s3_upload_id
         try:
             return await self._s3_client.get_part_upload_url(
                 file_upload=file_upload, part_no=part_no
@@ -548,40 +547,6 @@ class UploadController(UploadControllerPort):
         except S3ClientPort.UnknownStorageAliasError as err:
             raise self.UnknownStorageAliasError(
                 storage_alias=file_upload.storage_alias
-            ) from err
-        except S3ClientPort.S3UploadNotFoundError as err:
-            log_extra = {
-                "s3_upload_id": s3_upload_id,
-                "file_id": file_id,
-                "bucket_id": file_upload.bucket_id,
-                "part_no": part_no,
-                "storage_alias": file_upload.storage_alias,
-                "state": file_upload.state,
-            }
-            if file_upload.state == "init":
-                # The DB expects this S3 multipart upload to exist, so its
-                # disappearance is a genuine inconsistency that leaves the FileUpload
-                # stuck and unable to complete.
-                log.warning(
-                    "S3 multipart upload %s for file ID %s could not be found, but"
-                    " the FileUpload is still in the 'init' state.",
-                    s3_upload_id,
-                    file_id,
-                    extra=log_extra,
-                )
-            else:
-                # A missing multipart upload is expected once the FileUpload has moved on
-                # (e.g. cancelled, or the multipart upload was cleaned up/expired).
-                log.info(
-                    "S3 multipart upload %s for file ID %s could not be found. The"
-                    " corresponding FileUpload is in the '%s' state.",
-                    s3_upload_id,
-                    file_id,
-                    file_upload.state,
-                    extra=log_extra,
-                )
-            raise self.UploadSessionNotFoundError(
-                bucket_id=file_upload.bucket_id, s3_upload_id=s3_upload_id
             ) from err
         except S3ClientPort.BucketNotFoundError as err:
             raise self.BucketMissingError(bucket_id=file_upload.bucket_id) from err
@@ -933,8 +898,24 @@ class UploadController(UploadControllerPort):
         if file_upload.state in ("inbox", "failed_interrogation"):
             await self._remove_completed_file_upload(file_upload=file_upload)
         # Abort the upload if it still hasn't completed
-        elif file_upload.state == "init":
+        elif file_upload.state == "init" and not (
             await self._remove_incomplete_file_upload(file_upload=file_upload)
+        ):
+            # The DB expects this S3 multipart upload to exist. Part URLs are issued
+            #  without asking S3, so this is where its loss shows.
+            log.warning(
+                "S3 multipart upload %s for file ID %s could not be found, but"
+                " the FileUpload is still in the 'init' state.",
+                file_upload.s3_upload_id,
+                file_id,
+                extra={
+                    "s3_upload_id": file_upload.s3_upload_id,
+                    "file_id": file_id,
+                    "bucket_id": file_upload.bucket_id,
+                    "storage_alias": file_upload.storage_alias,
+                    "state": file_upload.state,
+                },
+            )
 
         # Update the file_upload to 'cancelled'
         file_upload.state = "cancelled"

@@ -121,6 +121,7 @@ async def test_upload_files_applies_config_part_size(
         file_info_list,
         my_private_key,
         max_concurrent_uploads,
+        max_concurrent_files,
         max_retries,
         dry_run,
         shorten,

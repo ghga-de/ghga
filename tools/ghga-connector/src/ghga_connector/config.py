@@ -97,7 +97,15 @@ class Config(TransportConfig):
         default=5, description="Number of parallel download tasks for file parts."
     )
     max_concurrent_uploads: PositiveInt = Field(
-        default=5, description="Number of parallel upload tasks for file parts."
+        default=10,
+        description="Number of file parts uploaded in parallel, across all files in"
+        + " flight. Each holds one part in memory and one connection.",
+    )
+    max_concurrent_files: PositiveInt = Field(
+        default=4,
+        description="Number of files uploaded at the same time. Each holds an open"
+        + " upload in the upload box, which accepts a limited number of them, 5 by"
+        + " default.",
     )
     max_wait_time: PositiveInt = Field(
         default=MAX_WAIT_TIME,

@@ -980,17 +980,10 @@ async def test_create_file_upload_endpoint_part_size_validation(
             UploadControllerPort.UnknownStorageAliasError(storage_alias="HD01"),
             http_exceptions.HttpUnknownStorageAliasError(),
         ),
-        (
-            UploadControllerPort.UploadSessionNotFoundError(
-                bucket_id="test-bucket", s3_upload_id="test-upload-id"
-            ),
-            http_exceptions.HttpS3UploadNotFoundError(),
-        ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
     ids=[
         "UnknownStorageAlias",
-        "UploadSessionNotFound",
         "InternalError",
     ],
 )

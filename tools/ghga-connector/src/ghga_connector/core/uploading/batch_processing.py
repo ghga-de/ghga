@@ -16,10 +16,15 @@
 """Batch processing for the upload process"""
 
 import asyncio
+import enum
 import logging
+import math
 import signal
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from pydantic import SecretBytes
 
@@ -28,9 +33,10 @@ from ghga_connector.constants import BATCH_RETRY_BACKOFF_SEC, DEFAULT_BATCH_MAX_
 from ghga_connector.core import CLIMessageDisplay, utils
 from ghga_connector.core.crypt.encryption import Crypt4GHEncryptor
 from ghga_connector.core.file_operations import is_file_encrypted
+from ghga_connector.core.progress_bar import BatchUploadProgress
 from ghga_connector.core.uploading.api_calls import UploadClient
 from ghga_connector.core.uploading.structs import CoreFileInfo, FileInfoForUpload
-from ghga_connector.core.uploading.uploader import Uploader
+from ghga_connector.core.uploading.uploader import FairSlots, Uploader
 
 log = logging.getLogger(__name__)
 
@@ -194,6 +200,34 @@ def _signal_handler(signum, frame):
     CLIMessageDisplay.display("Cleanup in progress, please wait…")
 
 
+class _SigintDeferred:
+    """Swallow Ctrl+C while any cleanup runs, and restore the handler after the last.
+
+    Cleanups of several files in flight overlap. If each swapped the handler on its
+    own, they would restore each other's, and the last could leave this one in place.
+    """
+
+    def __init__(self) -> None:
+        self._running = 0
+        self._previous: Any = None
+
+    @contextmanager
+    def __call__(self) -> Iterator[None]:
+        """Keep Ctrl+C from interrupting the cleanup inside this context."""
+        if not self._running:
+            self._previous = signal.signal(signal.SIGINT, _signal_handler)
+        self._running += 1
+        try:
+            yield
+        finally:
+            self._running -= 1
+            if not self._running:
+                signal.signal(signal.SIGINT, self._previous)
+
+
+_defer_sigint = _SigintDeferred()
+
+
 async def perform_cleanup(*, uploader: Uploader, alias: str) -> None:
     """Perform file cleanup after an error or user cancellation.
 
@@ -204,23 +238,20 @@ async def perform_cleanup(*, uploader: Uploader, alias: str) -> None:
     Note: ``signal.signal()`` only works on the main thread, which is where the CLI runs
     (via ``asyncio.run``), so this is safe here.
     """
-    previous_handler = signal.signal(signal.SIGINT, _signal_handler)
-
-    try:
-        await uploader.delete_file()
-    except BaseException as exc:
-        CLIMessageDisplay.failure(str(exc))
-        CLIMessageDisplay.failure(
-            "Failed to cancel in-progress upload after unhandled exception."
-        )
-    else:
-        CLIMessageDisplay.display(f"File upload for {alias} was cancelled.")
-        CLIMessageDisplay.display(
-            "Upload process stopped. If applicable, any previously completed"
-            + " file uploads remain uploaded."
-        )
-    finally:
-        signal.signal(signal.SIGINT, previous_handler)
+    with _defer_sigint():
+        try:
+            await uploader.delete_file()
+        except BaseException as exc:
+            CLIMessageDisplay.failure(str(exc))
+            CLIMessageDisplay.failure(
+                "Failed to cancel in-progress upload after unhandled exception."
+            )
+        else:
+            CLIMessageDisplay.display(f"File upload for {alias} was cancelled.")
+            CLIMessageDisplay.display(
+                "Upload process stopped. If applicable, any previously completed"
+                + " file uploads remain uploaded."
+            )
 
 
 @dataclass
@@ -242,19 +273,158 @@ class BatchPassResult:
     halted: bool = False
 
 
+class _Outcome(enum.Enum):
+    """How the upload of one file in a pass ended."""
+
+    UPLOADED = enum.auto()
+    FAILED = enum.auto()
+    REJECTED = enum.auto()
+    # The box has no room for the file: start no further file
+    BOX_FULL = enum.auto()
+    # The box holds the most open uploads it accepts: try again once one ends
+    AT_UPLOAD_LIMIT = enum.auto()
+    # The user stopped the batch: stop every file in flight
+    ABORTED = enum.auto()
+
+
+@dataclass
+class _FileUploadContext:
+    """What the uploads of one pass share."""
+
+    upload_client: UploadClient
+    my_private_key: SecretBytes
+    budget: asyncio.Semaphore
+    per_file: int
+    progress: BatchUploadProgress
+    shorten: bool
+    overwrite: bool
+
+
+async def _upload_one_file(  # noqa: PLR0911
+    file_info: FileInfoForUpload, context: _FileUploadContext
+) -> _Outcome:
+    """Upload one file of a batch and report how it ended.
+
+    A file that fails, or that the user aborts during its upload, is deleted from the
+    box again.
+    """
+    # Display name for user-facing messages and the progress bar; logs and API
+    # calls always use the full alias.
+    display_alias = _display_name(file_info.alias, shorten=context.shorten)
+
+    log.info("Checking whether %s is already Crypt4GH encrypted.", file_info.alias)
+    try:
+        already_encrypted = is_file_encrypted(file_info.path)
+    except OSError as err:
+        CLIMessageDisplay.failure(f"Could not read the file for {display_alias}: {err}")
+        return _Outcome.FAILED
+    if already_encrypted:
+        CLIMessageDisplay.failure(
+            str(exceptions.FileAlreadyEncryptedError(file_path=file_info.path))
+        )
+        return _Outcome.REJECTED
+
+    uploader = Uploader(
+        upload_client=context.upload_client,
+        file_info=file_info,
+        part_slots=FairSlots(context.budget, context.per_file),
+        display_name=display_alias,
+        overwrite=context.overwrite,
+        progress=context.progress,
+    )
+    log.info("Initializing upload for %s", file_info.alias)
+    log.debug("Full file path is %s", str(file_info.path.resolve()))
+
+    try:
+        file_id, storage_alias = await uploader.initiate_file_upload()
+    except USER_ABORT_EXCEPTIONS:
+        # Ctrl+C during initiation (before any bytes flow) halts the batch cleanly,
+        # mirroring the abort handling around upload_file() below. Note: initiation
+        # may already have created a server-side FileUpload before the interrupt;
+        # because no file_id was returned, we can't delete it here, so an orphan may
+        # be left in the "init" state. A rerun with --overwrite restarts it, and
+        # `ubox rm` removes it.
+        CLIMessageDisplay.failure(
+            f"Cancelled upload for {display_alias}. It is possible that the server-"
+            + "side upload was created anyway. If you are unable to create a new"
+            + f" upload for {display_alias} because of this, remove the server-side"
+            + f" upload by running `ghga-connector ubox`, then `rm {display_alias}`."
+        )
+        return _Outcome.ABORTED
+    except Exception as err:
+        # Wait if the box has no room for another open upload; the caller decides
+        if isinstance(err.__cause__, exceptions.TooManyOpenUploadsError):
+            return _Outcome.AT_UPLOAD_LIMIT
+
+        CLIMessageDisplay.failure(str(err))
+
+        # Stop if the error is because the upload box lacks sufficient space
+        if isinstance(err.__cause__, exceptions.UploadBoxSizeExceededError):
+            CLIMessageDisplay.failure(
+                "Upload process stopped. If applicable, any previously completed"
+                + " file uploads remain uploaded."
+            )
+            return _Outcome.BOX_FULL
+
+        # For other errors, go to next file because there's nothing else to do here
+        return _Outcome.FAILED
+    log.info(
+        "File upload successfully initialized for %s."
+        + " The generated file ID is %s and the assigned storage alias is %s.",
+        file_info.alias,
+        file_id,
+        storage_alias,
+    )
+
+    log.info("Encrypting and uploading %s", file_info.alias)
+    encryptor = Crypt4GHEncryptor(
+        part_size=file_info.part_size,  # this will be the adjusted part size
+        my_private_key=context.my_private_key,
+        file_size=file_info.decrypted_size,
+        storage_alias=storage_alias,
+    )
+    try:
+        await uploader.upload_file(encryptor=encryptor)
+    except USER_ABORT_EXCEPTIONS:
+        # User cancellation is handled here.
+        CLIMessageDisplay.failure(
+            f"Upload aborted for {display_alias}, (file ID {file_id}), deleting."
+        )
+        await perform_cleanup(uploader=uploader, alias=display_alias)
+        return _Outcome.ABORTED
+    except BaseException as err:
+        # All other errors are handled here
+        CLIMessageDisplay.failure(str(err))
+        CLIMessageDisplay.failure(
+            f"Failed to upload {display_alias}, (file ID {file_id}), deleting."
+        )
+        await perform_cleanup(uploader=uploader, alias=display_alias)
+        return _Outcome.FAILED
+
+    CLIMessageDisplay.success(f"Successfully uploaded {display_alias}.")
+    return _Outcome.UPLOADED
+
+
 async def upload_files_from_list(  # noqa: PLR0913
     *,
     upload_client: UploadClient,
     file_info_list: list[FileInfoForUpload],
     my_private_key: SecretBytes,
     max_concurrent_uploads: int,
+    max_concurrent_files: int = 1,
     shorten: bool = False,
     overwrite: bool = False,
 ) -> BatchPassResult:
     """Upload all files in the provided list of file paths.
 
-    If the user cancels the upload, e.g. via CTRL+C, or if an unexpected error occurs,
-    the in progress file will be cancelled and the upload process halted.
+    Up to ``max_concurrent_files`` files upload at the same time, largest first. They
+    share ``max_concurrent_uploads`` parts in flight, each file at most its equal
+    share of them.
+
+    If the user cancels the upload, e.g. via CTRL+C, every file in flight is deleted
+    and the upload process halted. If the upload box has no room for a file, no
+    further file starts, the files in flight finish, and the process halts. A file
+    that fails otherwise is deleted, and the other files go on.
 
     If ``shorten`` is set, long aliases are middle-elided in user-facing messages.
 
@@ -265,115 +435,156 @@ async def upload_files_from_list(  # noqa: PLR0913
     upload starts. Files that are already encrypted are rejected and reported via the
     result's ``rejected`` list; they are never retried.
 
-    Returns a ``BatchPassResult`` describing which files failed and whether the pass was
-    halted before all files were attempted.
+    Returns a ``BatchPassResult`` describing which files failed, in input order, and
+    whether the pass was halted before all files were attempted.
     """
-    failed: list[FileInfoForUpload] = []
-    rejected: list[FileInfoForUpload] = []
-    for index, file_info in enumerate(file_info_list):
-        # Display name for user-facing messages and the progress bar; logs and API
-        # calls always use the full alias.
-        display_alias = _display_name(file_info.alias, shorten=shorten)
-
-        log.info("Checking whether %s is already Crypt4GH encrypted.", file_info.alias)
-        try:
-            already_encrypted = is_file_encrypted(file_info.path)
-        except OSError as err:
-            CLIMessageDisplay.failure(
-                f"Could not read the file for {display_alias}: {err}"
-            )
-            failed.append(file_info)
-            continue
-        if already_encrypted:
-            CLIMessageDisplay.failure(
-                str(exceptions.FileAlreadyEncryptedError(file_path=file_info.path))
-            )
-            rejected.append(file_info)
-            continue
-
-        uploader = Uploader(
-            upload_client=upload_client,
-            file_info=file_info,
-            max_concurrent_uploads=max_concurrent_uploads,
-            display_name=display_alias,
-            overwrite=overwrite,
+    with BatchUploadProgress() as progress:
+        batch_pass = _BatchPass(
+            file_info_list,
+            _FileUploadContext(
+                upload_client=upload_client,
+                my_private_key=my_private_key,
+                budget=asyncio.Semaphore(max_concurrent_uploads),
+                per_file=math.ceil(max_concurrent_uploads / max_concurrent_files),
+                progress=progress,
+                shorten=shorten,
+                overwrite=overwrite,
+            ),
         )
-        log.info("Initializing upload for %s", file_info.alias)
-        log.debug("Full file path is %s", str(file_info.path.resolve()))
+        await batch_pass.run(max_concurrent_files)
+    return batch_pass.result()
 
+
+class _BatchPass:
+    """One pass over the files of a batch, with several workers taking files in turn."""
+
+    def __init__(
+        self, file_info_list: list[FileInfoForUpload], context: _FileUploadContext
+    ):
+        self._file_info_list = file_info_list
+        self._context = context
+        # Largest first, so the largest file does not end the pass alone; the sort
+        #  keeps the input order among files of equal size
+        self._queue = sorted(
+            enumerate(file_info_list),
+            key=lambda item: item[1].decrypted_size,
+            reverse=True,
+        )
+        self._outcomes: dict[int, _Outcome] = {}
+        self._workers: list[asyncio.Task] = []
+        self._stopped = False
+        # Workers uploading a file; those that wait for room in the box are not
+        self._busy = 0
+        self._file_ended = asyncio.Condition()
+        # Files whose wait for room the user was told about, so it is said once
+        self._announced: set[str] = set()
+
+    async def run(self, max_concurrent_files: int) -> None:
+        """Upload the files with up to `max_concurrent_files` workers."""
+        for _ in range(min(max_concurrent_files, len(self._file_info_list))):
+            self._workers.append(asyncio.create_task(self._work()))
         try:
-            file_id, storage_alias = await uploader.initiate_file_upload()
-        except KeyboardInterrupt:
-            # Ctrl+C during initiation (before any bytes flow) halts the batch cleanly,
-            # mirroring the abort handling around upload_file() below. Note: initiation
-            # may already have created a server-side FileUpload before the interrupt;
-            # because no file_id was returned, we can't delete it here, so an orphan may
-            # be left in the "init" state. It can be removed manually with `ubox rm`.
-            # TODO: Automatically check for and delete stuck files so user doesn't have to
-            CLIMessageDisplay.failure(
-                f"Cancelled upload for {display_alias}. It is possible that the server-"
-                + "side upload was created anyway. If you are unable to create a new"
-                + f" upload for {display_alias} because of this, remove the server-side"
-                + f" upload by running `ghga-connector ubox`, then `rm {display_alias}`."
-            )
-            failed.extend(file_info_list[index:])
-            return BatchPassResult(failed=failed, rejected=rejected, halted=True)
+            await asyncio.gather(*self._workers)
+        except asyncio.CancelledError:
+            # The user stopped the batch. The gather waited for the workers, which
+            #  deleted their files in flight.
+            self._stopped = True
+        except BaseException:
+            # An unexpected error: the other workers delete their files in flight
+            for worker in self._workers:
+                worker.cancel()
+            await asyncio.gather(*self._workers, return_exceptions=True)
+            raise
+
+    async def _work(self) -> None:
+        """Upload files from the queue until it is empty or the pass stops."""
+        while self._queue and not self._stopped:
+            index, file_info = self._queue.pop(0)
+            self._busy += 1
+            try:
+                outcome = await _upload_one_file(file_info, self._context)
+            finally:
+                self._busy -= 1
+            if outcome is _Outcome.AT_UPLOAD_LIMIT:
+                # The file goes back to the head of the queue, for after the wait
+                self._queue.insert(0, (index, file_info))
+                await self._wait_for_room(file_info)
+                continue
+            self._outcomes[index] = outcome
+            async with self._file_ended:
+                self._file_ended.notify()
+            if outcome in (_Outcome.BOX_FULL, _Outcome.ABORTED):
+                self._stopped = True
+            if outcome is _Outcome.ABORTED:
+                # Stop the other files in flight too, as asyncio does on Ctrl+C
+                for worker in self._workers:
+                    if worker is not asyncio.current_task():
+                        worker.cancel()
+
+    async def _wait_for_room(self, file_info: FileInfoForUpload) -> None:
+        """Wait until one of this pass's files ends and frees an open upload.
+
+        With none of them in flight, only uploads that are not this pass's fill the
+        box, and nothing here can free them: the pass stops and names them.
+        """
+        async with self._file_ended:
+            if not self._busy:
+                self._stopped = True
+                self._file_ended.notify_all()
+            else:
+                if file_info.alias not in self._announced:
+                    self._announced.add(file_info.alias)
+                    display_alias = _display_name(
+                        file_info.alias, shorten=self._context.shorten
+                    )
+                    CLIMessageDisplay.display(
+                        "The upload box holds the most open uploads it accepts, so"
+                        + f" {display_alias} waits for another file of this batch"
+                        + " to end."
+                    )
+                try:
+                    await self._file_ended.wait()
+                except asyncio.CancelledError:
+                    # The batch was stopped while this file waited
+                    self._stopped = True
+                return
+        await self._report_upload_limit()
+
+    async def _report_upload_limit(self) -> None:
+        """Tell the user which open uploads fill the box and how to free it."""
+        try:
+            _, unfinished = await _aliases_in_box(self._context.upload_client)
         except Exception as err:
-            CLIMessageDisplay.failure(str(err))
-
-            # Exit if the error is because the upload box lacks sufficient space
-            if isinstance(err.__cause__, exceptions.UploadBoxSizeExceededError):
-                CLIMessageDisplay.failure(
-                    "Upload process stopped. If applicable, any previously completed"
-                    + " file uploads remain uploaded."
-                )
-                # Retrying is futile, so mark the pass as halted.
-                failed.extend(file_info_list[index:])
-                return BatchPassResult(failed=failed, rejected=rejected, halted=True)
-
-            # For other errors, go to next file because there's nothing else to do here
-            failed.append(file_info)
-            continue
-        log.info(
-            "File upload successfully initialized for %s."
-            + " The generated file ID is %s and the assigned storage alias is %s.",
-            file_info.alias,
-            file_id,
-            storage_alias,
+            log.warning("Could not list the upload box: %s", err)
+            unfinished = set()
+        listed = _summarize_aliases(
+            [
+                _display_name(a, shorten=self._context.shorten)
+                for a in sorted(unfinished)
+            ]
+        )
+        CLIMessageDisplay.failure(
+            "Upload process stopped: the upload box holds the most open uploads it"
+            + " accepts, and none of them belongs to this batch's files in flight."
+            + (f" Unfinished uploads in the box: {listed}." if listed else "")
+            + " If no other Connector is uploading them, remove them by running"
+            + " `ghga-connector ubox`, or run the command again with --overwrite to"
+            + " restart those that belong to this batch."
         )
 
-        log.info("Encrypting and uploading %s", file_info.alias)
-        encryptor = Crypt4GHEncryptor(
-            part_size=file_info.part_size,  # this will be the adjusted part size
-            my_private_key=my_private_key,
-            file_size=file_info.decrypted_size,
-            storage_alias=storage_alias,
-        )
-        try:
-            await uploader.upload_file(encryptor=encryptor)
-        except USER_ABORT_EXCEPTIONS:
-            # User cancellation is handled here.
-            CLIMessageDisplay.failure(
-                f"Upload aborted for {display_alias}, (file ID {file_id}), deleting."
-            )
-            await perform_cleanup(uploader=uploader, alias=display_alias)
-            # An explicit user abort stops the whole batch rather than retrying.
-            failed.append(file_info)
-            failed.extend(file_info_list[index + 1 :])
-            return BatchPassResult(failed=failed, rejected=rejected, halted=True)
-        except BaseException as err:
-            # All other errors are handled here
-            CLIMessageDisplay.failure(str(err))
-            CLIMessageDisplay.failure(
-                f"Failed to upload {display_alias}, (file ID {file_id}), deleting."
-            )
-            await perform_cleanup(uploader=uploader, alias=display_alias)
-            failed.append(file_info)
-        else:
-            # This is the success case
-            CLIMessageDisplay.success(f"Successfully uploaded {display_alias}.")
-
-    return BatchPassResult(failed=failed, rejected=rejected, halted=False)
+    def result(self) -> BatchPassResult:
+        """Return the failed and rejected files in input order, and whether the pass
+        stopped early. A file that never started counts as failed.
+        """
+        failed: list[FileInfoForUpload] = []
+        rejected: list[FileInfoForUpload] = []
+        for index, file_info in enumerate(self._file_info_list):
+            outcome = self._outcomes.get(index)
+            if outcome is _Outcome.REJECTED:
+                rejected.append(file_info)
+            elif outcome is not _Outcome.UPLOADED:
+                failed.append(file_info)
+        return BatchPassResult(failed=failed, rejected=rejected, halted=self._stopped)
 
 
 async def _aliases_in_box(upload_client: UploadClient) -> tuple[set[str], set[str]]:
@@ -532,12 +743,16 @@ async def run_batch_upload(  # noqa: PLR0913
     file_info_list: list[FileInfoForUpload],
     my_private_key: SecretBytes,
     max_concurrent_uploads: int,
+    max_concurrent_files: int = 1,
     max_retries: int = DEFAULT_BATCH_MAX_RETRIES,
     dry_run: bool = False,
     shorten: bool = False,
     overwrite: bool = False,
 ) -> None:
     """Upload a batch of files, skipping those already uploaded and retrying failures.
+
+    Up to ``max_concurrent_files`` files upload at the same time, sharing
+    ``max_concurrent_uploads`` parts in flight.
 
     Files already uploaded to the box are skipped, so re-running the command resumes
     where a previous run left off. Files whose upload in the box is unfinished, e.g.
@@ -586,6 +801,7 @@ async def run_batch_upload(  # noqa: PLR0913
             file_info_list=pending,
             my_private_key=my_private_key,
             max_concurrent_uploads=max_concurrent_uploads,
+            max_concurrent_files=max_concurrent_files,
             shorten=shorten,
             overwrite=overwrite,
         )

@@ -318,6 +318,7 @@ class UboxShell:
             file_info_list=file_info_list,
             my_private_key=self._my_private_key,
             max_concurrent_uploads=config.max_concurrent_uploads,
+            max_concurrent_files=config.max_concurrent_files,
         )
 
     async def _do_ls(self, args: list[str]) -> None:

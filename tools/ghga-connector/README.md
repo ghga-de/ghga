@@ -15,6 +15,8 @@ The GHGA Connector is a command line client facilitating interaction with the fi
 To this end, it provides commands for the up- and download of files that interact with the RESTful APIs exposed by the Upload Controller Service (<https://github.com/ghga-de/ghga/tree/main/services/ucs>) and Download Controller Service (<https://github.com/ghga-de/ghga/tree/main/services/dcs>), respectively.
 
 When uploading, the Connector expects an unencrypted file that is subsequently encrypted according to the Crypt4GH standard (<https://www.ga4gh.org/news_item/crypt4gh-a-secure-method-for-sharing-human-genetic-data/>) and only afterwards uploaded to the GHGA storage infrastructure.
+A batch upload sends up to `max_concurrent_files` files at once, which share `max_concurrent_uploads` parts in flight.
+Each of these files holds an open upload in the upload box until it is complete, and UCS accepts only a limited number of open uploads per box, 5 by default.
 
 When downloading, the resulting file is still encrypted in this manner and can be decrypted using the Connector's decrypt command.
 As the user is expected to download multiple files, this command takes a directory location as input and an optional output directory location can be provided, creating the directory if it does not yet exist (defaulting to the current working directory, if none is provided).
@@ -71,9 +73,14 @@ The Connector accepts the following configuration parameters:
 - <a id="properties/max_concurrent_downloads"></a>**`max_concurrent_downloads`** *(integer)*: Number of parallel download tasks for file parts.
   Exclusive minimum: `0`.
   Default: `5`.
-- <a id="properties/max_concurrent_uploads"></a>**`max_concurrent_uploads`** *(integer)*: Number of parallel upload tasks for file parts.
+- <a id="properties/max_concurrent_uploads"></a>**`max_concurrent_uploads`** *(integer)*: Number of file parts uploaded in parallel, across all files in flight.
+  Each holds one part in memory and one connection.
   Exclusive minimum: `0`.
-  Default: `5`.
+  Default: `10`.
+- <a id="properties/max_concurrent_files"></a>**`max_concurrent_files`** *(integer)*: Number of files uploaded at the same time.
+  Each holds an open upload in the upload box, which accepts a limited number of them, 5 by default.
+  Exclusive minimum: `0`.
+  Default: `4`.
 - <a id="properties/max_wait_time"></a>**`max_wait_time`** *(integer)*: Maximum time in seconds to wait before quitting without a download.
   Exclusive minimum: `0`.
   Default: `3600`.

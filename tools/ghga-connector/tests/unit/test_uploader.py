@@ -17,6 +17,7 @@
 
 import asyncio
 import logging
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -31,10 +32,10 @@ from ghga_connector.constants import (
     MAX_UPLOAD_BACKOFF_SEC,
     UPLOAD_RETRY_BACKOFF_SEC,
 )
-from ghga_connector.core.crypt.checksums import Checksums
+from ghga_connector.core.crypt.checksums import Checksums, md5_hex, sha256_hex
 from ghga_connector.core.crypt.encryption import FileProcessor
 from ghga_connector.core.tasks import TaskHandler
-from ghga_connector.core.uploading.uploader import Uploader
+from ghga_connector.core.uploading.uploader import FairSlots, Uploader
 from tests.fixtures.utils import (
     TEST_FILE_ID,
     TEST_STORAGE_ALIAS2,
@@ -50,16 +51,19 @@ FILE_ALIAS = "test-file"
 def make_dummy_file_processor(part_count: int) -> FileProcessor:
     """Create a FileProcessor with fixed data for the given part count"""
     for i in range(part_count):
-        yield (i + 1, b"somebytes")
+        yield (i + 1, bytearray(b"somebytes"))
 
 
-def make_mock_encryptor(parts: list[tuple[int, bytes]] | None = None) -> MagicMock:
-    """Create a mock encryptor with pre-populated checksums and an optional part iterator."""
+def make_mock_encryptor(
+    parts: list[tuple[int, bytearray]] | None = None,
+) -> MagicMock:
+    """Create a mock encryptor with empty checksums and an optional part iterator.
+
+    The uploader records each part's hashes in the checksums as the part uploads.
+    """
     encryptor = MagicMock()
     encryptor.checksums = Checksums()
     if parts is not None:
-        for _, content in parts:
-            encryptor.checksums.update_encrypted(content)
         encryptor.process_file.return_value = iter(parts)
     return encryptor
 
@@ -67,7 +71,7 @@ def make_mock_encryptor(parts: list[tuple[int, bytes]] | None = None) -> MagicMo
 def make_uploader(
     path: Path,
     upload_client: AsyncMock | None = None,
-    max_concurrent_uploads: int = 3,
+    part_slots: int = 3,
 ) -> Uploader:
     """Create an Uploader instance wired up with mock dependencies for unit testing."""
     if upload_client is None:
@@ -78,7 +82,7 @@ def make_uploader(
     return Uploader(
         upload_client=upload_client,
         file_info=file_info,
-        max_concurrent_uploads=max_concurrent_uploads,
+        part_slots=asyncio.Semaphore(part_slots),
     )
 
 
@@ -91,7 +95,9 @@ async def test_new_progress_bar_uses_display_name():
 
         # Default: the bar falls back to the file alias.
         default = Uploader(
-            upload_client=AsyncMock(), file_info=file_info, max_concurrent_uploads=1
+            upload_client=AsyncMock(),
+            file_info=file_info,
+            part_slots=asyncio.Semaphore(1),
         )
         assert default.new_progress_bar()._file_name == FILE_ALIAS
 
@@ -99,7 +105,7 @@ async def test_new_progress_bar_uses_display_name():
         custom = Uploader(
             upload_client=AsyncMock(),
             file_info=file_info,
-            max_concurrent_uploads=1,
+            part_slots=asyncio.Semaphore(1),
             display_name="short … name",
         )
         assert custom.new_progress_bar()._file_name == "short … name"
@@ -137,7 +143,7 @@ async def test_initiate_file_upload_forwards_overwrite():
         uploader = Uploader(
             upload_client=upload_client,
             file_info=file_info,
-            max_concurrent_uploads=1,
+            part_slots=asyncio.Semaphore(1),
             overwrite=True,
         )
 
@@ -254,11 +260,11 @@ async def test_upload_file_calls_complete_after_all_parts():
         uploader = Uploader(
             upload_client=upload_client,
             file_info=mock_file_info,
-            max_concurrent_uploads=1,
+            part_slots=asyncio.Semaphore(1),
         )
         uploader._file_id = FILE_ID
         uploader.new_progress_bar = MagicMock(return_value=MagicMock())
-        encryptor = make_mock_encryptor(parts=[(1, b"encrypted")])
+        encryptor = make_mock_encryptor(parts=[(1, bytearray(b"encrypted"))])
         await uploader.upload_file(encryptor=encryptor)
         upload_client.complete_file_upload.assert_called_once()
 
@@ -278,13 +284,13 @@ async def test_upload_file_complete_error_raises_complete_file_upload_error():
         uploader = Uploader(
             upload_client=upload_client,
             file_info=mock_file_info,
-            max_concurrent_uploads=1,
+            part_slots=asyncio.Semaphore(1),
         )
         uploader._file_id = FILE_ID
         uploader.new_progress_bar = MagicMock(return_value=MagicMock())
 
         with pytest.raises(exceptions.CompleteFileUploadError):
-            encryptor = make_mock_encryptor(parts=[(1, b"encrypted")])
+            encryptor = make_mock_encryptor(parts=[(1, bytearray(b"encrypted"))])
             await uploader.upload_file(encryptor=encryptor)
 
 
@@ -354,12 +360,30 @@ async def test_initiate_file_upload_raises_after_exhausted_429_retries():
         assert mock_sleep.call_args_list == expected_sleep_calls
 
 
-async def test_semaphore_initialized_with_max_concurrent_uploads():
-    """Make sure the asyncio Semaphore is created with the given max_concurrent_uploads value."""
+async def test_upload_file_part_holds_a_part_slot():
+    """Make sure each part holds one of the uploader's part slots while it uploads."""
+    slots = asyncio.Semaphore(2)
+    held: list[int] = []
+
+    async def upload_file_part(**kwargs):
+        held.append(slots._value)
+
+    upload_client = AsyncMock()
+    upload_client.upload_file_part.side_effect = upload_file_part
     with NamedTemporaryFile() as f:
-        max_concurrent = 2
-        uploader = make_uploader(Path(f.name), max_concurrent_uploads=max_concurrent)
-        assert uploader._semaphore._value == max_concurrent
+        file_info = make_file_info_for_upload(path=Path(f.name), alias=FILE_ALIAS)
+        uploader = Uploader(
+            upload_client=upload_client, file_info=file_info, part_slots=slots
+        )
+        uploader._file_id = FILE_ID
+        uploader._progress_bar = MagicMock()
+        uploader._checksums = Checksums()
+        await uploader._upload_file_part(
+            make_dummy_file_processor(part_count=1), ThreadPoolExecutor(max_workers=1)
+        )
+
+    assert held == [1]
+    assert slots._value == 2
 
 
 async def test_upload_file_part_raises_when_processor_is_exhausted():
@@ -392,12 +416,212 @@ async def test_upload_file_raises_when_processor_yields_a_surplus_part():
         uploader = Uploader(
             upload_client=AsyncMock(),
             file_info=mock_file_info,
-            max_concurrent_uploads=1,
+            part_slots=asyncio.Semaphore(1),
         )
         uploader._file_id = FILE_ID
         uploader.new_progress_bar = MagicMock(return_value=MagicMock())
 
         # One more part than `part_count` says should exist
-        encryptor = make_mock_encryptor(parts=[(1, b"encrypted"), (2, b"surplus")])
+        encryptor = make_mock_encryptor(
+            parts=[(1, bytearray(b"encrypted")), (2, bytearray(b"surplus"))]
+        )
         with pytest.raises(RuntimeError, match="more parts than"):
             await uploader.upload_file(encryptor=encryptor)
+
+
+def make_parts(file_info, numbers: list[int]) -> list[tuple[int, bytearray]]:
+    """Make distinct part contents for the given part numbers."""
+    return [(number, bytearray(f"part {number}".encode())) for number in numbers]
+
+
+async def test_upload_file_sends_part_hashes_in_part_order():
+    """Parts that finish in reverse order still complete with their hashes in part
+    order, and with the ETag of the parts in that order.
+    """
+    with NamedTemporaryFile() as f:
+        file_info = make_file_info_for_upload(
+            path=Path(f.name), alias=FILE_ALIAS, decrypted_size=10 * 1024**2
+        )
+        part_count = file_info.part_count
+        assert part_count > 2
+        parts = make_parts(file_info, list(range(1, part_count + 1)))
+        finished: list[int] = []
+
+        async def upload_file_part(*, file_id, content, part_no, url=None):
+            """Hold the earlier parts longer, so the last part finishes first."""
+            await asyncio.sleep(0.05 * (part_count - part_no))
+            finished.append(part_no)
+
+        upload_client = AsyncMock()
+        upload_client.upload_file_part.side_effect = upload_file_part
+        uploader = Uploader(
+            upload_client=upload_client,
+            file_info=file_info,
+            part_slots=asyncio.Semaphore(part_count),
+        )
+        uploader._file_id = FILE_ID
+        uploader.new_progress_bar = MagicMock(return_value=MagicMock())
+        encryptor = make_mock_encryptor(parts=parts)
+        await uploader.upload_file(encryptor=encryptor)
+
+    assert finished == list(range(part_count, 0, -1))
+    kwargs = upload_client.complete_file_upload.call_args.kwargs
+    assert kwargs["encrypted_parts_md5"] == [md5_hex(part) for _, part in parts]
+    assert kwargs["encrypted_parts_sha256"] == [sha256_hex(part) for _, part in parts]
+    expected = Checksums()
+    for number, part in parts:
+        expected.set_part(number, md5=md5_hex(part), sha256=sha256_hex(part))
+    assert kwargs["encrypted_md5"] == expected.get_encrypted_checksum_for_s3()
+
+
+async def test_upload_file_stops_before_complete_when_a_part_hash_is_missing():
+    """A part number without hashes stops the upload before the complete call."""
+    with NamedTemporaryFile() as f:
+        file_info = make_file_info_for_upload(
+            path=Path(f.name), alias=FILE_ALIAS, decrypted_size=10 * 1024**2
+        )
+        part_count = file_info.part_count
+        # the last part comes with a number one too high, so its own is missing
+        parts = make_parts(file_info, [*range(1, part_count), part_count + 1])
+        upload_client = AsyncMock()
+        uploader = Uploader(
+            upload_client=upload_client,
+            file_info=file_info,
+            part_slots=asyncio.Semaphore(part_count),
+        )
+        uploader._file_id = FILE_ID
+        uploader.new_progress_bar = MagicMock(return_value=MagicMock())
+
+        with pytest.raises(RuntimeError, match="do not match"):
+            await uploader.upload_file(encryptor=make_mock_encryptor(parts=parts))
+    upload_client.complete_file_upload.assert_not_called()
+
+
+def make_prefetch_uploader(
+    path: Path, upload_client: AsyncMock
+) -> tuple[Uploader, ThreadPoolExecutor]:
+    """Create an uploader ready for `_upload_file_part`, and its encryption worker."""
+    uploader = make_uploader(path, upload_client=upload_client)
+    uploader._file_id = FILE_ID
+    uploader._progress_bar = MagicMock()
+    uploader._checksums = Checksums()
+    return uploader, ThreadPoolExecutor(max_workers=1)
+
+
+async def test_upload_file_part_requests_url_during_encryption():
+    """The part's URL is requested before its encryption ends, and the PUT uses it."""
+    url_requested = threading.Event()
+
+    async def get_part_upload_url(*, file_id, part_no):
+        url_requested.set()
+        return f"https://s3.invalid/part/{part_no}"
+
+    def file_processor():
+        """Produce part 1 only once its URL has been requested."""
+        assert url_requested.wait(timeout=5)
+        yield 1, bytearray(b"part one")
+
+    upload_client = AsyncMock()
+    upload_client.get_part_upload_url.side_effect = get_part_upload_url
+    with NamedTemporaryFile() as f:
+        uploader, pool = make_prefetch_uploader(Path(f.name), upload_client)
+        await uploader._upload_file_part(file_processor(), pool)
+
+    upload_client.upload_file_part.assert_awaited_once_with(
+        file_id=FILE_ID,
+        content=bytearray(b"part one"),
+        part_no=1,
+        url="https://s3.invalid/part/1",
+    )
+
+
+async def test_upload_file_part_drops_url_for_another_part_number():
+    """A part whose number differs from the expected one is sent without the URL
+    fetched in advance, so the upload client fetches the right one.
+    """
+    upload_client = AsyncMock()
+    upload_client.get_part_upload_url.return_value = "https://s3.invalid/part/1"
+    with NamedTemporaryFile() as f:
+        uploader, pool = make_prefetch_uploader(Path(f.name), upload_client)
+        processor = iter([(2, bytearray(b"part two"))])
+        await uploader._upload_file_part(processor, pool)  # type: ignore[arg-type]
+
+    upload_client.get_part_upload_url.assert_called_once_with(
+        file_id=FILE_ID, part_no=1
+    )
+    upload_client.upload_file_part.assert_awaited_once_with(
+        file_id=FILE_ID, content=bytearray(b"part two"), part_no=2, url=None
+    )
+
+
+async def test_failed_encryption_cancels_url_request():
+    """A failed encryption cancels the URL request it started."""
+    url_requested = threading.Event()
+    url_cancelled = asyncio.Event()
+
+    async def get_part_upload_url(*, file_id, part_no):
+        url_requested.set()
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            url_cancelled.set()
+            raise
+        return "https://s3.invalid/part/1"
+
+    def file_processor():
+        """Fail once the URL request is under way."""
+        assert url_requested.wait(timeout=5)
+        raise OSError("disk gone")
+        yield  # a generator that fails on its first step
+
+    upload_client = AsyncMock()
+    upload_client.get_part_upload_url.side_effect = get_part_upload_url
+    with NamedTemporaryFile() as f:
+        uploader, pool = make_prefetch_uploader(Path(f.name), upload_client)
+        with pytest.raises(exceptions.UploadFileError, match="disk gone"):
+            await uploader._upload_file_part(file_processor(), pool)
+        await asyncio.wait_for(url_cancelled.wait(), timeout=5)
+
+    upload_client.upload_file_part.assert_not_called()
+
+
+async def test_fair_slots_cap_each_file_within_the_budget():
+    """A file takes at most its own share of slots, and the budget caps all files."""
+    budget = asyncio.Semaphore(3)
+    first, second = FairSlots(budget, per_file=2), FairSlots(budget, per_file=2)
+
+    await first.__aenter__()
+    await first.__aenter__()
+    blocked_by_share = asyncio.create_task(first.__aenter__())
+    await second.__aenter__()
+    blocked_by_budget = asyncio.create_task(second.__aenter__())
+    await asyncio.sleep(0)
+    assert not blocked_by_share.done()
+    assert not blocked_by_budget.done()
+
+    # A slot freed by the first file goes to the second, whose part waited longer
+    await first.__aexit__()
+    await asyncio.sleep(0)
+    assert blocked_by_budget.done()
+    assert not blocked_by_share.done()
+
+    blocked_by_share.cancel()
+    await asyncio.gather(blocked_by_share, return_exceptions=True)
+
+
+async def test_fair_slots_give_the_file_slot_back_when_cancelled():
+    """A part cancelled while it waits for the budget gives its file's slot back."""
+    budget = asyncio.Semaphore(1)
+    other, slots = FairSlots(budget, per_file=1), FairSlots(budget, per_file=1)
+    await other.__aenter__()
+
+    waiting = asyncio.create_task(slots.__aenter__())
+    await asyncio.sleep(0)
+    waiting.cancel()
+    await asyncio.gather(waiting, return_exceptions=True)
+    await other.__aexit__()
+
+    # Both of the file's and the batch's slot are free again
+    await asyncio.wait_for(slots.__aenter__(), timeout=1)
+    await slots.__aexit__()
+    assert budget._value == 1

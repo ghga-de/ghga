@@ -17,6 +17,7 @@
 """Contains abstract message display base class"""
 
 import enum
+import sys
 
 import typer
 
@@ -33,6 +34,18 @@ class MessageColors(enum.StrEnum):
     FAILURE = "red"
 
 
+def _echo(message: str, color: MessageColors, *, err: bool = False):
+    """Write the message to the current stdout or stderr, in color on a terminal.
+
+    The stream is passed explicitly: a live progress display swaps it for a proxy
+    that prints above the display, which click would otherwise bypass. The proxy is
+    no terminal itself, so the colors follow the stream behind it.
+    """
+    stream = sys.stderr if err else sys.stdout
+    target = getattr(stream, "rich_proxied_file", stream)
+    typer.secho(message, fg=color, file=stream, color=target.isatty())
+
+
 class CLIMessageDisplay:
     """
     Command line writer message display implementation,
@@ -42,14 +55,14 @@ class CLIMessageDisplay:
     @staticmethod
     def display(message: str):
         """Write message with default color to stdout"""
-        typer.secho(message, fg=MessageColors.DEFAULT)
+        _echo(message, MessageColors.DEFAULT)
 
     @staticmethod
     def success(message: str):
         """Write message to stdout representing information about a successful operation"""
-        typer.secho(message, fg=MessageColors.SUCCESS)
+        _echo(message, MessageColors.SUCCESS)
 
     @staticmethod
     def failure(message: str):
         """Write message to stderr representing information about a failed operation"""
-        typer.secho(message, fg=MessageColors.FAILURE, err=True)
+        _echo(message, MessageColors.FAILURE, err=True)

@@ -39,16 +39,6 @@ class S3ClientPort(ABC):
             )
             super().__init__(msg)
 
-    class S3UploadNotFoundError(RuntimeError):
-        """Raised when the local DB has a record of an S3 multipart upload but S3 itself doesn't."""
-
-        def __init__(self, *, bucket_id: str, s3_upload_id: str):
-            msg = (
-                "S3 object storage does not contain a multipart upload with ID"
-                + f" {s3_upload_id} in bucket ID {bucket_id}."
-            )
-            super().__init__(msg)
-
     class UnknownStorageAliasError(RuntimeError):
         """Thrown when the requested storage location is not configured.
         The given parameter given should be a configured alias, but is not.
@@ -142,9 +132,10 @@ class S3ClientPort(ABC):
     ) -> str:
         """Get a pre-signed URL to upload a specific part of a multipart upload.
 
+        S3 is not asked whether the multipart upload still exists.
+
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
-            `S3UploadNotFoundError` if the multipart upload can't be found in S3.
             `BucketNotFoundError` if the configured bucket does not exist in S3.
             `S3OperationError` if S3 returns any other unexpected error.
         """
@@ -195,8 +186,10 @@ class S3ClientPort(ABC):
         object_id: str,
         s3_upload_id: str,
         file_id: UUID4 | None = None,
-    ) -> None:
+    ) -> bool:
         """Abort an in-progress multipart upload. Tolerates a missing upload.
+
+        Returns False if S3 had no such upload, True if it was aborted.
 
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.

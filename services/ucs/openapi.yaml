@@ -697,31 +697,6 @@ components:
       - file_id
       title: HttpRequeueErrorData
       type: object
-    HttpS3UploadNotFoundError:
-      additionalProperties: false
-      properties:
-        data:
-          $ref: '#/components/schemas/HttpS3UploadNotFoundErrorData'
-        description:
-          description: A human readable message to the client explaining the cause
-            of the exception.
-          title: Description
-          type: string
-        exception_id:
-          const: s3UploadNotFound
-          title: Exception Id
-          type: string
-      required:
-      - data
-      - description
-      - exception_id
-      title: HttpS3UploadNotFoundError
-      type: object
-    HttpS3UploadNotFoundErrorData:
-      additionalProperties: true
-      properties: {}
-      title: HttpS3UploadNotFoundErrorData
-      type: object
     HttpTooManyOpenUploadsError:
       additionalProperties: false
       properties:
@@ -1534,10 +1509,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HttpS3UploadNotFoundError'
+                $ref: '#/components/schemas/HttpFileUploadNotFoundError'
           description: 'Exceptions by ID:
 
-            - s3UploadNotFound: The S3 multipart upload could not be found.'
+            - fileUploadNotFound: The FileUpload could not be found.'
         '422':
           content:
             application/json:

@@ -117,12 +117,13 @@ async def test_get_part_upload_url(s3_client: S3ClientPort):
     assert "part_no_1" in url
 
 
-async def test_get_part_upload_url_when_s3_upload_not_found(s3_client: S3ClientPort):
-    """Test for error handling when S3 can't find the multipart upload."""
+async def test_get_part_upload_url_without_upload_check(s3_client: S3ClientPort):
+    """Test that a part URL is issued without checking that S3 has the upload; S3
+    rejects a part for an upload that does not exist when it arrives.
+    """
     file_upload = make_file_upload(s3_upload_id="not-real")
-
-    with pytest.raises(S3ClientPort.S3UploadNotFoundError):
-        await s3_client.get_part_upload_url(file_upload=file_upload, part_no=123)
+    url = await s3_client.get_part_upload_url(file_upload=file_upload, part_no=123)
+    assert "part_no_123" in url
 
 
 async def test_complete_multipart_upload(
@@ -268,7 +269,7 @@ async def test_abort_multipart_upload(s3_client: S3ClientPort):
     )
     file_upload = file_upload.model_copy(update={"s3_upload_id": upload_id})
 
-    await s3_client.abort_multipart_upload(
+    assert await s3_client.abort_multipart_upload(
         storage_alias=file_upload.storage_alias,
         object_id=str(file_upload.object_id),
         s3_upload_id=file_upload.s3_upload_id,
@@ -280,9 +281,11 @@ async def test_abort_multipart_upload(s3_client: S3ClientPort):
 
 
 async def test_abort_multipart_upload_already_gone(s3_client: S3ClientPort):
-    """Aborting a non-existent upload (already aborted or never started) succeeds silently."""
+    """Aborting a non-existent upload (already aborted or never started) succeeds
+    silently and reports that S3 had no such upload.
+    """
     file_upload = make_file_upload(s3_upload_id="not-real")
-    await s3_client.abort_multipart_upload(
+    assert not await s3_client.abort_multipart_upload(
         storage_alias=file_upload.storage_alias,
         object_id=str(file_upload.object_id),
         s3_upload_id=file_upload.s3_upload_id,

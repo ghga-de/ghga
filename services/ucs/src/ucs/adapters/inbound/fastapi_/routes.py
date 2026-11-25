@@ -96,13 +96,6 @@ ERROR_RESPONSES = {
         ),
         "model": http_exceptions.HttpOrphanedMultipartUploadError.get_body_model(),
     },
-    "s3UploadNotFound": {
-        "description": (
-            "Exceptions by ID:"
-            + "\n- s3UploadNotFound: The S3 multipart upload could not be found."
-        ),
-        "model": http_exceptions.HttpS3UploadNotFoundError.get_body_model(),
-    },
     "fileUploadNotFound": {
         "description": (
             "Exceptions by ID:"
@@ -544,8 +537,7 @@ async def create_file_upload(  # noqa: C901
     response_description="The pre-signed URL for uploading the file part",
     responses={
         status.HTTP_400_BAD_REQUEST: ERROR_RESPONSES["noSuchStorage"],
-        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["fileUploadNotFound"]
-        | ERROR_RESPONSES["s3UploadNotFound"],
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["fileUploadNotFound"],
     },
 )
 @TRACER.start_as_current_span("routes.get_part_upload_url")
@@ -582,8 +574,6 @@ async def get_part_upload_url(  # noqa: PLR0913
         raise http_exceptions.HttpFileUploadNotFoundError(file_id=file_id) from error
     except UploadControllerPort.UnknownStorageAliasError as error:
         raise http_exceptions.HttpUnknownStorageAliasError() from error
-    except UploadControllerPort.UploadSessionNotFoundError as error:
-        raise http_exceptions.HttpS3UploadNotFoundError() from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error

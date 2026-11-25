@@ -1,0 +1,57 @@
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Tests for the CLI message display"""
+
+import io
+import sys
+
+import pytest
+from rich.console import Console
+from rich.file_proxy import FileProxy
+
+from ghga_connector.core.message_display import CLIMessageDisplay
+
+
+class Terminal(io.StringIO):
+    """A text stream that reports to be a terminal."""
+
+    def isatty(self) -> bool:
+        """Claim to be a terminal."""
+        return True
+
+
+@pytest.mark.parametrize(
+    "stream_name, write",
+    [("stdout", CLIMessageDisplay.success), ("stderr", CLIMessageDisplay.failure)],
+)
+def test_messages_print_above_a_live_display(monkeypatch, stream_name, write):
+    """While a live display has swapped the stream for its proxy, a message goes
+    through the proxy, which prints it above the display, and keeps its color.
+    """
+    printed = io.StringIO()
+    console = Console(file=printed, force_terminal=True, color_system="standard")
+    monkeypatch.setattr(sys, stream_name, FileProxy(console, Terminal()))
+
+    write("Uploaded the file.")
+
+    assert "Uploaded the file." in printed.getvalue()
+    assert "\x1b[3" in printed.getvalue()  # a foreground color
+
+
+def test_messages_have_no_color_off_a_terminal(capsys):
+    """A message to a stream that is no terminal carries no color codes."""
+    CLIMessageDisplay.success("Uploaded the file.")
+    assert capsys.readouterr().out == "Uploaded the file.\n"

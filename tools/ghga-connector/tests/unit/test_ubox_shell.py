@@ -319,7 +319,12 @@ async def test_do_upload_glob(monkeypatch, tmp_path: Path):
     captured: list[list[tuple[str, str]]] = []
 
     async def fake_upload_files_from_list(
-        *, upload_client, file_info_list, my_private_key, max_concurrent_uploads
+        *,
+        upload_client,
+        file_info_list,
+        my_private_key,
+        max_concurrent_uploads,
+        max_concurrent_files,
     ):
         captured.append([(fi.alias, Path(fi.path).name) for fi in file_info_list])
 
@@ -345,7 +350,12 @@ async def test_do_upload_with_alias(monkeypatch, tmp_path: Path):
     captured: list[list[tuple[str, str]]] = []
 
     async def fake_upload_files_from_list(
-        *, upload_client, file_info_list, my_private_key, max_concurrent_uploads
+        *,
+        upload_client,
+        file_info_list,
+        my_private_key,
+        max_concurrent_uploads,
+        max_concurrent_files,
     ):
         captured.append([(fi.alias, Path(fi.path).name) for fi in file_info_list])
 

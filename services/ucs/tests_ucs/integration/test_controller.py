@@ -16,6 +16,7 @@
 """Integration tests for the UploadController"""
 
 import hashlib
+import logging
 from contextlib import asynccontextmanager, nullcontext
 from datetime import timedelta
 from tempfile import NamedTemporaryFile
@@ -437,6 +438,50 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     assert file_uploads[0]["_id"] == file_id2
     assert file_uploads[0]["completed"]
     assert file_uploads[0]["state"] in ["inbox", "archived"]
+
+
+async def test_part_for_aborted_s3_upload_fails_at_s3(
+    joint_fixture: JointFixture, caplog
+):
+    """With part URLs issued unchecked, a URL for an S3 upload that no longer exists
+    is still issued and S3 rejects the part. Deleting the FileUpload then logs the
+    missing upload as a warning.
+    """
+    controller = joint_fixture.upload_controller
+    async with set_correlation_id(uuid4()):
+        box_id = await controller.create_file_upload_box(
+            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
+        )
+        file_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
+        )
+    db = joint_fixture.mongodb.client[joint_fixture.config.db_name]
+    [upload] = (
+        db[FILE_UPLOADS_COLLECTION].find({"__metadata__.deleted": False}).to_list()
+    )
+    await joint_fixture.s3.storage.abort_multipart_upload(
+        bucket_id="test-inbox",
+        object_id=str(upload["object_id"]),
+        upload_id=upload["s3_upload_id"],
+    )
+
+    url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
+    response = await upload_to_s3(url, CONTENT)
+    assert response.status_code == 404
+    assert "<Code>NoSuchUpload</Code>" in response.text
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="ucs.core.controller"):
+        async with set_correlation_id(uuid4()):
+            await controller.remove_file_upload(
+                box_id=box_id, file_id=file_id, require_unlocked=True
+            )
+    [warning] = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert upload["s3_upload_id"] in warning.getMessage()
 
 
 async def test_orphaned_s3_upload_in_file_create(joint_fixture: JointFixture, caplog):
