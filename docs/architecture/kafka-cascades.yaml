@@ -287,6 +287,19 @@ flows:
       terminal: true
     - use: {fragment: priority_echo, reason: the box leaves the list}
     - use: audit_leaf
+- id: box-reorder
+  lane: Upload boxes
+  actor: Data Portal · steward
+  call: PUT /upload-box-priority
+  title: A data steward reorders the upload boxes
+  target: ghga-registry-service
+  root:
+    service: RS
+    action: replaces the order of the priority list with the steward's and names them in <span class='m'>reordered_by</span>
+    condition: 409 if the list changed since the steward read it or holds other boxes; writes, publishes and audits only if the order changed
+    children:
+    - use: {fragment: priority_echo, reason: the order the steward saved}
+    - use: audit_leaf
 - id: box-priority-repair
   lane: Upload boxes
   actor: Ops · deploy

@@ -403,7 +403,7 @@
   // kafka-map-data:start
   // Generated from docs/architecture/kafka-cascades.yaml by scripts/kafka_map.py.
   // Edit the YAML and run `just kafka-map`; do not edit this block.
-  var META = { "updated": "2026-11-25", "topics": 24, "entrypoints": 23 };
+  var META = { "updated": "2026-11-25", "topics": 24, "entrypoints": 24 };
 
   var SVC = {
     "MASS": "metadata search & access service",
@@ -802,6 +802,34 @@
             "s": "FIS",
             "a": "stores the list in <span class='m'>uploadBoxPriority</span> and hands DHFS the waiting files in its order",
             "cond": "the box leaves the list; a version no newer than the stored one is ignored",
+            "term": true
+          },
+          {
+            "e": { "tp": "audit-records", "ty": "audit_record_logged", "k": "persist" },
+            "s": "—",
+            "a": "append-only stewardship record",
+            "term": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "box-reorder",
+      "lane": "Upload boxes",
+      "actor": "Data Portal · steward",
+      "call": "PUT /upload-box-priority",
+      "title": "A data steward reorders the upload boxes",
+      "target": "ghga-registry-service",
+      "root": {
+        "s": "RS",
+        "a": "replaces the order of the priority list with the steward's and names them in <span class='m'>reordered_by</span>",
+        "cond": "409 if the list changed since the steward read it or holds other boxes; writes, publishes and audits only if the order changed",
+        "kids": [
+          {
+            "e": { "tp": "upload-box-priority", "ty": "upserted", "k": "outbox" },
+            "s": "FIS",
+            "a": "stores the list in <span class='m'>uploadBoxPriority</span> and hands DHFS the waiting files in its order",
+            "cond": "the order the steward saved; a version no newer than the stored one is ignored",
             "term": true
           },
           {
