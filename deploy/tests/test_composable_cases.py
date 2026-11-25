@@ -498,29 +498,76 @@ def _policy(**values):
     return {"authorizationPolicy": {"enabled": True, **values}}
 
 
+GET = [{"methods": ["GET"], "paths": ["/x"]}]
+SA = {"c": {"serviceAccount": "c"}}
+GATEWAY = {"from": [{"source": {"principals": ["gw"]}}]}
+
+
 @pytest.mark.parametrize(
     "values, message",
     [
         (_policy(), "would deny all traffic"),
-        (_policy(callers={"c": []}), "has no operation"),
-        (_policy(callers={"c": {"methods": ["GET"]}}), "must be a list"),
-        (_policy(callers={"c": [{}]}), "restricts nothing"),
-        (_policy(callers={"c": [{"methods": []}]}), "restricts nothing"),
-        (_policy(callers={"c": [{"path": ["/x"]}]}), "unknown operation key"),
+        # callers
+        (_policy(callers={"c": []}, identities=SA), "has no operation"),
+        (_policy(callers={"c": {"methods": ["GET"]}}, identities=SA), "must be a list"),
+        (_policy(callers={"c": [{}]}, identities=SA), "restricts nothing"),
+        (_policy(callers={"c": [{"methods": []}]}, identities=SA), "is empty"),
         (
-            _policy(callers={"c": [{"allowAll": True}, {"methods": ["GET"]}]}),
-            "allowAll must be",
+            _policy(callers={"c": [{"methods": [], "paths": ["/x"]}]}, identities=SA),
+            "methods is empty",
         ),
         (
-            _policy(
-                callers={"c": [{"methods": ["GET"]}]},
-                identities={"c": {"serviceaccount": "x"}},
-            ),
+            _policy(callers={"c": [{"ports": [], "paths": ["/x"]}]}, identities=SA),
+            "ports is empty",
+        ),
+        (
+            _policy(callers={"c": [{"path": ["/x"]}]}, identities=SA),
+            "unknown operation key",
+        ),
+        (
+            _policy(callers={"c": [{"allowAll": True}, *GET]}, identities=SA),
+            "allowAll must be the",
+        ),
+        (
+            _policy(callers={"c": [{"allowAll": "false"}]}, identities=SA),
+            "allowAll must be true or false",
+        ),
+        # identities
+        (_policy(callers={"c": GET}), "identities.c is missing"),
+        (
+            _policy(callers={"c": GET}, identities={**SA, "d": SA["c"]}),
+            "identities.d has no caller",
+        ),
+        (
+            _policy(callers={"c": GET}, identities={"c": {"serviceaccount": "x"}}),
             "unknown key",
         ),
         (
+            _policy(callers={"c": GET}, identities={"c": {"namespace": "n"}}),
+            "needs serviceAccount or principals",
+        ),
+        (
+            _policy(
+                callers={"c": GET},
+                identities={"c": {"principals": ["p"], "serviceAccount": "c"}},
+            ),
+            "principals replaces",
+        ),
+        # extraRules
+        (_policy(extraRules=[{}]), r"extraRules\[0\] is empty"),
+        (_policy(extraRules=[{"allowAnySource": True}]), r"extraRules\[0\] is empty"),
+        (
+            _policy(extraRules=[{"when": [{"key": "k", "values": ["v"]}]}]),
+            "has no from",
+        ),
+        (
+            _policy(extraRules=[{**GATEWAY, "allowAnySource": "yes"}]),
+            "allowAnySource must be",
+        ),
+        # workload
+        (
             {
-                **_policy(callers={"c": [{"methods": ["GET"]}]}),
+                **_policy(callers={"c": GET}, identities=SA),
                 "service": {"enabled": False},
             },
             "need the chart's Service",
@@ -528,8 +575,8 @@ def _policy(**values):
     ],
 )
 def test_authorization_policy_fails_closed(rendered_chart, values, message):
-    """Anything that would allow more than intended, or deny everything by
-    accident, stops the render instead.
+    """Anything that would allow more than it says, or that cannot be matched to a
+    caller, stops the render instead of opening the service.
     """
     with pytest.raises(AssertionError, match=message):
         rendered_chart("common.yaml", values)

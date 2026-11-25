@@ -46,9 +46,9 @@ The platform layer owns what is cluster-wide: the edge `Gateway`, the edge auth 
 
 **Amended 2026-11-25:** App charts also own the workload's Istio `AuthorizationPolicy`, an `ALLOW` policy built from the same helpers as the workload's Service and Deployment, so it cannot drift off them.
 Production runs Istio in ambient mode, where only the waypoint can check paths and methods, so a policy with callers binds to the Service through `targetRefs`; one that denies all traffic selects the pods, where ztunnel enforces it.
-Which services call it, and with which methods and paths, is a fact of the code, so the callee lists its callers in its chart values, keyed by the caller's chart name, and CI checks each path against the callee's OpenAPI spec.
-Who a caller is differs per environment, so the platform layer sets the identities (ServiceAccount, namespace, trust domain) in a separate map, adds raw rules for what no chart knows, such as the ingress gateway, and enables the policy; both maps merge key by key, so an environment can change or drop a single caller.
-The policy fails closed: a caller that restricts nothing must say so with `allowAll`, and an enabled policy without rules fails the render unless `denyAll` asks for it, since an `ALLOW` policy without rules denies everything.
+Which services call it, and with which methods and paths, is a fact of the code, so the callee lists its callers in its chart values, keyed by the caller's chart or instance name, and CI checks each path against the callee's OpenAPI spec.
+Who a caller is differs per environment, so the platform layer sets the identities (ServiceAccount, namespace, trust domain) in a separate map, required for every caller, adds raw rules for what no chart knows, such as the ingress gateway, and enables the policy; both maps merge key by key, so an environment can change or drop a single caller.
+The policy fails closed: a caller that restricts nothing must say so with `allowAll`, a raw rule without a source with `allowAnySource`, and an enabled policy without rules fails the render unless `denyAll` asks for it, since an `ALLOW` policy without rules denies everything.
 The mesh-wide default deny, `PeerAuthentication`, and guardrails as `DENY` policies stay with the platform layer, and Istio evaluates `DENY` before `ALLOW`, so no app chart can override them.
 `devops-kubernetes-hub` stays outside this repo.
 

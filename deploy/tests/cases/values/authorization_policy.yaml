@@ -13,13 +13,18 @@ authorizationPolicy:
       - methods: ["DELETE"]
         paths: ["/items/{*}"]
   identities:
+    caller:
+      serviceAccount: caller
     other-ns:
       namespace: elsewhere
       serviceAccount: other-sa
+    multi:
+      principals: ["cluster.local/ns/{{ .Release.Namespace }}/sa/multi"]
   extraRules:
     - from:
         - source:
             principals: ["cluster.local/ns/{{ .Release.Namespace }}-ingress/sa/gateway"]
-    - when:
+    - allowAnySource: true
+      when:
         - key: request.headers[x-test]
           values: ["yes"]

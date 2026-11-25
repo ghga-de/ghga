@@ -5,6 +5,7 @@ production those surface as 403s. Here they fail CI instead.
 """
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -88,6 +89,9 @@ def test_caller_matches_the_api(source, callee, caller, operations):
     route_paths = {path for _, path in routes}
     for operation in operations:
         methods = operation.get("methods") or []
+        assert operation.get("paths"), (
+            f"{source}: {caller} may use {methods} on every path; list its paths"
+        )
         for path in operation.get("paths") or []:
             assert path in route_paths, (
                 f"{source}: {caller} may use {path}, which {callee} does not serve"
@@ -96,3 +100,42 @@ def test_caller_matches_the_api(source, callee, caller, operations):
                 assert (method, path) in routes, (
                     f"{source}: {caller} may use {method} {path}, which {callee} does not serve"
                 )
+
+
+def test_environment_drops_a_chart_caller():
+    """Helm itself removes a caller the chart sets when an environment sets it to
+    null, together with its identity; the dummy chart cannot show this, since its
+    callers come from the test values, not from chart defaults.
+    """
+    chart = CHARTS / "ekss"
+    subprocess.run(
+        ["helm", "dependency", "update", str(chart), "--skip-refresh"],
+        check=True,
+        capture_output=True,
+    )
+    overlay = {
+        "authorizationPolicy": {
+            "enabled": True,
+            "callers": {"dcs-consumer": None},
+            "identities": {
+                "dcs": {"serviceAccount": "download-controller"},
+                "fis": {"serviceAccount": "file-ingest"},
+            },
+        }
+    }
+    rendered = subprocess.run(
+        ["helm", "template", "ekss", str(chart), "--namespace", "ns", "--values", "-"],
+        check=True,
+        capture_output=True,
+        text=True,
+        input=yaml.safe_dump(overlay),
+    ).stdout
+    policy = next(
+        doc
+        for doc in yaml.safe_load_all(rendered)
+        if doc and doc["kind"] == "AuthorizationPolicy"
+    )
+    assert [r["from"][0]["source"]["principals"] for r in policy["spec"]["rules"]] == [
+        ["cluster.local/ns/ns/sa/download-controller"],
+        ["cluster.local/ns/ns/sa/file-ingest"],
+    ]

@@ -2,19 +2,26 @@
 {{- if .Values.authorizationPolicy.enabled }}
 {{- $ap := .Values.authorizationPolicy }}
 {{- $namespace := include "common.names.namespace" . }}
+{{- $callers := default dict $ap.callers }}
+{{- $identities := default dict $ap.identities }}
 {{- $operationKeys := list "methods" "paths" "ports" "allowAll" }}
 {{- $identityKeys := list "serviceAccount" "namespace" "principals" }}
 {{- $rules := list }}
-{{- /* callers (from the chart) say what each caller may do, identities (from the
-platform) who the caller is. Both are maps, so Helm merges them key by key and an
-environment can override or (with null) drop a single entry. */}}
-{{- range $caller, $operations := $ap.callers }}
+{{- /* Fail closed throughout: anything that would allow more than it says, or that
+cannot be matched to a caller, stops the render instead of opening the service.
+callers (from the chart) say what each caller may do, identities (from the platform)
+who it is. Both are maps, so Helm merges them key by key; an environment drops a
+caller by setting both its callers and its identities entry to null. */}}
+{{- range $caller, $identity := $identities }}
+{{- if and (not (kindIs "invalid" $identity)) (or (not (hasKey $callers $caller)) (kindIs "invalid" (get $callers $caller))) }}
+{{- fail (printf "authorizationPolicy.identities.%s has no caller: check the key, or drop the identity together with the caller" $caller) }}
+{{- end }}
+{{- end }}
+{{- range $caller, $operations := $callers }}
 {{- if not (kindIs "invalid" $operations) }}
 {{- if not (kindIs "slice" $operations) }}
 {{- fail (printf "authorizationPolicy.callers.%s must be a list of operations" $caller) }}
 {{- end }}
-{{- /* Fail closed: a caller that restricts nothing must say so with allowAll, so a
-typo or an empty list stops the render instead of opening the service. */}}
 {{- if not $operations }}
 {{- fail (printf "authorizationPolicy.callers.%s has no operation; list its methods and paths, or [{allowAll: true}]" $caller) }}
 {{- end }}
@@ -24,15 +31,24 @@ typo or an empty list stops the render instead of opening the service. */}}
 {{- if not (kindIs "map" $op) }}
 {{- fail (printf "authorizationPolicy.callers.%s: each operation must be a map" $caller) }}
 {{- end }}
-{{- range $key, $_ := $op }}
+{{- range $key, $value := $op }}
 {{- if not (has $key $operationKeys) }}
 {{- fail (printf "authorizationPolicy.callers.%s: unknown operation key %q" $caller $key) }}
 {{- end }}
+{{- /* An empty list would drop the key and with it the restriction. */}}
+{{- if and (ne $key "allowAll") (empty $value) }}
+{{- fail (printf "authorizationPolicy.callers.%s: %s is empty, which would allow any; list values or remove the key" $caller $key) }}
 {{- end }}
-{{- if $op.allowAll }}
+{{- end }}
+{{- if hasKey $op "allowAll" }}
+{{- if not (kindIs "bool" $op.allowAll) }}
+{{- fail (printf "authorizationPolicy.callers.%s: allowAll must be true or false, not %q" $caller (toString $op.allowAll)) }}
+{{- end }}
 {{- if or (gt (len $operations) 1) (gt (len $op) 1) }}
 {{- fail (printf "authorizationPolicy.callers.%s: allowAll must be the caller's only operation, with no other keys" $caller) }}
 {{- end }}
+{{- end }}
+{{- if $op.allowAll }}
 {{- $allowAll = true }}
 {{- else }}
 {{- $operation := dict }}
@@ -47,16 +63,27 @@ typo or an empty list stops the render instead of opening the service. */}}
 {{- $to = append $to (dict "operation" $operation) }}
 {{- end }}
 {{- end }}
-{{- $identity := default dict (get (default dict $ap.identities) $caller) }}
+{{- /* No default identity: workloads run under release-specific ServiceAccounts, so
+a guessed one would only show up as 403s. */}}
+{{- $identity := get $identities $caller }}
+{{- if or (kindIs "invalid" $identity) (not $identity) }}
+{{- fail (printf "authorizationPolicy.identities.%s is missing: set the caller's serviceAccount (and namespace if it differs) or principals" $caller) }}
+{{- end }}
 {{- range $key, $_ := $identity }}
 {{- if not (has $key $identityKeys) }}
 {{- fail (printf "authorizationPolicy.identities.%s: unknown key %q" $caller $key) }}
 {{- end }}
 {{- end }}
 {{- $principals := $identity.principals }}
-{{- if not $principals }}
-{{- /* The ServiceAccount defaults to the caller's key, its chart name. */}}
-{{- $principals = list (printf "%s/ns/%s/sa/%s" $ap.trustDomain (default $namespace $identity.namespace) (default $caller $identity.serviceAccount)) }}
+{{- if $principals }}
+{{- if or (hasKey $identity "serviceAccount") (hasKey $identity "namespace") }}
+{{- fail (printf "authorizationPolicy.identities.%s: principals replaces serviceAccount and namespace, set either" $caller) }}
+{{- end }}
+{{- else }}
+{{- if not $identity.serviceAccount }}
+{{- fail (printf "authorizationPolicy.identities.%s needs serviceAccount or principals" $caller) }}
+{{- end }}
+{{- $principals = list (printf "%s/ns/%s/sa/%s" $ap.trustDomain (default $namespace $identity.namespace) $identity.serviceAccount) }}
 {{- end }}
 {{- $rule := dict "from" (list (dict "source" (dict "principals" $principals))) }}
 {{- if not $allowAll }}
@@ -65,9 +92,20 @@ typo or an empty list stops the render instead of opening the service. */}}
 {{- $rules = append $rules $rule }}
 {{- end }}
 {{- end }}
-{{- /* Raw Istio rules for what no chart knows, such as the ingress gateway. */}}
-{{- range $rule := $ap.extraRules }}
-{{- $rules = append $rules $rule }}
+{{- /* Raw Istio rules for what no chart knows, such as the ingress gateway. In an
+ALLOW policy an empty rule matches every request and one without from matches
+every source, so both need saying. */}}
+{{- range $i, $rule := $ap.extraRules }}
+{{- if or (not (kindIs "map" $rule)) (not (omit $rule "allowAnySource")) }}
+{{- fail (printf "authorizationPolicy.extraRules[%d] is empty, which would allow every request" $i) }}
+{{- end }}
+{{- if and (hasKey $rule "allowAnySource") (not (kindIs "bool" $rule.allowAnySource)) }}
+{{- fail (printf "authorizationPolicy.extraRules[%d]: allowAnySource must be true or false" $i) }}
+{{- end }}
+{{- if and (not $rule.from) (not $rule.allowAnySource) }}
+{{- fail (printf "authorizationPolicy.extraRules[%d] has no from, which would allow any source; add from, or allowAnySource: true if that is intended" $i) }}
+{{- end }}
+{{- $rules = append $rules (omit $rule "allowAnySource") }}
 {{- end }}
 {{- /* denyAll overrides the rules: they come from the chart, denyAll from the
 environment, e.g. for a consumer instance that takes no calls at all. */}}

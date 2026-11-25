@@ -1562,19 +1562,19 @@
         },
         "callers": {
           "type": "object",
-          "description": "Allowed callers, keyed by chart name, each a list of operations",
+          "description": "Allowed callers, keyed by the caller's chart or instance name, each a list of operations",
           "additionalProperties": true,
           "default": {}
         },
         "identities": {
           "type": "object",
-          "description": "Who each caller is, keyed like callers; defaults to the ServiceAccount named like the key, in this namespace",
+          "description": "Who each caller is, keyed like callers: serviceAccount (and namespace if it differs) or principals. Required for every caller",
           "additionalProperties": true,
           "default": {}
         },
         "extraRules": {
           "type": "array",
-          "description": "Raw Istio rules added as they are, such as the ingress gateway. Templated",
+          "description": "Raw Istio rules added as they are, such as the ingress gateway; each needs from unless it sets allowAnySource: true. Templated",
           "default": []
         }
       }

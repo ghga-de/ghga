@@ -188,8 +188,8 @@ for the full set of configurable values.
 | `authorizationPolicy.callers.dcs` |  | `[{"methods": ["GET"], "paths": ["/secrets/{*}/envelopes/{*}"]}]` |
 | `authorizationPolicy.callers.dcs-consumer` |  | `[{"methods": ["DELETE"], "paths": ["/secrets/{*}"]}]` |
 | `authorizationPolicy.callers.fis` |  | `[{"methods": ["POST"], "paths": ["/secrets"]}, {"methods": ["DELETE"], "paths": ["/secrets/{*}"]}]` |
-| `authorizationPolicy.identities` | Who each caller is, keyed like callers; defaults to the ServiceAccount named like the key, in this namespace | `{}` |
-| `authorizationPolicy.extraRules` | Raw Istio rules added as they are, such as the ingress gateway. Templated | `[]` |
+| `authorizationPolicy.identities` | Who each caller is, keyed like callers: serviceAccount (and namespace if it differs) or principals. Required for every caller | `{}` |
+| `authorizationPolicy.extraRules` | Raw Istio rules added as they are, such as the ingress gateway; each needs from unless it sets allowAnySource: true. Templated | `[]` |
 | `networkPolicy.enabled` | Render a NetworkPolicy restricting ingress traffic to the pod | `false` |
 | `networkPolicy.ingress` | Only allow traffic from namespaces labeled `ghga-ingress: allow`, on the Service's own ports | `[{"from": [{"namespaceSelector": {"matchLabels": {"ghga-ingress": "allow"}}}]}]` |
 | `strimziApiVersion` | apiVersion used for the rendered Strimzi KafkaUser resource | `"kafka.strimzi.io/v1"` |

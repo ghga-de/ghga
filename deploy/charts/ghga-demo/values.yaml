@@ -266,6 +266,7 @@ auth-claims:
   enabled: true
   readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   nameOverride: auth-claims
+  envVarsSecret: ghga-auth-keys-pub
   # In-mesh callers of the access API and what each may do, only the processes that
   # call; off here (no Istio in the demo), kept with the instance so the platform
   # layer only sets identities, adds the gateway and enables it. {*} matches one
