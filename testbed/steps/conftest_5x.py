@@ -28,7 +28,7 @@ from fixtures import (
 from playwright.sync_api import expect
 from pytest_bdd import given, then, when
 
-from steps.utils import ADMIN_PAGES, parse
+from steps.utils import ADMIN_PAGES, parse, reset_user_token_counter
 
 
 @given(
@@ -40,6 +40,10 @@ def login_to_data_portal(
     fixtures: JointFixture,
 ) -> str:
     """Login to the Data Portal."""
+    # log in again without waiting for the next TOTP time step
+    reset_user_token_counter(
+        fixtures.auth.get_sub(full_name), fixtures, keep_failed_attempts=True
+    )
     fixtures.playwright.login(
         full_name, config=fixtures.config, auth_fixture=fixtures.auth
     )

@@ -22,9 +22,11 @@ import pytest
 import pytest_asyncio
 
 from auth_service.config import Config
+from auth_service.user_registry.core.registry import _unchanged_user
 from auth_service.user_registry.models.ivas import Iva, IvaType
 from auth_service.user_registry.models.users import (
     AcademicTitle,
+    PeriodCounter,
     StatusChange,
     User,
     UserStatus,
@@ -37,7 +39,7 @@ from auth_service.user_registry.translators.dao import (
 )
 from ghga_service_commons.utils.utc_dates import utc_datetime
 from hexkit.correlation import set_new_correlation_id
-from hexkit.protocols.dao import ResourceNotFoundError
+from hexkit.protocols.dao import PreconditionFailedError, ResourceNotFoundError
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
@@ -162,3 +164,50 @@ async def test_iva_crud(
 
     # changes should not be automatically published
     assert not recorder.recorded_events
+
+
+@pytest.mark.asyncio()
+async def test_user_update_with_precondition(
+    user_dao_publisher_factory: UserDaoPublisherFactoryPort,
+):
+    """Test the precondition for writing back users against the database.
+
+    It compares the status and the fields of the daily IVA counter.
+    """
+    user_dao = await user_dao_publisher_factory.get_user_dao()
+    user = User(
+        ext_id="max@ls.org",
+        status=UserStatus.ACTIVE,
+        name="Max Headroom",
+        email="max@example.org",
+        registration_date=utc_datetime(2022, 9, 1, 12, 0),
+    )
+    await user_dao.insert(user)
+
+    # without an IVA counter
+    titled = user.model_copy(update={"title": AcademicTitle.DR})
+    await user_dao.update(titled, precondition=_unchanged_user(user))
+    assert (await user_dao.get_by_id(user.id)).title is AcademicTitle.DR
+
+    # with an IVA counter
+    counter = PeriodCounter(date=utc_datetime(2026, 11, 23), count=1)
+    counted = titled.model_copy(update={"ivas_created_today": counter})
+    await user_dao.update(counted, precondition=_unchanged_user(titled))
+    stored = await user_dao.get_by_id(user.id)
+    assert stored.ivas_created_today == counter
+    renamed = counted.model_copy(update={"name": "Max Renamed"})
+    await user_dao.update(renamed, precondition=_unchanged_user(stored))
+
+    # a changed status or counter makes the precondition fail
+    disabled = renamed.model_copy(update={"status": UserStatus.INACTIVE})
+    await user_dao.update(disabled)
+    with pytest.raises(PreconditionFailedError):
+        await user_dao.update(renamed, precondition=_unchanged_user(renamed))
+    recounted = disabled.model_copy(
+        update={"ivas_created_today": PeriodCounter(date=counter.date, count=2)}
+    )
+    await user_dao.update(recounted)
+    with pytest.raises(PreconditionFailedError):
+        await user_dao.update(disabled, precondition=_unchanged_user(disabled))
+    stored = await user_dao.get_by_id(user.id)
+    assert stored == recounted

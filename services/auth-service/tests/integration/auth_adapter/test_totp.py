@@ -336,7 +336,7 @@ async def test_rate_limiting_totp(
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid TOTP code"}
     # reset the TOTP token to make sure it works again
-    totp_token.counter_attempts = 0
+    user_token_dao.user_tokens[ID_OF_JOHN].totp_token.counter_attempts = 0
     response = await client.post(
         VERIFY_TOTP_PATH,
         headers=with_totp_code(headers, secret),
@@ -387,7 +387,9 @@ async def test_total_limit_totp(
             headers=with_totp_code(headers, secret, valid=False),
         )
         assert response.json() == {"detail": "Invalid TOTP code"}
-        totp_token.counter_attempts = 0  # suppress rate limiting
+        # suppress rate limiting (the token is replaced with every attempt)
+        totp_token = user_token_dao.user_tokens[ID_OF_JOHN].totp_token
+        totp_token.counter_attempts = 0
     assert totp_token.total_attempts == 10
 
     # now the user should not be verified any more
@@ -552,7 +554,7 @@ async def test_recreate_totp_token_for_disabled_user(
     assert response.json() == {"detail": "User account is disabled"}
 
     # the stored token is kept and the session has ended
-    assert await user_token_dao.get_by_id(user_dao.user.id) is user_token
+    assert await user_token_dao.get_by_id(user_dao.user.id) == user_token
     assert not user_registry.published_events
     response = await client.post(TOTP_TOKEN_PATH, headers=headers)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -636,8 +638,7 @@ async def test_recreate_totp_token_clears_roles_of_pending_sessions(
 
     # complete the second factor with the new token in the second session,
     # in the next time step, since replay protection blocks the current one
-    user_token = await user_token_dao.get_by_id(user_id)
-    user_token.totp_token.last_counter -= 1
+    user_token_dao.user_tokens[user_id].totp_token.last_counter -= 1
     response = await client.post(
         VERIFY_TOTP_PATH, headers=with_totp_code(headers_b, new_secret)
     )

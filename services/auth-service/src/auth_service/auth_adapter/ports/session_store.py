@@ -46,6 +46,7 @@ class SessionStorePort[T: BaseSession](ABC):
         """Save an existing user session back to the store.
 
         Pass additional data used for updating the session as keyword arguments.
+        A session that is no longer in the store must not be saved again.
         """
         ...
 

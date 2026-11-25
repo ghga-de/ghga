@@ -235,6 +235,10 @@ def authenticate_user(full_name: str, fixtures: JointFixture):
         name=full_name, state_store=fixtures.state
     )
     assert session, f"No session found for {full_name}"
+    # log in again without waiting for the next TOTP time step
+    reset_user_token_counter(
+        fixtures.auth.get_sub(full_name), fixtures, keep_failed_attempts=True
+    )
     response = fixtures.auth.authenticate(session=session, state_store=fixtures.state)
     assert response.status_code == 204, response.text
 
