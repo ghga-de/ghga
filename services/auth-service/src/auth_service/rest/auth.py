@@ -24,6 +24,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from auth_service.config import CONFIG
 from ghga_service_commons.auth.ghga import (
+    AuthConfig,
     AuthContext,
     GHGAAuthContextProvider,
     has_role,
@@ -35,7 +36,15 @@ from ghga_service_commons.auth.policies import (
 __all__ = ["StewardAuthContext", "UserAuthContext"]
 
 
-auth_provider = GHGAAuthContextProvider(config=CONFIG, context_class=AuthContext)
+# The service config types the key as a secret so that it is masked in the log;
+# the provider expects the public key as a plain string.
+auth_config = AuthConfig(
+    auth_key=CONFIG.auth_key.get_secret_value() if CONFIG.auth_key else "",
+    auth_algs=CONFIG.auth_algs,
+    auth_check_claims=CONFIG.auth_check_claims,
+    auth_map_claims=CONFIG.auth_map_claims,
+)
+auth_provider = GHGAAuthContextProvider(config=auth_config, context_class=AuthContext)
 
 
 async def require_auth_context(

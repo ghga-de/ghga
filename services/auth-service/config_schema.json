@@ -613,14 +613,16 @@
     "auth_key": {
       "anyOf": [
         {
-          "type": "string"
+          "format": "password",
+          "type": "string",
+          "writeOnly": true
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "internal public key for the auth service (key pair for auth adapter)",
+      "description": "internal key: the public key for the users, claims and access APIs, the private key (full key pair) for the auth adapter",
       "title": "Auth Key"
     },
     "auth_algs": {
@@ -854,7 +856,9 @@
     "basic_auth_credentials": {
       "anyOf": [
         {
-          "type": "string"
+          "format": "password",
+          "type": "string",
+          "writeOnly": true
         },
         {
           "type": "null"
