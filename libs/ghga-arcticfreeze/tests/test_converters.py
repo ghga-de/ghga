@@ -20,6 +20,7 @@
 import pytest
 
 from arcticfreeze import Converter, freeze
+from arcticfreeze._internal import resolve
 from arcticfreeze._internal._converters import STANDARD_CONVERTERS
 from arcticfreeze._internal.resolve import sort_and_deduplicate_converters
 
@@ -75,3 +76,20 @@ def test_superclass_match_by_priority():
         freeze(Leaf(), add_converters=[high_base, high_middle], by_superclass=True)
         == "base"
     )
+
+
+def test_converters_sorted_once_per_call(monkeypatch: pytest.MonkeyPatch):
+    """The converter table is built once per freeze call, not once per node, which
+    would make freezing a large object several times slower.
+    """
+    calls = 0
+
+    def counting_sort(converters):
+        nonlocal calls
+        calls += 1
+        return sort_and_deduplicate_converters(converters)
+
+    monkeypatch.setattr(resolve, "sort_and_deduplicate_converters", counting_sort)
+
+    freeze([{"a": [i, {i}]} for i in range(100)], by_superclass=True)
+    assert calls == 1
