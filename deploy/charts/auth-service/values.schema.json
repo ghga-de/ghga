@@ -2258,7 +2258,84 @@
           "type": "object",
           "description": "Allowed callers, keyed by the caller's chart or instance name, each a list of operations",
           "additionalProperties": true,
-          "default": {}
+          "properties": {
+            "wps": {
+              "type": "array",
+              "default": [
+                {
+                  "methods": [
+                    "GET"
+                  ],
+                  "paths": [
+                    "/download-access/users/{*}/datasets",
+                    "/download-access/users/{*}/datasets/{*}",
+                    "/upload-access/users/{*}/boxes",
+                    "/upload-access/users/{*}/boxes/{*}"
+                  ]
+                }
+              ]
+            },
+            "ars": {
+              "type": "array",
+              "default": [
+                {
+                  "methods": [
+                    "POST"
+                  ],
+                  "paths": [
+                    "/download-access/users/{*}/ivas/{*}/datasets/{*}"
+                  ]
+                },
+                {
+                  "methods": [
+                    "GET"
+                  ],
+                  "paths": [
+                    "/download-access/grants"
+                  ]
+                },
+                {
+                  "methods": [
+                    "DELETE"
+                  ],
+                  "paths": [
+                    "/download-access/grants/{*}"
+                  ]
+                }
+              ]
+            },
+            "rs": {
+              "type": "array",
+              "default": [
+                {
+                  "methods": [
+                    "POST"
+                  ],
+                  "paths": [
+                    "/upload-access/users/{*}/ivas/{*}/boxes/{*}"
+                  ]
+                },
+                {
+                  "methods": [
+                    "GET"
+                  ],
+                  "paths": [
+                    "/upload-access/grants",
+                    "/upload-access/users/{*}/boxes",
+                    "/upload-access/users/{*}/boxes/{*}"
+                  ]
+                },
+                {
+                  "methods": [
+                    "DELETE"
+                  ],
+                  "paths": [
+                    "/upload-access/grants/{*}"
+                  ]
+                }
+              ]
+            }
+          }
         },
         "identities": {
           "type": "object",
