@@ -94,7 +94,14 @@ class _Freezer:
         outer_deepest = self._deepest
         self._deepest = depth
         self._memo[key] = (obj, _IN_PROGRESS, 0)
-        frozen = converter.convert(obj, freeze_child)
+        try:
+            frozen = converter.convert(obj, freeze_child)
+        except BaseException:
+            # A converter may catch this error and go on with its other children,
+            # so leave no in-progress entry behind and keep the depth reached:
+            del self._memo[key]
+            self._deepest = max(outer_deepest, self._deepest)
+            raise
         self._memo[key] = (obj, frozen, self._deepest - depth)
         self._deepest = max(outer_deepest, self._deepest)
         return frozen
@@ -139,7 +146,10 @@ def custom_freeze(
             The maximum nesting depth of the object, where the children of the root
             object are at depth 1. It bounds the recursion, so that deeply nested
             untrusted input fails with a `MaxDepthExceededError` instead of exhausting
-            the call stack. Pass `None` to be limited only by the recursion limit.
+            the call stack. An object that occurs several times counts at each of its
+            depths. Pass `None` to turn the bound off for trusted input: the walk is
+            then limited only by the recursion limit, but shared objects can build a
+            result nested deeper than that, which code walking it later may fail on.
 
     Raises:
         ConverterNotFoundError:
@@ -153,10 +163,10 @@ def custom_freeze(
     if max_depth is not None and max_depth < 0:
         raise ValueError("The maximum depth must not be negative.")
 
-    freezer = _Freezer(
-        converters=converters, by_superclass=by_superclass, max_depth=max_depth
-    )
     try:
+        freezer = _Freezer(
+            converters=converters, by_superclass=by_superclass, max_depth=max_depth
+        )
         return freezer.freeze(obj, 0)
     except RecursionError as error:
         # The stack can run out before max_depth is reached, if the caller's stack is
@@ -202,7 +212,10 @@ def freeze(
             The maximum nesting depth of the object, where the children of the root
             object are at depth 1. It bounds the recursion, so that deeply nested
             untrusted input fails with a `MaxDepthExceededError` instead of exhausting
-            the call stack. Pass `None` to be limited only by the recursion limit.
+            the call stack. An object that occurs several times counts at each of its
+            depths. Pass `None` to turn the bound off for trusted input: the walk is
+            then limited only by the recursion limit, but shared objects can build a
+            result nested deeper than that, which code walking it later may fail on.
 
     Raises:
         ConverterNotFoundError:

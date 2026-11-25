@@ -39,8 +39,8 @@ class MaxDepthExceededError(FreezeError):
     def __init__(self, *, max_depth: int | None):
         if max_depth is None:
             message = (
-                "The object is nested too deeply to be frozen"
-                " within the recursion limit."
+                "The object is nested too deeply to be frozen within the recursion"
+                " limit, or the call stack was already too deep."
             )
         else:
             message = f"The object is nested more than {max_depth} levels deep."

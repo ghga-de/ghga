@@ -202,3 +202,47 @@ def test_shared_object_depth_counted_everywhere(shared_first: bool):
     items = [shared, deeper] if shared_first else [deeper, shared]
     with pytest.raises(MaxDepthExceededError):
         freeze(items)
+
+
+class _Box:
+    """A custom container whose converter skips children it cannot freeze."""
+
+    def __init__(self, *payload: object):
+        self.payload = payload
+
+
+def _convert_box_skipping_errors(obj: _Box, freeze_child: Callable) -> tuple:
+    """Freeze the children of a box, replacing those without a converter."""
+    frozen = []
+    for child in obj.payload:
+        try:
+            frozen.append(freeze_child(child))
+        except ConverterNotFoundError:
+            frozen.append("?")
+    return tuple(frozen)
+
+
+_BOX_CONVERTER = Converter(_Box, _convert_box_skipping_errors)
+
+
+@pytest.mark.parametrize("shared_first", [True, False])
+def test_converter_catching_child_error_keeps_depth(shared_first: bool):
+    """A converter that catches a child's error leaves the depth of its object
+    intact, so reusing the object later still counts its full depth.
+    """
+    box = _Box(_nest(50), [object()])
+    deeper: object = box
+    for _ in range(60):
+        deeper = [deeper]
+    items = [box, deeper] if shared_first else [deeper, box]
+    with pytest.raises(MaxDepthExceededError):
+        freeze(items, add_converters=[_BOX_CONVERTER])
+
+
+def test_converter_catching_child_error_no_false_cycle():
+    """A child whose freezing failed is not mistaken for a cycle when it occurs
+    again.
+    """
+    failing = [object()]
+    frozen = freeze(_Box(failing, failing), add_converters=[_BOX_CONVERTER])
+    assert frozen == ("?", "?")

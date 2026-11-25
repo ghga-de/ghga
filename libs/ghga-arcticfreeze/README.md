@@ -84,6 +84,7 @@ point_converter = Converter(
 assert freeze(Point(1, 2), add_converters=[point_converter]) == (1, 2)
 ```
 
+A converter must freeze the children of its object with the `freeze_child` callable it gets, not with `freeze`: the depth limit, sharing and cycle detection rely on it.
 A custom converter for a type that already has a standard converter replaces it, whatever their priorities.
 The priorities decide which converter is used when matching by superclass (`by_superclass=True`).
 
@@ -93,7 +94,8 @@ The priorities decide which converter is used when matching by superclass (`by_s
 
 - **Depth:** `max_depth` (default `DEFAULT_MAX_DEPTH`, 100) bounds the nesting depth, where the children of the root object are at depth 1.
   A deeper object raises `MaxDepthExceededError` instead of exhausting the call stack.
-  With `max_depth=None`, only the recursion limit bounds it, and reaching that limit raises `MaxDepthExceededError` as well.
+  `max_depth=None` turns the bound off and is meant for trusted input only.
+  The walk then stops at the recursion limit with `MaxDepthExceededError` as well, but shared objects can build a result nested deeper than that.
 - **Cycles:** an object that contains itself raises `ReferenceCycleError`.
 - **Shared objects:** an object that occurs several times, as YAML aliases produce, is frozen only once, and all occurrences share the result.
   Each occurrence still counts at its own depth, so sharing cannot build a result nested deeper than `max_depth`.
