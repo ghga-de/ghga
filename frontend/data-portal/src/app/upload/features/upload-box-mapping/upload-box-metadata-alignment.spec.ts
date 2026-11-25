@@ -74,14 +74,22 @@ class MockUploadBoxService {
 }
 
 /**
- * Upload a metadata file with the given content through the file picker.
- * @param container - the element the component was rendered into
- * @param text - the text content of the uploaded file
+ * Create a metadata file with the given content.
+ * @param text - the text content of the file
+ * @returns the file
  */
-async function uploadMetadata(container: Element, text: string): Promise<void> {
+function metadataFile(text: string): File {
+  return new File([text], 'metadata.json', { type: 'application/json' });
+}
+
+/**
+ * Upload a metadata file through the file picker.
+ * @param container - the element the component was rendered into
+ * @param file - the uploaded file, or its text content
+ */
+async function uploadMetadata(container: Element, file: File | string): Promise<void> {
   const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
-  const file = new File([text], 'metadata.json', { type: 'application/json' });
-  await userEvent.upload(input, file);
+  await userEvent.upload(input, typeof file === 'string' ? metadataFile(file) : file);
 }
 
 describe('UploadBoxMetadataAlignment', () => {
@@ -105,7 +113,7 @@ describe('UploadBoxMetadataAlignment', () => {
     await uploadMetadata(result.container, JSON.stringify(VALID_METADATA));
 
     expect(await screen.findByText('My study')).toBeVisible();
-    expect(screen.getByText('metadata.json')).toBeVisible();
+    expect(screen.getByText(/metadata\.json \(\d+\sB\)/)).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Alignment' })).toBeVisible();
     expect(
       screen.getByRole('button', { name: /choose a different file/i }),
@@ -125,16 +133,58 @@ describe('UploadBoxMetadataAlignment', () => {
     expect(alignment?.unmatchedBoxFiles.map((f) => f.id)).toEqual(['file-2']);
   });
 
-  it('reports an error for invalid JSON', async () => {
+  it('reports an error with the parser message for invalid JSON', async () => {
     await uploadMetadata(result.container, '{ not json');
 
     expect(
-      await screen.findByText('The file does not contain valid JSON.'),
+      await screen.findByText(/^The file does not contain valid JSON: \S/),
     ).toBeVisible();
     expect(screen.queryByRole('heading', { name: 'Alignment' })).toBeNull();
 
     expect(component.uploadedMetadata()).toBeUndefined();
-    expect(component.parseError()).toBe('The file does not contain valid JSON.');
+    expect(component.parseError()).toMatch(/^The file does not contain valid JSON: /);
+  });
+
+  it('reports an error for truncated JSON', async () => {
+    const text = JSON.stringify(VALID_METADATA);
+    await uploadMetadata(result.container, text.slice(0, text.length / 2));
+
+    expect(
+      await screen.findByText(/^The file does not contain valid JSON: \S/),
+    ).toBeVisible();
+    expect(component.uploadedMetadata()).toBeUndefined();
+  });
+
+  it('reports an error for an empty file', async () => {
+    await uploadMetadata(result.container, ' \n');
+
+    expect(await screen.findByText('The file is empty.')).toBeVisible();
+    expect(screen.getByText(/metadata\.json \(2\sB\)/)).toBeVisible();
+    expect(component.uploadedMetadata()).toBeUndefined();
+  });
+
+  it('reports a read failure separately from invalid JSON', async () => {
+    const file = metadataFile(JSON.stringify(VALID_METADATA));
+    file.text = () =>
+      Promise.reject(new DOMException('The file changed.', 'NotReadableError'));
+    await uploadMetadata(result.container, file);
+
+    expect(
+      await screen.findByText(/^The file could not be read \(The file changed\.\)/),
+    ).toBeVisible();
+    expect(screen.queryByText(/valid JSON/)).toBeNull();
+    expect(component.uploadedMetadata()).toBeUndefined();
+  });
+
+  it('drops loaded metadata when a later file is rejected', async () => {
+    await uploadMetadata(result.container, JSON.stringify(VALID_METADATA));
+    expect(await screen.findByText('My study')).toBeVisible();
+
+    await uploadMetadata(result.container, '{ not json');
+
+    expect(await screen.findByText(/valid JSON/)).toBeVisible();
+    expect(screen.queryByText('My study')).toBeNull();
+    expect(component.uploadedMetadata()).toBeUndefined();
   });
 
   it('reports an error for a metadata file with the wrong shape', async () => {
