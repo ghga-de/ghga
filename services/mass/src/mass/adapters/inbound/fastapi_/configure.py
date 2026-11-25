@@ -17,6 +17,7 @@
 
 from email.utils import parseaddr
 
+import fastapi
 from fastapi import FastAPI
 
 from ghga_service_commons.api import configure_app
@@ -37,7 +38,9 @@ def get_configured_app(*, config: Config) -> FastAPI:
     license_info = {"name": license} if license else None
     version = metadata["Version"]
 
-    app = FastAPI(
+    # The OpenTelemetry setup replaces `fastapi.FastAPI` after this module bound
+    # `FastAPI`, so look the class up here to get the instrumented one.
+    app = fastapi.FastAPI(
         contact=contact,
         license_info=license_info,
         summary=summary,
