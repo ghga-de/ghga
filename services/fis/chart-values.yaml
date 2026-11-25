@@ -18,6 +18,9 @@ config:
   migration_max_wait_sec: 600
   enable_opentelemetry: false
   kafka_enable_dlq: true
+  # retry before the DLQ, so a short database outage does not park an event there
+  kafka_max_retries: 3
+  kafka_retry_backoff: 2
   ekss_api_url: http://encryption-key-store:8080
 
 executableArgs:

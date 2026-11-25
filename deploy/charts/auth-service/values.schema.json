@@ -1117,6 +1117,40 @@
             "null"
           ]
         },
+        "kafka_max_retries": {
+          "default": 0,
+          "description": "The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue.",
+          "examples": [
+            0,
+            1,
+            2,
+            3,
+            5
+          ],
+          "minimum": 0,
+          "title": "Kafka Max Retries",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "kafka_retry_backoff": {
+          "default": 0,
+          "description": "The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt.",
+          "examples": [
+            0,
+            1,
+            2,
+            3,
+            5
+          ],
+          "minimum": 0,
+          "title": "Kafka Retry Backoff",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "db_version_collection": {
           "description": "The name of the collection containing DB version information for this service",
           "examples": [
@@ -1453,23 +1487,6 @@
           ],
           "title": "Kafka Compression Type"
         },
-        "kafka_max_retries": {
-          "default": 0,
-          "description": "The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue.",
-          "examples": [
-            0,
-            1,
-            2,
-            3,
-            5
-          ],
-          "minimum": 0,
-          "title": "Kafka Max Retries",
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
         "kafka_dlq_topic": {
           "default": "dlq",
           "description": "The name of the topic used to resolve error-causing events.",
@@ -1479,23 +1496,6 @@
           "title": "Kafka DLQ Topic",
           "type": [
             "string",
-            "null"
-          ]
-        },
-        "kafka_retry_backoff": {
-          "default": 0,
-          "description": "The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt.",
-          "examples": [
-            0,
-            1,
-            2,
-            3,
-            5
-          ],
-          "minimum": 0,
-          "title": "Kafka Retry Backoff",
-          "type": [
-            "integer",
             "null"
           ]
         },

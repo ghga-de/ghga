@@ -219,6 +219,8 @@ config:
   host: 0.0.0.0
   enable_opentelemetry: false
   kafka_enable_dlq: true
+  kafka_max_retries: 3
+  kafka_retry_backoff: 2
   db_version_collection: "authDbVersions"
   migration_wait_sec: 10
   migration_max_wait_sec: 600
