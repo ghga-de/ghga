@@ -20,13 +20,14 @@ from pydantic import Field, ValidationInfo, field_validator
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
 from top.core.oidc_provider import OidcProviderConfig
 
 SERVICE_NAME = "top"
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
-class Config(ApiConfigBase, OidcProviderConfig, LoggingConfig):
+class Config(ApiConfigBase, OidcProviderConfig, LoggingConfig, OpenTelemetryConfig):
     """Config parameters and their defaults."""
 
     service_name: str = Field(

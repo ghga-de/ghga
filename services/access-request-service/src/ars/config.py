@@ -26,6 +26,7 @@ from ghga_service_commons.api import ApiConfigBase
 from ghga_service_commons.auth.ghga import AuthConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
 
@@ -34,6 +35,7 @@ SERVICE_NAME = "ars"
 
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
+    OpenTelemetryConfig,
     ApiConfigBase,
     AuthConfig,
     LoggingConfig,

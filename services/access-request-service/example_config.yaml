@@ -27,6 +27,8 @@ db_name: access-request
 db_version_collection: arsDbVersions
 docs_url: /docs
 download_access_url: http://127.0.0.1:8080/download-access
+enable_opentelemetry: false
+enable_otel_metrics: false
 generate_correlation_id: true
 host: 127.0.0.1
 kafka_compression_type: null
@@ -51,6 +53,7 @@ mongo_dsn: '**********'
 mongo_timeout: null
 notification_topic: notifications
 openapi_url: /openapi.json
+otel_trace_sampling_rate: 1.0
 port: 8080
 service_instance_id: '1'
 service_name: ars

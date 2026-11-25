@@ -1,6 +1,8 @@
 db_name: notification
 db_version_collection: nsDbVersions
 email_notification_type: email_notification
+enable_opentelemetry: false
+enable_otel_metrics: false
 from_address: test@test.com
 generate_correlation_id: true
 html_email_template: '<!DOCTYPE html><html><head></head><body style="color: #00393f;padding:
@@ -33,6 +35,7 @@ migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 notification_topic: notifications
+otel_trace_sampling_rate: 1.0
 plaintext_email_template: 'Dear $recipient_name,
 
 

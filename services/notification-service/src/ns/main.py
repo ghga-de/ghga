@@ -16,6 +16,7 @@
 """Service entry point function(s)."""
 
 from hexkit.log import configure_logging
+from hexkit.opentelemetry import configure_opentelemetry
 from hexkit.providers.mongodb.migrations import MigrationManager
 from ns.config import Config
 from ns.inject import prepare_event_subscriber
@@ -29,6 +30,7 @@ async def consume_events(run_forever: bool = True):
     config = Config()
 
     configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)

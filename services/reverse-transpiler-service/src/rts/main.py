@@ -22,6 +22,7 @@ Additional endpoints might be structured in dedicated modules
 
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
+from hexkit.opentelemetry import configure_opentelemetry
 from hexkit.providers.mongodb.migrations import MigrationManager
 from rts.config import Config
 from rts.inject import prepare_event_subscriber, prepare_rest_app
@@ -34,6 +35,7 @@ async def run_rest_app():
     """Run the HTTP REST API."""
     config = Config()
     configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
@@ -43,6 +45,7 @@ async def consume_events(run_forever: bool = True):
     """Run the event consumer"""
     config = Config()
     configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)

@@ -20,6 +20,7 @@ from ars.migrations import MIGRATION_MAP
 from ars.prepare import prepare_access_request_dao, prepare_consumer, prepare_rest_app
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
+from hexkit.opentelemetry import configure_opentelemetry
 from hexkit.providers.mongodb.migrations import MigrationManager
 
 DB_VERSION = 3
@@ -29,6 +30,7 @@ async def run_rest_app():
     """Run the HTTP REST API."""
     config = Config()
     configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
@@ -38,6 +40,7 @@ async def consume_events(run_forever: bool = True) -> None:
     """Run an event consumer listening to the configured topic."""
     config = Config()
     configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
 
     async with prepare_consumer(config=config) as consumer:
         await consumer.event_subscriber.run(forever=run_forever)
@@ -47,6 +50,7 @@ async def publish_events(*, all: bool = False):
     """Publish pending events. Set `--all` to (re)publish all events regardless of status."""
     config = Config()
     configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
 
     async with prepare_access_request_dao(config=config) as outbox_publisher:
         if all:

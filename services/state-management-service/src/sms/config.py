@@ -31,6 +31,7 @@ from ghga_service_commons.api import ApiConfigBase
 from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka import KafkaConfig
 from sms.core.secrets_handler import VaultConfig
 
@@ -150,6 +151,7 @@ class SmsConfig(VaultConfig):
 
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
+    OpenTelemetryConfig,
     ApiConfigBase,
     LoggingConfig,
     SmsConfig,
