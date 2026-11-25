@@ -752,6 +752,69 @@
               }
             }
           }
+        },
+        "deadLetterQueue": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "topic": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "default": "kafka_dlq_topic"
+                },
+                "value": {
+                  "type": "string",
+                  "default": "dlq"
+                }
+              }
+            },
+            "kafkaUser": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "operations": {
+                  "type": "array",
+                  "default": [
+                    "Write"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "deadLetterQueueRetry": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "topic": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "name": {
+                  "default": null
+                },
+                "value": {
+                  "type": "string",
+                  "default": "retry"
+                }
+              }
+            },
+            "kafkaUser": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "operations": {
+                  "type": "array",
+                  "default": [
+                    "Read"
+                  ]
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -963,6 +1026,19 @@
           "default": false,
           "description": "If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled.",
           "title": "Enable Opentelemetry",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "kafka_enable_dlq": {
+          "default": false,
+          "description": "A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries",
+          "examples": [
+            true,
+            false
+          ],
+          "title": "Kafka Enable DLQ",
           "type": [
             "boolean",
             "null"
@@ -1501,19 +1577,6 @@
           "title": "Kafka Max Retries",
           "type": [
             "integer",
-            "null"
-          ]
-        },
-        "kafka_enable_dlq": {
-          "default": false,
-          "description": "A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries",
-          "examples": [
-            true,
-            false
-          ],
-          "title": "Kafka Enable DLQ",
-          "type": [
-            "boolean",
             "null"
           ]
         },

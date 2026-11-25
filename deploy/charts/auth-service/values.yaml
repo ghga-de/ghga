@@ -173,6 +173,20 @@ _topics:
     kafkaUser:
       operations:
       - Write
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+      - Write
+  deadLetterQueueRetry:
+    topic:
+      name:
+      value: retry
+    kafkaUser:
+      operations:
+      - Read
 _consumerGroup:
   operations:
   - Read
@@ -204,6 +218,7 @@ config:
   mongo_dsn:
   host: 0.0.0.0
   enable_opentelemetry: false
+  kafka_enable_dlq: true
   db_version_collection: "authDbVersions"
   migration_wait_sec: 10
   migration_max_wait_sec: 600
