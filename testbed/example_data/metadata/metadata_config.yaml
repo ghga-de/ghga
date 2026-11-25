@@ -120,6 +120,13 @@ workflow_config:
   add_accessions:
     accession_slot_name: accession
     accession_slot_description: The accession for an entity.
+  remove_excluded_files:
+    resources_to_delete:
+      ResearchDataFile: {included_in_submission: false}
+      ProcessDataFile: {included_in_submission: false}
+      ExperimentMethodSupportingFile: {included_in_submission: false}
+      AnalysisMethodSupportingFile: {included_in_submission: false}
+      IndividualSupportingFile: {included_in_submission: false}
   embed_restricted:
     embedding_profiles:
       - target_class: EmbeddedDataset

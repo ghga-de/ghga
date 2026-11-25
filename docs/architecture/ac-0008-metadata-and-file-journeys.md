@@ -152,12 +152,13 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
 - Entities reference each other **by alias** at submission time; `add_accessions` swaps aliases for accessions during transform.
 - Study↔Dataset: `Dataset.study` is a **single** alias reference (`testbed/.../metadata_study_a.json`).
   Files (`ResearchDataFile`, `ProcessDataFile`, `*SupportingFile`) carry `alias`, a `name` (filename), a `dataset` ref, and an `ega_accession` slot.
+  `included_in_submission: false` marks a declared file that was not submitted; `remove_excluded_files` drops it and its references from every artifact after `added_accessions`.
   Study→datasets is *inferred* during transform (`Study<(study)Dataset`).
 - **`studies[0]` assumption:** the loader derives a publishable artifact's `study_accession` from `content["studies"][0]["accession"]` (`libs/metldata/src/metldata/load/collect.py:91`) — a hard one-study-per-submission assumption. → [made a hard rule by the feature](../epics/epic-0093-giraffe.md).
 
 ### Transform artifacts
 
-Workflow `builtin_workflows/ghga_archive.py:36`: normalize → **add_accessions** → embed_restricted → infer_multiway_references → merge_dataset_file_lists → remove_restricted_metadata → aggregate_stats → embed_public.
+Workflow `builtin_workflows/ghga_archive.py`: normalize → **add_accessions** → remove_excluded_files → embed_restricted → infer_multiway_references → merge_dataset_file_lists → remove_restricted_metadata → aggregate_stats → embed_public.
 Artifacts produced: `added_accessions`, `embedded_restricted`, `resolved_restricted`, `resolved_public`, `embedded_public`, `stats_public`.
 The **primary** queryable artifact/class is `embedded_public` / `EmbeddedDataset`.
 

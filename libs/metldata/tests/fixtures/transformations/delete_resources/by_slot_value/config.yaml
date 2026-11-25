@@ -1,0 +1,3 @@
+resources_to_delete:
+  File:
+    included_in_submission: false

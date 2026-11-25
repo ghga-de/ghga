@@ -23,6 +23,9 @@ from metldata.builtin_transformations.aggregate import AGGREGATE_TRANSFORMATION
 from metldata.builtin_transformations.custom_embeddings import (
     CUSTOM_EMBEDDING_TRANSFORMATION,
 )
+from metldata.builtin_transformations.delete_resources import (
+    RESOURCE_DELETION_TRANSFORMATION,
+)
 from metldata.builtin_transformations.delete_slots import SLOT_DELETION_TRANSFORMATION
 from metldata.builtin_transformations.infer_references import (
     REFERENCE_INFERENCE_TRANSFORMATION,
@@ -46,13 +49,21 @@ GHGA_ARCHIVE_WORKFLOW = WorkflowDefinition(
             transformation_definition=ACCESSION_ADDITION_TRANSFORMATION,
             input="normalize_model",
         ),
+        "remove_excluded_files": WorkflowStep(
+            description=(
+                "Remove files that are not included in the submission, and the"
+                + " references to them, so that no derived artifact lists them."
+            ),
+            transformation_definition=RESOURCE_DELETION_TRANSFORMATION,
+            input="add_accessions",
+        ),
         "embed_restricted": WorkflowStep(
             description=(
                 "A step to generate a fully embedded metadata for data recipients that"
                 + " have been granted controlled access to that dataset."
             ),
             transformation_definition=CUSTOM_EMBEDDING_TRANSFORMATION,
-            input="add_accessions",
+            input="remove_excluded_files",
         ),
         "infer_multiway_references": WorkflowStep(
             description=(
@@ -63,7 +74,7 @@ GHGA_ARCHIVE_WORKFLOW = WorkflowDefinition(
                 + " connected via a common reference are established."
             ),
             transformation_definition=REFERENCE_INFERENCE_TRANSFORMATION,
-            input="add_accessions",
+            input="remove_excluded_files",
         ),
         "merge_dataset_file_lists": WorkflowStep(
             description=(

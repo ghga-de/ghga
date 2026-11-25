@@ -1,0 +1,9 @@
+files:
+  - alias: F1
+    name: file_1.fastq.gz
+    included_in_submission: true
+analyses:
+  - alias: A1
+    files: [F1]
+  - alias: A2
+    files: []

@@ -228,6 +228,19 @@
       "name": "SAMPLE_2_SPECIMEN_1_FILE_9.fastq.gz",
       "sequencing_lane_id": "LANE_131",
       "technical_replicate": 6
+    },
+    {
+      "alias": "RESEARCH_DATA_FILE_10",
+      "dataset": "DS_B",
+      "ega_accession": "EGAFILE12355",
+      "experiments": [
+        "EXP_2"
+      ],
+      "format": "FASTQ",
+      "included_in_submission": false,
+      "name": "SAMPLE_2_SPECIMEN_1_FILE_10.fastq.gz",
+      "sequencing_lane_id": "LANE_132",
+      "technical_replicate": 1
     }
   ],
   "samples": [

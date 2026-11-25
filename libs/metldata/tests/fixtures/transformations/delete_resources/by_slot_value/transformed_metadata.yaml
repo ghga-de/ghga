@@ -1,0 +1,6 @@
+files:
+  - alias: F1
+    name: file_1.fastq.gz
+    included_in_submission: true
+  - alias: F3
+    name: file_3.fastq.gz

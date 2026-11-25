@@ -115,6 +115,9 @@ def file_fixture(config: Config, dsk: DskFixture) -> Generator[dict[str, FileBat
             datasets[dataset["alias"]] = []
         for file_field in dsk.config.metadata_file_fields:
             for file in metadata[file_field]:
+                # a file declared but not submitted is never uploaded
+                if file.get("included_in_submission") is False:
+                    continue
                 datasets[file["dataset"]].append(file)
     assert set(datasets) == {"DS_A", "DS_B"}
 
