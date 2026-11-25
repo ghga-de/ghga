@@ -17,7 +17,7 @@ The demo and the test bed run without most of them ([ADR-0028](../adrs/adr-0028-
 | Traffic between workloads | Plain HTTP | mTLS through the Istio ambient mesh |
 | Callers of an internal API | `authorizationPolicy.enabled: false` | An Istio `AuthorizationPolicy` per service |
 | Kafka | `kafkaUser.enabled: false`, plaintext broker | TLS, one `KafkaUser` with ACLs per workload |
-| Secrets | Kubernetes Secrets from a pre-install Job | Vault Agent injection ([ADR-0035](../adrs/adr-0035-secrets-and-tls.md)) |
+| Secrets | Kubernetes Secrets from a pre-install Job | Vault Agent injection ([ADR-0035](../adrs/adr-0035-secrets-and-tls.md)); a CSI provider is planned |
 | Logs | Container output | Readable by the DevOps team only |
 | Test-only services | Off; on in the test-bed profile | Never deployed |
 
@@ -51,6 +51,7 @@ The demo broker runs plaintext without ACLs, which is why the charts default to 
 ## Secrets and logs
 
 Production secrets come from Vault ([ADR-0035](../adrs/adr-0035-secrets-and-tls.md)), and `auth-km-jobs` rotates the signing keys there.
+Vault Agent injects them today; a planned move to a Secrets Store CSI provider would mount them as files without a sidecar in each pod.
 Only the DevOps team can read container logs and the log aggregation.
 That does not make logs a place for secrets: a config field that holds one is typed as a pydantic `Secret`, which the startup log masks, and `just service-docs` fails on a field whose name marks it as a secret but whose type does not.
 
