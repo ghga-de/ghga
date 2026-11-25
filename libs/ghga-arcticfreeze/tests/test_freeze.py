@@ -188,3 +188,17 @@ def test_errors_are_value_errors(value: object, error_type: type[Exception]):
 
     with pytest.raises(ValidationError, match="Value error"):
         Model(value=value)
+
+
+@pytest.mark.parametrize("shared_first", [True, False])
+def test_shared_object_depth_counted_everywhere(shared_first: bool):
+    """A shared object counts at its deepest occurrence, whichever comes first, so
+    reusing its frozen result cannot exceed the maximum depth.
+    """
+    shared = _nest(50)
+    deeper: object = shared
+    for _ in range(60):
+        deeper = [deeper]
+    items = [shared, deeper] if shared_first else [deeper, shared]
+    with pytest.raises(MaxDepthExceededError):
+        freeze(items)

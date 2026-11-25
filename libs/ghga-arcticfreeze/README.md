@@ -96,6 +96,7 @@ The priorities decide which converter is used when matching by superclass (`by_s
   With `max_depth=None`, only the recursion limit bounds it, and reaching that limit raises `MaxDepthExceededError` as well.
 - **Cycles:** an object that contains itself raises `ReferenceCycleError`.
 - **Shared objects:** an object that occurs several times, as YAML aliases produce, is frozen only once, and all occurrences share the result.
+  Each occurrence still counts at its own depth, so sharing cannot build a result nested deeper than `max_depth`.
 
 All errors subclass `FreezeError`, a `ValueError`, so Pydantic reports them as validation errors when `freeze` runs in a validator:
 

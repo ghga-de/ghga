@@ -60,7 +60,10 @@ class _Freezer:
             converters=converters, by_superclass=by_superclass
         )
         self._max_depth = max_depth
-        self._memo: dict[int, tuple[object, object]] = {}
+        # Maps an id to the object, its frozen result and how deep below it goes:
+        self._memo: dict[int, tuple[object, object, int]] = {}
+        # The deepest level reached so far in the subtree being frozen:
+        self._deepest = 0
 
     def freeze(self, obj: object, depth: int) -> object:
         """Freeze an object found at the given nesting depth."""
@@ -72,19 +75,28 @@ class _Freezer:
         freeze_child = self._child_freezer(depth + 1)
 
         if input_type in _ATOMIC_TYPES:
+            self._deepest = max(self._deepest, depth)
             return converter.convert(obj, freeze_child)
 
         key = id(obj)
         entry = self._memo.get(key)
         if entry is not None:
-            frozen = entry[1]
+            _, frozen, height = entry
             if frozen is _IN_PROGRESS:
                 raise ReferenceCycleError(input_type=input_type)
+            # Reusing the result reaches as deep as freezing the object again would:
+            reached = depth + height
+            if self._max_depth is not None and reached > self._max_depth:
+                raise MaxDepthExceededError(max_depth=self._max_depth)
+            self._deepest = max(self._deepest, reached)
             return frozen
 
-        self._memo[key] = (obj, _IN_PROGRESS)
+        outer_deepest = self._deepest
+        self._deepest = depth
+        self._memo[key] = (obj, _IN_PROGRESS, 0)
         frozen = converter.convert(obj, freeze_child)
-        self._memo[key] = (obj, frozen)
+        self._memo[key] = (obj, frozen, self._deepest - depth)
+        self._deepest = max(outer_deepest, self._deepest)
         return frozen
 
     def _child_freezer(self, depth: int) -> Callable[[object], object]:
