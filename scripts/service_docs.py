@@ -10,6 +10,8 @@ For each one the script loads `<package>.config.Config` from the member's
 - the parameter list in the README, between the `config-docs` markers;
 - `openapi.yaml`, the OpenAPI specification of its REST API, when it has one.
 
+It also fails when a config field that holds a secret is not typed as a pydantic
+`Secret`, since hexkit logs the whole config at startup and masks only those.
 With `--check` it writes nothing and fails when a file is out of date.
 Given paths, it handles only the members they belong to; a path outside a member,
 such as this script, selects them all, and so does giving none.
@@ -33,11 +35,14 @@ import pathlib
 import re
 import subprocess
 import sys
+import typing
 import warnings
+from collections.abc import Iterator
 
 import jsonschema2md
 import yaml
 from fastapi import FastAPI
+from pydantic import BaseModel, Secret, SecretBytes, SecretStr
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MEMBER_GLOBS = ("libs/*", "services/*", "tools/*")
@@ -55,6 +60,18 @@ END_MARKER = "<!-- config-docs: end -->"
 # punctuation belongs to the sentence, not to the URL.
 BARE_URL = re.compile(r"(?<![<(])\bhttps?://\w[^\s<>)]*?(?=[.,;:]?(?:\s|$))")
 INLINE_CODE = re.compile(r"(`+).*?\1")
+
+# Names of string fields that hold a secret; an `_id` or a `_path` only points to one.
+SECRET_NAME = re.compile(
+    r"password|passphrase|credentials|secret(?!_id)|private_key(?!_path)|signing_key"
+)
+# Secrets whose name does not say so, by member.
+SECRET_FIELDS = {"auth-service": {"auth_key"}}
+# Names that match SECRET_NAME but hold no secret, each with the reason.
+NOT_SECRET = {
+    "vault_secrets_mount_point": "the path of the Vault secrets engine",
+}
+SECRET_TYPES = (SecretStr, SecretBytes, Secret)
 
 
 def members(paths: list[str]) -> list[pathlib.Path]:
@@ -100,6 +117,39 @@ def load_config(member: pathlib.Path):
     os.environ.setdefault(f"{package.upper()}_CONFIG_YAML", str(source))
     module = importlib.import_module(f"{package}.config")
     return module.Config(config_yaml=source)
+
+
+def annotation_types(annotation) -> Iterator[type]:
+    """The classes an annotation names, its type arguments and their origins included."""
+    if isinstance(annotation, type):
+        yield annotation
+    origin = typing.get_origin(annotation)
+    if isinstance(origin, type):
+        yield origin
+    for argument in typing.get_args(annotation):
+        yield from annotation_types(argument)
+
+
+def unmasked_secrets(
+    model: type[BaseModel], secret_fields: set[str], prefix: str = ""
+) -> Iterator[str]:
+    """The dotted paths of the model's secret fields not typed as a pydantic Secret.
+
+    A field counts as secret when it is listed in `secret_fields`, or when it is
+    typed as a string and its name matches SECRET_NAME; nested models are searched.
+    """
+    for name, field in model.model_fields.items():
+        path = prefix + name
+        types = set(annotation_types(field.annotation))
+        nested = {t for t in types if issubclass(t, BaseModel)}
+        for nested_model in sorted(nested, key=lambda t: t.__name__):
+            yield from unmasked_secrets(nested_model, secret_fields, f"{path}.")
+        if any(issubclass(t, SECRET_TYPES) for t in types):
+            continue
+        if path in secret_fields or (
+            SECRET_NAME.search(name) and name not in NOT_SECRET and types & {str, bytes}
+        ):
+            yield path
 
 
 def render_schema(config) -> str:
@@ -248,9 +298,8 @@ def render_readme(readme: pathlib.Path, parameters: str) -> str:
     return format_markdown(text, readme)
 
 
-def expected_files(member: pathlib.Path) -> dict[pathlib.Path, str]:
+def expected_files(member: pathlib.Path, config) -> dict[pathlib.Path, str]:
     """Each generated file of the member and the content it should have."""
-    config = load_config(member)
     schema = render_schema(config)
     files = {
         member / SCHEMA_FILE: schema,
@@ -274,8 +323,15 @@ def main() -> int:
     warnings.simplefilter("ignore")
 
     stale = []
+    unmasked: list[str] = []
     for member in members(args.paths):
-        for path, content in expected_files(member).items():
+        config = load_config(member)
+        secret_fields = SECRET_FIELDS.get(member.name, set())
+        unmasked.extend(
+            f"  {member.relative_to(ROOT)}: {path}"
+            for path in unmasked_secrets(type(config), secret_fields)
+        )
+        for path, content in expected_files(member, config).items():
             current = path.read_text() if path.is_file() else ""
             if current == content:
                 continue
@@ -292,14 +348,22 @@ def main() -> int:
             else:
                 path.write_text(content)
 
+    if unmasked:
+        listing = "\n".join(unmasked)
+        print(
+            "Secret config values not typed as a pydantic Secret, so the startup log"
+            f" shows them in clear text:\n{listing}\nType them as SecretStr, or add"
+            " the name to NOT_SECRET in scripts/service_docs.py with the reason.",
+            file=sys.stderr,
+        )
     if not stale:
-        return 0
+        return 1 if unmasked else 0
     listing = "\n".join(f"  {path}" for path in stale)
     if args.check:
         print(f"\nOut of date; run `just service-docs`:\n{listing}", file=sys.stderr)
         return 1
     print(f"Updated:\n{listing}")
-    return 0
+    return 1 if unmasked else 0
 
 
 if __name__ == "__main__":
