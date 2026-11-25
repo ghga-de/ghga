@@ -84,6 +84,32 @@ point_converter = Converter(
 assert freeze(Point(1, 2), add_converters=[point_converter]) == (1, 2)
 ```
 
+A custom converter for a type that already has a standard converter replaces it, whatever their priorities.
+The priorities decide which converter is used when matching by superclass (`by_superclass=True`).
+
+### Untrusted input
+
+`freeze` is safe to run on data from an untrusted source, such as a parsed request body:
+
+- **Depth:** `max_depth` (default `DEFAULT_MAX_DEPTH`, 100) bounds the nesting depth, where the children of the root object are at depth 1.
+  A deeper object raises `MaxDepthExceededError` instead of exhausting the call stack.
+  With `max_depth=None`, only the recursion limit bounds it, and reaching that limit raises `MaxDepthExceededError` as well.
+- **Cycles:** an object that contains itself raises `ReferenceCycleError`.
+- **Shared objects:** an object that occurs several times, as YAML aliases produce, is frozen only once, and all occurrences share the result.
+
+All errors subclass `FreezeError`, a `ValueError`, so Pydantic reports them as validation errors when `freeze` runs in a validator:
+
+```python
+from typing import Annotated, Any
+
+from arcticfreeze import freeze
+from pydantic import BaseModel, BeforeValidator
+
+
+class Document(BaseModel):
+    content: Annotated[Any, BeforeValidator(freeze)]
+```
+
 ### FrozenDict in Pydantic models
 
 ```python

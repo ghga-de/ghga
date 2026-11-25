@@ -17,9 +17,22 @@
 
 """Test the freeze function."""
 
-import pytest
+import sys
+from collections.abc import Callable
+from typing import Annotated, Any
 
-from arcticfreeze import freeze
+import pytest
+from pydantic import BaseModel, BeforeValidator, ValidationError
+
+from arcticfreeze import (
+    DEFAULT_MAX_DEPTH,
+    Converter,
+    ConverterNotFoundError,
+    FreezeError,
+    MaxDepthExceededError,
+    ReferenceCycleError,
+    freeze,
+)
 from tests.cases import INVALID_CASES, VALID_CASES, InvalidTestCase, ValidTestCase
 
 
@@ -47,3 +60,131 @@ def test_invalid_inputs(test_case: InvalidTestCase):
     """Test the arctic freeze function with invalid inputs."""
     with pytest.raises(test_case.expected_exception_type):
         freeze(test_case.inputs)
+
+
+def _nest(depth: int, container: type = list) -> object:
+    """Build a structure whose innermost object is at the given depth."""
+    obj: object = 1
+    for _ in range(depth):
+        obj = [obj] if container is list else {"a": obj}
+    return obj
+
+
+@pytest.mark.parametrize("container", [list, dict])
+def test_max_depth_reached(container: type):
+    """An object nested exactly to the maximum depth is frozen."""
+    assert freeze(_nest(DEFAULT_MAX_DEPTH, container)) == freeze(
+        _nest(DEFAULT_MAX_DEPTH, container), max_depth=None
+    )
+    freeze(_nest(5, container), max_depth=5)
+
+
+@pytest.mark.parametrize("container", [list, dict])
+def test_max_depth_exceeded(container: type):
+    """An object nested deeper than the maximum depth is rejected."""
+    with pytest.raises(MaxDepthExceededError, match="more than 100 levels") as info:
+        freeze(_nest(DEFAULT_MAX_DEPTH + 1, container))
+    assert info.value.max_depth == DEFAULT_MAX_DEPTH
+
+    with pytest.raises(MaxDepthExceededError, match="more than 5 levels"):
+        freeze(_nest(6, container), max_depth=5)
+
+    with pytest.raises(MaxDepthExceededError):
+        freeze([1], max_depth=0)
+
+
+def test_max_depth_disabled():
+    """Without a maximum depth, nesting is limited only by the recursion limit, which
+    still fails with a MaxDepthExceededError instead of a RecursionError.
+    """
+    freeze(_nest(DEFAULT_MAX_DEPTH + 50), max_depth=None)
+
+    with pytest.raises(MaxDepthExceededError, match="recursion limit") as info:
+        freeze(_nest(sys.getrecursionlimit()), max_depth=None)
+    assert info.value.max_depth is None
+    assert isinstance(info.value.__cause__, RecursionError)
+
+
+def test_max_depth_negative():
+    """A negative maximum depth is rejected."""
+    with pytest.raises(ValueError, match="must not be negative"):
+        freeze(1, max_depth=-1)
+
+
+def test_reference_cycle():
+    """An object that contains itself is rejected, also when max_depth is None."""
+    cyclic_list: list = [1]
+    cyclic_list.append(cyclic_list)
+    with pytest.raises(ReferenceCycleError, match="list"):
+        freeze(cyclic_list, max_depth=None)
+
+    cyclic_dict: dict = {"a": {}}
+    cyclic_dict["a"]["b"] = [cyclic_dict]
+    with pytest.raises(ReferenceCycleError, match="dict"):
+        freeze(cyclic_dict)
+
+
+def test_shared_object_frozen_once():
+    """An object that occurs several times is frozen once and shared, so repeated
+    references, as produced by YAML aliases, do not multiply the work.
+    """
+    calls = 0
+
+    def convert_list(obj: list, freeze_child: Callable) -> tuple:
+        nonlocal calls
+        calls += 1
+        return tuple(freeze_child(child) for child in obj)
+
+    shared = [1, 2]
+    level: list = [shared]
+    for _ in range(20):
+        level = [level] * 10  # 10**20 paths, without the memo
+
+    frozen = freeze(level, add_converters=[Converter(list, convert_list)])
+    assert calls == 22
+    assert isinstance(frozen, tuple)
+    assert frozen[0] is frozen[1]
+
+
+def test_temporary_objects_not_confused():
+    """A converter may pass temporary objects to freeze_child; one dropped temporary
+    must not be confused with the next one that gets the same id.
+    """
+
+    class Point:
+        def __init__(self, x: int, y: int):
+            self.x = x
+            self.y = y
+
+    point_converter = Converter(
+        input_type=Point,
+        convert=lambda obj, freeze_child: freeze_child([obj.x, obj.y]),
+    )
+    points = [Point(i, -i) for i in range(1000)]
+
+    frozen = freeze(points, add_converters=[point_converter])
+    assert frozen == tuple((i, -i) for i in range(1000))
+
+
+@pytest.mark.parametrize(
+    "value, error_type",
+    [
+        (object(), ConverterNotFoundError),
+        (_nest(DEFAULT_MAX_DEPTH + 1), MaxDepthExceededError),
+    ],
+)
+def test_errors_are_value_errors(value: object, error_type: type[Exception]):
+    """Freeze errors subclass ValueError, so Pydantic reports them as validation
+    errors when freeze runs in a validator.
+    """
+
+    class Model(BaseModel):
+        value: Annotated[Any, BeforeValidator(lambda obj: freeze(obj))]
+
+    with pytest.raises(error_type) as info:
+        freeze(value)
+    assert isinstance(info.value, FreezeError)
+    assert isinstance(info.value, ValueError)
+
+    with pytest.raises(ValidationError, match="Value error"):
+        Model(value=value)

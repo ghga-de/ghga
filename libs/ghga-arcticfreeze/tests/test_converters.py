@@ -19,6 +19,7 @@
 
 import pytest
 
+from arcticfreeze import Converter, freeze
 from arcticfreeze._internal._converters import STANDARD_CONVERTERS
 from arcticfreeze._internal.resolve import sort_and_deduplicate_converters
 
@@ -30,3 +31,47 @@ def test_converter_sequences(converters):
     """
     expected_converters, _ = sort_and_deduplicate_converters(converters)
     assert expected_converters == converters
+
+
+@pytest.mark.parametrize("priority", [-1000, 0, 1000])
+@pytest.mark.parametrize("input_value", [[1], "text", {"a": 1}])
+def test_custom_converter_replaces_standard(priority: int, input_value: object):
+    """A custom converter for a type that has a standard converter is used instead of
+    it, whatever the priorities.
+    """
+    custom = Converter(
+        input_type=type(input_value),
+        convert=lambda obj, freeze_child: "custom",
+        priority=priority,
+    )
+    assert freeze(input_value, add_converters=[custom]) == "custom"
+
+
+def test_superclass_match_by_priority():
+    """Matching by superclass uses the matching converter with the highest priority,
+    and the one defined first among equal priorities.
+    """
+
+    class Base:
+        pass
+
+    class Middle(Base):
+        pass
+
+    class Leaf(Middle):
+        pass
+
+    def converter(input_type: type, result: str, priority: int) -> Converter:
+        return Converter(input_type, lambda obj, _: result, priority)
+
+    low_base = converter(Base, "base", -10)
+    high_middle = converter(Middle, "middle", 10)
+    assert (
+        freeze(Leaf(), add_converters=[low_base, high_middle], by_superclass=True)
+        == "middle"
+    )
+    high_base = converter(Base, "base", 10)
+    assert (
+        freeze(Leaf(), add_converters=[high_base, high_middle], by_superclass=True)
+        == "base"
+    )

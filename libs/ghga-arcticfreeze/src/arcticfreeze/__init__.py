@@ -20,14 +20,24 @@
 from importlib.metadata import version
 
 from ._internal._converters import STANDARD_CONVERTERS, Converter
-from ._internal.freeze import ConverterNotFoundError, freeze
+from ._internal.errors import (
+    ConverterNotFoundError,
+    FreezeError,
+    MaxDepthExceededError,
+    ReferenceCycleError,
+)
+from ._internal.freeze import DEFAULT_MAX_DEPTH, freeze
 from ._internal.frozendict import FrozenDict
 
 __all__ = [
+    "DEFAULT_MAX_DEPTH",
     "STANDARD_CONVERTERS",
     "Converter",
     "ConverterNotFoundError",
+    "FreezeError",
     "FrozenDict",
+    "MaxDepthExceededError",
+    "ReferenceCycleError",
     "freeze",
 ]
 
