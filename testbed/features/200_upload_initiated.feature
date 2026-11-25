@@ -25,6 +25,7 @@ Feature: 200 Upload Initiated
     Then the response status code is "200"
     And the expected item count in response is "<count>"
     And the response contains an upload box ID for "<storage>" storage
+    And the "<storage>" upload box is last in the priority list
 
     Examples:
       | storage   | count |
@@ -54,6 +55,7 @@ Feature: 200 Upload Initiated
     When "Data Steward" creates an extra data upload box for "primary" storage
     Then the response status code is "201"
     And we have an extra data upload box
+    And the "extra" upload box is last in the priority list
 
     When "Data Steward" deletes the extra data upload box
     Then the response status code is "204"
@@ -62,6 +64,7 @@ Feature: 200 Upload Initiated
     Then the response status code is "200"
     And the expected item count in response is "2"
     And the extra data upload box is no longer listed
+    And the "extra" upload box is no longer in the priority list
 
   Scenario: Data Steward retrieves data upload boxes by page
 

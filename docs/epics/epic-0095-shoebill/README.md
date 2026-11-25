@@ -19,20 +19,19 @@ DHFS processes them in that order, and asks again right after a batch, instead o
 
 ### Included/Required
 
-- **RS** must store the priority order as a single document, holding an ordered list of entries, a `version` counter, `changed_by` and `last_changed`.
+- **RS** must store the priority order as a single document, holding an ordered list of entries, a `version` counter, `changed_by`, `last_changed`, `reordered_by` and `reordered_at`.
   The list holds one entry for every research data upload box that is not archived.
   Each entry holds the research data upload box ID and its file upload box ID, because data stewards rank research data upload boxes and FIS knows only file upload boxes.
   Index 0 is the highest priority.
   `changed_by` and `last_changed` mirror the research data upload box fields of the same names: the ID of the steward whose action changed the list, and the time from `now_utc_ms_prec()`.
   Every change that increments `version` sets both.
+  `reordered_by` and `reordered_at` name the steward who last saved a new order, and when.
+  Only a save sets them, and they are `null` until the first one.
+  Repairs, additions and removals keep them, since they never reorder the boxes already listed, so the page can name the steward who chose the order.
 - RS must offer data stewards two endpoints, one to read the list and one to change the order (see [API definitions](#api-definitions)).
-  A change is a list of moves, each of which puts a box before another box, or at the end.
-  RS applies the moves in order to the list as it is stored at that moment.
-  So if another steward saved in between, the changes of both stewards are kept, and the second save does not fail.
-  RS applies every move, even a move of a box that was archived or deleted in the meantime.
-  Later moves in the same save can refer to that box, so RS drops such boxes only after the last move (see [API definitions](#api-definitions)).
-  RS skips a move only if it cannot place the box, because the box it should go before is not in the list.
-  The response lists the skipped moves.
+  A change sends the whole new order, as a list of research data upload box IDs, with the `version` the page loaded.
+  RS saves it only if `version` is still the stored version, and the list holds exactly the boxes that are not archived.
+  Otherwise RS answers `409`, and the steward makes the change again on the current order.
   Each save that changes the list increments the `version` counter.
   If a save leaves the list unchanged, it doesn't cause any changes in the database: RS returns the stored document without incrementing `version`, publishing an event or writing an audit record.
 - RS must add a box to the end of the list when the box is created, and remove it when the box is deleted or archived.
@@ -42,7 +41,7 @@ DHFS processes them in that order, and asks again right after a batch, instead o
   The repair fixes the list on the next write or the next start of RS.
 - RS must 'repair' the list upon every update, and once when the REST app starts.
   The repair drops entries for boxes that are archived or no longer exist, and adds missing non-archived boxes to the end, oldest `last_changed` first.
-  On a save, RS adds the missing boxes before it applies the moves, and drops the entries after the last move.
+  On a save, RS repairs the list before it compares it with the new order, so the new order can hold a box that the stored list is still missing.
   A crash between writing a box and writing the list can leave such entries, or such gaps (see [States](#states)), which the repair step aims to heal.
   The repair at startup also fills the list with the boxes that existed before this epic, and since the action is triggered by the system, it sets `changed_by` to `null`.
 - RS must publish the document through the outbox (`MongoKafkaDaoPublisherFactory`), with a fixed key on a compacted topic, so a FIS instance that starts later still receives the current list.
@@ -93,32 +92,28 @@ Only data stewards can see box priority or use the endpoints.
 The [basic prototype](./prototype.html) walks through each journey.
 
 1. **See where a box is in the queue.**
-   The Upload Box Manager has a new **Priority** column.
+   The Upload Box Manager has a new **Prio** column.
    It shows the position of each box that is not archived, starting at 1, and is empty for archived boxes.
    The steward can sort the list by this column.
 2. **Change the order.**
-   The steward clicks **Change priority**.
+   The steward clicks **Change order**.
    The list is replaced by the reorder view, which shows all non-archived boxes in priority order.
-   The view also shows the version of the order, and who changed it last and when.
+   Opening the view loads the boxes and the order again, so the steward starts from the current order.
+   The view also shows who last reordered the boxes and when.
    The steward drags boxes, or uses their buttons, to move them.
-   **Save priority** sends the changes and switches back to the list, which confirms the new version.
+   **Save order** sends the new order and switches back to the list, which confirms the save.
 3. **Cancel.**
    **Cancel** throws away the changes and switches back to the list.
    If the steward tries to leave the page with unsaved changes, the page asks first.
 4. **The order changed in the meantime.**
    Another steward saved, or a box was created or archived, while this steward was editing.
-   The save still works, because RS applies the changes to the newer order.
-   The page tells the steward that the saved order also contains other changes.
-   A box that was archived in the meantime is not in the saved order, even if the steward moved it.
-5. **A change no longer applies.**
-   For example, the steward moved a box before another box that was archived or deleted in the meantime.
-   RS no longer knows where that other box was, so it skips the move.
-   The save works without that move, and the page tells the steward how many changes were skipped.
-6. **The save fails.**
+   The save fails, because the new order is based on an older version.
+   The page says so, loads the current order, and asks the steward to make the change again.
+5. **The save fails.**
    The page stays in the reorder view, keeps the changes and asks the steward to try again.
-7. **A new box joins the queue (no user action).**
+6. **A new box joins the queue (no user action).**
    When a steward creates a box, RS adds it to the end of the order.
-8. **Files are processed in the new order (no user action).**
+7. **Files are processed in the new order (no user action).**
    RS publishes the saved order, and FIS stores it within seconds.
    From its next request on, each DHFS gets files in the new order.
 
@@ -129,8 +124,8 @@ sequenceDiagram
     participant RS
     participant FIS
     participant DHFS
-    Steward->>Portal: Change priority, reorder boxes, Save priority
-    Portal->>RS: PATCH /upload-box-priority (moves)
+    Steward->>Portal: Change order, reorder boxes, Save order
+    Portal->>RS: PUT /upload-box-priority (version, box_ids)
     RS-->>Portal: 200, version n+1
     RS->>FIS: priority event (outbox, version n+1)
     DHFS->>FIS: GET /storages/{alias}/uploads
@@ -145,49 +140,39 @@ RS gets two endpoints on a new router.
 Both require the Data Steward role through `StewardAuthContext`, like the existing steward-only RS endpoints, and both answer `401` without a valid token and `403` without the role.
 
 - `GET /upload-box-priority`: return the current priority list.
-  - `200`: the stored document, with `version`, `entries`, `changed_by` and `last_changed` as in the [event payload](#payload-schemas-for-events).
-    If no list has been saved yet, the body is `{"version": 0, "entries": [], "changed_by": null, "last_changed": null}`, so the Data Portal needs no special case beyond the empty change fields.
-- `PATCH /upload-box-priority`: move boxes in the priority order, as described below.
-  - `200`: `{"priority": ..., "skipped": [...], "includes_other_changes": ...}`.
-    `priority` is the stored document after the save, and `skipped` lists the moves RS skipped, as the page sent them.
-    `includes_other_changes` is `true` if the list changed after the version the page loaded.
+  - `200`: the stored document, with `version`, `entries`, `changed_by`, `last_changed`, `reordered_by` and `reordered_at` as in the [event payload](#payload-schemas-for-events).
+    If no list has been saved yet, the body is `{"version": 0, "entries": [], "changed_by": null, "last_changed": null, "reordered_by": null, "reordered_at": null}`, so the Data Portal needs no special case beyond the empty change fields.
+- `PUT /upload-box-priority`: replace the priority order, as described below.
+  - `200`: the stored document after the save.
     The other RS write endpoints answer `204`.
     This one returns the document, so the Data Portal can show the new order without another request.
-  - `422`: the body is malformed, for example with a missing field.
-  - `500`: the write collided with other writes three times in a row, or another error occurred.
+  - `409`: the list changed since `version`, or holds other boxes than `box_ids`.
+    The body has the existing exception ID `boxVersionOutdated`.
+  - `422`: the body is malformed, for example with a missing field or a box listed twice.
+  - `500`: another error occurred.
 
-The request body for `PATCH /upload-box-priority` holds `version`, which is the version the page loaded, and `moves`, which RS applies in order:
+The request body for `PUT /upload-box-priority` holds `version`, which is the version the page loaded, and `box_ids`, the new order:
 
 ```json
 {
   "version": 7,
-  "moves": [
-    {"box_id": "4f0b3c1e-8a9d-4b7e-9c2a-1d3e5f7a9b0c", "before": "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a"},
-    {"box_id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d", "before": null}
+  "box_ids": [
+    "4f0b3c1e-8a9d-4b7e-9c2a-1d3e5f7a9b0c",
+    "7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+    "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d"
   ]
 }
 ```
 
-- A move puts the box `box_id` directly before the box `before`, or at the end if `before` is `null`.
-  Both are research data upload box IDs.
-- If `box_id` is not in the list, the move inserts it, so that later moves can refer to it.
-- RS skips a move if `before` is neither `null` nor in the list, or if `before` is the box itself.
-  If RS skips a move, it still applies the moves after it.
-- `version` does not have to match the stored version.
-  RS only uses it to set `includes_other_changes`.
-- RS handles a save in four steps:
-  1. Read the list, and add missing non-archived boxes to the end, where the page also shows them.
-  2. Apply the moves in order.
-  3. Drop the entries for boxes that are unknown, archived or deleted.
-  4. Write the result, but only if the stored `version` is still the one RS read.
-     If another write came first, RS starts again, up to three times, as box updates already do (`race_condition_retries`).
-- If the result is the same as the stored list, RS writes nothing (see [Included/Required](#includedrequired)).
-
-RS drops boxes only after the last move, because a later move can refer to a box that is gone.
-For example, the stored list is `A, B, C, D, E`, and box `X` was archived while the steward was editing.
-The steward moved `X` before `E`, then `A` before `X`, then `B` before `A`.
-RS applies all three moves, which gives `C, D, B, A, X, E`, and then drops `X`, which gives `C, D, B, A, E`.
-If RS dropped `X` first, it would skip the first two moves, and the result would be `B, A, C, D, E`.
+- `box_ids` holds every research data upload box that is not archived, once.
+  Index 0 is the highest priority.
+- `version` must be the stored version, or 0 if no list is stored yet.
+- RS handles a save in three steps:
+  1. Read the list, add missing non-archived boxes to the end, where the page also shows them, and drop the entries for boxes that are unknown, archived or deleted.
+  2. Answer `409` if `version` is not the version it read, or `box_ids` holds other boxes than the list.
+  3. Write the new order, but only if the stored `version` is still the one RS read.
+     If another write came first, RS reads again, finds a newer `version`, and answers `409`.
+- If the new order is the same as the stored list, RS writes nothing (see [Included/Required](#includedrequired)).
 
 FIS keeps its paths and response models unchanged.
 The list from `GET /storages/{storage_alias}/uploads` now holds at most five files, and its order, undefined until now, follows the rank, which DHFS relies on (see [Sorting the waiting files](#sorting-the-waiting-files)).
@@ -203,6 +188,8 @@ The event types are the outbox's `upserted` and `deleted`.
   "version": 7,
   "changed_by": "2b6f1c9e-3d4a-4e5b-8c7d-9e0f1a2b3c4d",
   "last_changed": "2026-10-14T13:02:11.482Z",
+  "reordered_by": "2b6f1c9e-3d4a-4e5b-8c7d-9e0f1a2b3c4d",
+  "reordered_at": "2026-10-14T13:02:11.482Z",
   "entries": [
     {
       "research_data_upload_box_id": "4f0b3c1e-8a9d-4b7e-9c2a-1d3e5f7a9b0c",
@@ -299,92 +286,96 @@ It already loads all boxes with `GET /upload-boxes`, and now also loads the prio
 It ignores entries that match no box or an archived box.
 If a non-archived box is missing from the list, the page shows it after the listed boxes, oldest `last_changed` first, which is where the next repair puts it.
 
-**List mode** is the current list plus a sortable **Priority** column.
+**List mode** is the current list plus a sortable **Prio** column between the storage location and the last change.
 The column shows each non-archived box's position, starting at 1, and is empty for archived boxes.
+It is right-aligned like **Size** and **Limit**, so that multi-digit positions line up.
 Sorting by it puts archived boxes last.
 The list already sorts and pages in the browser (`upload-box-manager-list.ts`), so the column needs no further RS change.
-If the priority list fails to load, the column stays empty, **Change priority** is disabled, and the page shows a message.
+If the priority list fails to load, the column stays empty, **Change order** is disabled, and the page shows a message.
 
-**Reorder mode** opens when the steward clicks **Change priority**.
+**Reorder mode** opens when the steward clicks **Change order**, which has a `swap_vert` icon.
+Its heading is **Priority order**, and its **Save order** button has a `save` icon; **Cancel** is text only.
+Opening it loads the boxes and the order again, so the steward doesn't learn about a newer order only from a `409` after making the change.
 It replaces the filters, the table and the paginator with one list of all non-archived boxes in priority order.
 Reorder mode has no paging, filters or column sorting, because they don't work with reordering.
 A box cannot be dragged to another page, and "move up" would skip boxes that are hidden.
 
-The header shows the version and "Last changed by <name> on <date>".
-The page turns `changed_by` into a display name with a link to `/user-manager/<id>`, as the upload box detail page does.
+The header shows "Last reordered by <name> on <date> at <time>", from `reordered_by` and `reordered_at`, so two saves on the same day can be told apart.
+It doesn't show the version, which only the save needs.
+The page turns `reordered_by` into a display name with a link to `/user-manager/<id>`, as the upload box detail page does.
 If that fails, it shows the plain ID.
-If `changed_by` is `null` because of a repair at startup, the header shows "Last changed automatically on <date>".
-Before the first write, the header shows "No edit history yet".
+Until a steward first saves an order, the header shows "Not reordered yet".
+The header doesn't use `changed_by`, which repairs and box changes also set, so it often wouldn't name the steward who chose the order.
 The page takes these values from the priority document, because it cannot read the audit log.
 
-Each row shows the box's position, title, storage alias, state and file count.
+Each row shows the box's title, storage location, state, size and limit (for example "2.5 GiB of 10.0 TiB"), and position.
+The size matters more for the re-encryption order than the file count.
+The rows look like the rows of the table, in the same font, size and background, with the state in the table's colours, so the steward finds the boxes again at a glance.
+The position is on the right, right-aligned like the **Prio** column, and the drag handle on the left.
 The steward drags a row to move it (Angular CDK `cdkDropList`, already a dependency).
-The move up, move down and move to top buttons do the same for keyboard users.
+The move up, move down and move to top buttons do the same for keyboard users, and each has a tooltip.
 While the steward drags a row, a bar between two rows shows where the row will be dropped.
 After a move, the row stays highlighted for about 1.5 seconds, so the steward can find it again.
+The rows slide to their new places: while dragging with the CDK's standard transitions, and after a button move in 200 ms, however far the row moves, so moving to the top of a long list is not slower.
+Both animations are skipped if the user prefers reduced motion.
 
-The page records each move, in the order the steward makes them.
-A move's `before` is the box that is now directly below the moved box, or `null` if the moved box is now last.
-If the moves bring the order back to the one the page loaded, the page discards them and disables **Save priority**.
+If the steward brings the order back to the one the page loaded, the page disables **Save order**.
 
-**Save priority** sends the moves and the loaded version with `PATCH /upload-box-priority`.
-If RS answers `200`, the page switches to list mode, shows the order from the response, and confirms the new version.
-It adds a note in two cases:
-
-- If `includes_other_changes` is `true`: "The saved order includes changes made since you started editing."
-- If `skipped` is not empty: "<n> of your changes no longer applied and were skipped, for example because a box was archived in the meantime."
-
-If the save fails, the page stays in reorder mode, keeps the changes, and asks the steward to try again.
+**Save order** sends the new order and the loaded version with `PUT /upload-box-priority`.
+If RS answers `200`, the page switches to list mode, shows the order from the response, and confirms the save.
+If RS answers `409`, the page says that the order changed while the steward was editing, loads the current order, and stays in reorder mode, so the steward can make the change again.
+If the save fails otherwise, the page stays in reorder mode, keeps the changes, and asks the steward to try again.
 **Cancel** throws away the changes and switches to list mode.
+Opening reorder mode moves the focus to its heading, and leaving it moves the focus back to **Change order**, because each removes the button that had the focus.
 The existing `pendingEditsGuard` (`shared/features/pending-edits.ts`) asks before the steward leaves the page with unsaved changes.
 The access request detail page already uses it.
-The page implements `HasPendingEdits`, which reports whether reorder mode has unsaved moves.
+The page implements `HasPendingEdits`, which reports whether reorder mode has unsaved changes.
 The [basic prototype](./prototype.html) shows both modes and each response, without styling.
 
 List mode, with the new column and button (the other columns stay the same):
 
 ```text
-Upload Box Manager                                                [Change priority]
+Upload Box Manager                                                   [Change order]
 [Filters                                                                          ]
 
-| Priority ^ | Title | State    | Files | Location   | Last change      | Details |
-|------------|-------|----------|-------|------------|------------------|---------|
-| 1          | Box B | locked   | 8     | Tuebingen  | 2026-10-12 09:40 | [>]     |
-| 2          | Box A | open     | 120   | Heidelberg | 2026-10-14 11:20 | [>]     |
-| 3          | Box D | open     | 60    | Koeln      | 2026-10-10 16:05 | [>]     |
-| 4          | Box C | open     | 35    | Heidelberg | 2026-10-13 08:15 | [>]     |
-| 5          | Box E | open     | 12    | Tuebingen  | 2026-10-11 14:30 | [>]     |
-|            | Box G | archived | 40    | Heidelberg | 2026-10-01 12:00 | [>]     |
+| Title | State    | Files | Location   | ^ Prio | Last change      | Details |
+|-------|----------|-------|------------|--------|------------------|---------|
+| Box B | locked   | 8     | Tuebingen  |      1 | 2026-10-12 09:40 | [>]     |
+| Box A | open     | 120   | Heidelberg |      2 | 2026-10-14 11:20 | [>]     |
+| Box D | open     | 60    | Koeln      |      3 | 2026-10-10 16:05 | [>]     |
+| Box C | open     | 35    | Heidelberg |      4 | 2026-10-13 08:15 | [>]     |
+| Box E | open     | 12    | Tuebingen  |      5 | 2026-10-11 14:30 | [>]     |
+| Box G | archived | 40    | Heidelberg |        | 2026-10-01 12:00 | [>]     |
                                              Upload boxes per page: 25   1 - 6 of 6
 ```
 
 Reorder mode:
 
 ```text
-Upload Box Manager / Change priority                 [Cancel] [Save priority]
+Upload Box Manager / Priority order                     [Cancel] [Save order]
 Files of boxes higher up are re-encrypted first.
-Version 7, last changed by _Steward A_ on 2026-10-14 15:02
+Last reordered by _Steward A_ on 2026-10-14 15:02
 
 | You have unsaved changes to the priority order.                          |
 
-+- Priority order --------------------------------------+
-| :: (1) Box B                             [^] [v] [^^] |
-|        Tuebingen - locked - 8 files                   |
-|=======================================================|
-| :: (2) Box A                             [^] [v] [^^] |
-|        Heidelberg - open - 120 files                  |
-|                                                       |
-| :: (3) Box D                             [^] [v] [^^] |
-|        Koeln - open - 60 files                        |
-|                                                       |
-| :: (4) Box C                             [^] [v] [^^] |
-|        Heidelberg - open - 35 files                   |
-|                                                       |
-| :: (5) Box E                             [^] [v] [^^] |
-|        Tuebingen - open - 12 files                    |
-|                                                       |
-| Drag a row or use the buttons to change its position. |
-+-------------------------------------------------------+
++- Priority order ----------------------------------------+
+| :: Box B                                 1 [^] [v] [^^] |
+|    Tuebingen - locked - 0.8 TiB of 2.0 TiB              |
+|=========================================================|
+| :: Box A                                 2 [^] [v] [^^] |
+|    Heidelberg - open - 3.1 TiB of 10.0 TiB              |
+|                                                         |
+| :: Box D                                 3 [^] [v] [^^] |
+|    Koeln - open - 1.4 TiB of 5.0 TiB                    |
+|                                                         |
+| :: Box C                                 4 [^] [v] [^^] |
+|    Heidelberg - open - 512.0 GiB of 1.0 TiB             |
+|                                                         |
+| :: Box E                                 5 [^] [v] [^^] |
+|    Tuebingen - open - 96.0 GiB of 1.0 TiB               |
+|                                                         |
+| Drag a row or use the buttons to change its position.   |
++---------------------------------------------------------+
 
 ::    drag handle          ===  drop position while dragging
 [^] [v]  move up, down     [^^] move to top
@@ -396,8 +387,8 @@ The priority list:
 
 | State | Meaning | Changes on |
 |---|---|---|
-| Not stored yet | RS returns version `0`, no entries, and `null` for `changed_by` and `last_changed`; FIS ranks no file | the repair when RS starts, if any non-archived box exists |
-| Version `n` | The stored order, with who changed it last and when | a save that changes the list, a box being created, archived or deleted, or a repair (`n + 1` each, setting `changed_by` and `last_changed`) |
+| Not stored yet | RS returns version `0`, no entries, and `null` for `changed_by`, `last_changed`, `reordered_by` and `reordered_at`; FIS ranks no file | the repair when RS starts, if any non-archived box exists |
+| Version `n` | The stored order, with who changed it last and when, and who last reordered it and when | a save that changes the list, a box being created, archived or deleted, or a repair (`n + 1` each, setting `changed_by` and `last_changed`; only a save also sets `reordered_by` and `reordered_at`) |
 
 A box and the list:
 
@@ -405,8 +396,8 @@ A box and the list:
 |---|---|---|
 | `open` | yes; RS adds it when the box is created | yes |
 | `locked` | yes; its files can still be waiting for re-encryption | yes |
-| `archived` | no; RS removes it on archival | its moves still apply, so that later moves can refer to it; RS drops it after the last move |
-| deleted | no; RS removes it on deletion | its moves still apply, so that later moves can refer to it; RS drops it after the last move |
+| `archived` | no; RS removes it on archival | no; a new order that holds it gets `409` |
+| deleted | no; RS removes it on deletion | no; a new order that holds it gets `409` |
 
 RS writes the box and the list separately.
 If RS crashes between the two writes, the list can miss a new box, or keep an entry for an archived or deleted box.
@@ -426,9 +417,9 @@ A file in FIS:
 
 The Upload Box Manager:
 
-- List mode: loading, load failed, priority not loaded (column empty, **Change priority** disabled), and loaded.
-  After a save, the loaded list also shows the confirmation, plus a note about other changes, skipped changes, or both.
-- Reorder mode: no changes (**Save priority** disabled), unsaved changes, saving (buttons disabled), and save failed.
+- List mode: loading, load failed, priority not loaded (column empty, **Change order** disabled), and loaded.
+  After a save, the loaded list also shows the confirmation.
+- Reorder mode: no changes (**Save order** disabled), unsaved changes, saving (buttons disabled), order changed in the meantime, and save failed.
 
 The prototype shows each of these except loading and the two load failures.
 
@@ -439,16 +430,15 @@ The prototype shows each of these except loading and the two load failures.
 | One document holds the whole order | A save is one write and one event. FIS only gets priority changes, and box writes don't touch the order | [Why one list](#why-one-list) |
 | Every non-archived box is in the order | There is one queue. A new box joins its end, and no box waits in a group without an order | [Included/Required](#includedrequired) |
 | Entries hold both box IDs | Stewards rank research data upload boxes; FIS knows only file upload boxes | [Included/Required](#includedrequired) |
-| A save sends moves, not the whole list | If two stewards save at the same time, both keep their changes and neither has to redo anything | [API definitions](#api-definitions) |
-| On a save, RS drops archived and deleted boxes after the last move, not before | A later move in the same save can refer to such a box | [API definitions](#api-definitions) |
-| `version` on the document | FIS drops stale events. RS notices when two of its own writes collide. The page can tell whether the order changed after it loaded | [API definitions](#api-definitions) |
-| A save that leaves the list unchanged is a no-op | FIS gets no event that changes nothing, and `changed_by` still names the steward who last changed the order | [API definitions](#api-definitions) |
+| A save sends the whole new order with the version it is based on | Simple to build and to check. The order changes rarely, so a steward seldom has to make a change again after a `409` | [API definitions](#api-definitions) |
+| `version` on the document | FIS drops stale events. RS notices when two of its own writes collide, and rejects a new order based on an older version | [API definitions](#api-definitions) |
+| A save that leaves the list unchanged is a no-op | FIS gets no event that changes nothing, and `reordered_by` still names the steward who last changed the order | [API definitions](#api-definitions) |
 | RS repairs the list on every write and when it starts | RS can't write a box and the list in one transaction. The repair at startup also fills the list with the boxes that existed before this epic | [Included/Required](#includedrequired) |
 | A box request succeeds even if the list write after it fails | The box change is already stored, and the next repair fixes the list | [Included/Required](#includedrequired) |
 | Outbox, not `PersistentKafkaPublisher` | The list is current state, not an event that starts a flow | [Included/Required](#includedrequired) |
 | Locked boxes stay in the order | Their files can still be waiting | [States](#states) |
 | Every change to the list writes an audit record | The order decides which data is processed first, so who changed it must be traceable | [Included/Required](#includedrequired) |
-| The document carries `changed_by` and `last_changed` | The page shows who changed the order last; the audit log is not readable from the page | [Upload Box Manager](#upload-box-manager) |
+| The document carries `reordered_by` and `reordered_at`, which only a save sets | The page shows who chose the order. `changed_by` also changes on repairs, additions and removals, and the audit log is not readable from the page | [Upload Box Manager](#upload-box-manager) |
 | The order is edited in the Upload Box Manager, not on a separate page | Stewards see a box's place in the queue in the list they already use, and that list already holds every box | [Upload Box Manager](#upload-box-manager) |
 | Reorder mode shows every non-archived box, without paging, filters or sorting | Reordering needs the whole order on one screen | [Upload Box Manager](#upload-box-manager) |
 | One global list, not one per storage alias | FIS filters by storage alias first, so each Data Hub sees the global order | [Not included](#not-included) |
@@ -490,30 +480,30 @@ No database migration is needed: `box_id` defaults to `None`, and the republish 
   `InMemDao` cannot run the pipeline, so unit tests of the interrogation handler use a fake of the new port.
 - FIS: stale priority events are ignored; a republished `FileUpload` event fills in a missing `box_id` and changes nothing else.
 - FIS: after a `deleted` priority event, files come out in `_id` order only.
-- RS: a move, both when it applies and when it is skipped.
-  Moves apply in order, and a skipped move does not stop the moves after it.
-- RS: a move of an unknown, archived or deleted box still applies, later moves that refer to that box apply too, and RS drops the box after the last move.
-  A move before such a box is skipped if no earlier move in the same save placed the box.
-- RS: a save based on an older `version` is applied to the stored list and sets `includes_other_changes`.
-  A write that collides with another write is retried with a fresh read.
+- RS: a new order replaces the stored one.
+- RS: a new order based on another `version`, or with other boxes than the ones that are not archived, fails with `409` and leaves the list unchanged.
+  A new order can hold a box that the stored list is still missing.
+  A new order that collides with another write fails with `409`, and the other write is kept.
 - RS: RS adds a box to the end of the list when the box is created, and removes it when the box is archived or deleted.
   If the list write fails, the create, archive or delete request still succeeds, and RS logs the error.
 - RS: the repair drops entries for archived or deleted boxes, and adds missing boxes to the end, oldest `last_changed` first.
-  On a save, it adds the missing boxes before the moves and drops the entries after them.
+  On a save, it runs before RS compares the boxes.
   It runs on every write and at startup, and at startup it sets `changed_by` to `null` and writes nothing if the list is already complete.
 - RS: a save sets `changed_by` to the saving steward, and an addition or removal to the steward who created, archived or deleted the box; all of them set `last_changed`.
+- RS: only a save sets `reordered_by` and `reordered_at`; a repair, an addition and a removal keep them, and they stay `null` until the first save.
 - RS: a save that changes the list, an addition, a removal and a repair each write one audit record with the old and new order.
-  A save whose moves leave the list unchanged returns the stored document and leaves `version`, `changed_by` and `last_changed` unchanged, with no event and no audit record.
+  A save that leaves the list unchanged returns the stored document and leaves `version`, `changed_by`, `last_changed`, `reordered_by` and `reordered_at` unchanged, with no event and no audit record.
 - DHFS: the wait is skipped after a round that concluded at least one file, and kept after an empty response or a round in which every file was inconclusive.
 - Data Portal, against a mocked RS:
-  - the Priority column, and sorting by it
-  - switching between the two modes
-  - the move that a drag and each button record
-  - discarding the moves when the order is back to the loaded one
+  - the Prio column, and sorting by it
+  - switching between the two modes, and loading the boxes and the order again when reorder mode opens
+  - moving the focus to the heading when reorder mode opens, and back to **Change order** when it closes
+  - the order after a drag and after each button
+  - disabling **Save order** when the order is back to the loaded one
   - **Cancel** and the leave guard
-  - the "Last changed" line before the first write, after a repair at startup, and after a save
+  - the "Last reordered" line before the first save, after a save, and after a repair or box change that follows a save
   - ignoring entries for archived or deleted boxes, and showing missing boxes at the end
-  - the notes about other changes and skipped changes
+  - a save that fails with `409`
   - a failed save
 
 ### Testbed
@@ -525,39 +515,43 @@ A new feature numbered after 203 therefore finds no box it can move, so it creat
 API, in a new feature, e.g. `204_upload_box_priority.feature`, with its own boxes:
 
 - The data steward creates two boxes and reads the list, which has both boxes at the end.
-- The data steward saves a move that puts the second box before the first.
-  The response has the new `version`, the steward's ID as `changed_by`, a `last_changed`, and `includes_other_changes` set to `false`.
-- A second save with the same, now outdated `version` is still applied, and its response has `includes_other_changes` set to `true`.
-- A save moves an unknown box, then moves a listed box before the unknown box.
-  The listed box ends up where the unknown box was moved to, and the stored list does not contain the unknown box.
-- A move before an unknown box comes back in `skipped`, and the other moves in the same save are applied.
-- A move that leaves the list unchanged returns the same `version`.
+- The data steward saves an order that puts the second box before the first.
+  The response has the new `version`, the steward's ID as `changed_by` and `reordered_by`, and the same time as `last_changed` and `reordered_at`.
+- A second save with the same, now outdated `version` fails with `409`.
+- A save that leaves out a box, or holds an unknown box, fails with `409`.
+- A save of the stored order returns the same `version`.
 - A malformed body fails with `422`.
 - After a save, FIS's priority document reaches the new `version` within a timeout.
 - FIS stores `box_id` on files uploaded during the run.
 
 Additions and removals, in the existing features, which already create, archive and delete boxes:
 
-- `200_upload_initiated.feature`: assert that the box is in the list after it is created, and that it leaves the list after the deletion scenario.
+- `200_upload_initiated.feature`: assert that each new box is last in the list after it is created, and that the deleted box leaves the list.
 - `203_upload_completed.feature`: assert that the box leaves the list after the archival scenario.
 
 Data Portal, in `502_data_portal_uploads.feature`, before the scenario that maps and archives the box:
 
-- The data steward opens the Upload Box Manager, clicks **Change priority**, moves the primary box once by dragging and once with a button, and saves.
-- The Priority column shows the box at the position it was moved to.
-- The reorder view shows the new version and "Last changed by" with the steward's name.
-- After the archival scenario, the box's Priority cell is empty, and the reorder view does not show the box.
+- The data steward opens the Upload Box Manager, clicks **Change order**, moves the primary box down with its button, and saves.
+  The drag, the other buttons and the lists without archived boxes send nothing to RS, so they stay with the Data Portal's tests against a mocked RS.
+- After the save, the list RS returns has the primary box last.
+- After a reload, the Prio column shows both boxes at their new positions.
+- Reorder mode shows "Last reordered by" with the steward's name.
+- After the archival scenario, the box is no longer in the list RS returns.
 
 Audit records are covered by the RS tests; the testbed has no access to them so far.
 
 Interrogation order, in feature 204:
 
 - DHFS polls on its own schedule and interrogates a file soon after upload, so files of two boxes are rarely waiting at the same time.
-  The scenario therefore uploads all its files while DHFS is idle, for example by setting a long `min_run_interval_seconds` for the run.
-- It uses two boxes in one storage, moves the second box before the first, and uploads two files to each.
+  The test bed polls every 2 s, and a longer `min_run_interval_seconds` would slow every other upload feature without making the timing certain.
+  The scenario therefore writes five waiting files of the second box to FIS's MongoDB, whose objects are missing from the inbox.
+  Their IDs sort first, so they fill every batch, and DHFS leaves each of them waiting, as described in [DHFS loop](#dhfs-loop).
+  Once FIS holds all files, the scenario removes them; a fixture also removes them at the end of the scenario if a step fails.
+- It uses two boxes in one storage, moves the second box before the first, and uploads two files to each, the first box's files first, so an order by upload time fails the check.
+- Before the scenario removes the five files, FIS holds each uploaded file with its file upload box as `box_id`.
 - DHFS interrogates both files of the second box first, then both files of the first box.
 - Within each box, the files are interrogated in ascending `_id` order.
-- The order is read from `state_updated` of the files in FIS's MongoDB, because DHFS processes one file at a time.
+- The order is read from `state_updated` of the files in FIS's MongoDB, which FIS takes from the report's `interrogated_at`, because DHFS processes one file at a time.
 
 ## Human Resource/Time Estimation
 

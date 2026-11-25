@@ -20,6 +20,7 @@ from abc import ABC, abstractmethod
 from rs.core.models import Study
 from rs.ports.inbound.files import FileControllerPort
 from rs.ports.inbound.legacy_resources import LegacyResourceManagerPort
+from rs.ports.inbound.priority import UploadBoxPriorityManagerPort
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
 
 
@@ -49,6 +50,12 @@ class RegistryPort(ABC):
     @abstractmethod
     def file_controller(self) -> FileControllerPort:
         """The FileController component."""
+        ...
+
+    @property
+    @abstractmethod
+    def priority_manager(self) -> UploadBoxPriorityManagerPort:
+        """The UploadBoxPriorityManager component."""
         ...
 
     @abstractmethod

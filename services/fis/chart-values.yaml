@@ -50,3 +50,11 @@ _topics:
     kafkaUser:
       operations:
       - Read
+  uploadBoxPriority:
+    # as consumer
+    topic:
+      name: upload_box_priority_topic
+      value: upload-box-priority
+    kafkaUser:
+      operations:
+      - Read
