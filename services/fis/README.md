@@ -60,6 +60,14 @@ The service requires the following configuration parameters:
   "http://127.0.0.1/ekss"
   ```
 
+- <a id="properties/upload_box_priority_topic"></a>**`upload_box_priority_topic`** *(string, required)*: Name of the event topic containing upload box priority events.
+
+  Examples:
+
+  ```json
+  "upload-box-priority"
+  ```
+
 - <a id="properties/file_upload_topic"></a>**`file_upload_topic`** *(string, required)*: Topic containing published FileUpload outbox events.
 
   Examples:

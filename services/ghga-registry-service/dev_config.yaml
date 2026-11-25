@@ -14,6 +14,7 @@ audit_record_type: audit_record_logged
 work_order_signing_key: "{}"
 file_upload_box_topic: file-upload-boxes
 research_data_upload_box_topic: research-data-upload-boxes
+upload_box_priority_topic: upload-box-priority
 study_topic: studies
 # LEGACY: searchable resource events consumed from metldata producer
 resource_change_topic: searchable-resources

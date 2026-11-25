@@ -108,7 +108,9 @@ class InterrogationHandlerPort(ABC):
     async def get_files_not_yet_interrogated(
         self, *, storage_alias: str
     ) -> list[models.BaseFileInformation]:
-        """Return a list of not-yet-interrogated files for a Data Hub"""
+        """Return up to `MAX_FILES_PER_REQUEST` not-yet-interrogated files for a Data
+        Hub, highest priority first.
+        """
 
     @abstractmethod
     async def delete_file(self, *, file_id: UUID4) -> None:
@@ -119,4 +121,21 @@ class InterrogationHandlerPort(ABC):
         cancelled FileUpload with a new instance for the same file alias.
 
         If no matching entry is found, it is assumed that the entry was already deleted.
+        """
+
+    @abstractmethod
+    async def store_upload_box_priority(
+        self, *, priority: models.UploadBoxPriority
+    ) -> None:
+        """Store the upload box priority list.
+
+        Ignore the list if its version is not higher than the stored one's.
+        """
+
+    @abstractmethod
+    async def clear_upload_box_priority(self, *, priority_id: str) -> None:
+        """Empty the stored upload box priority list, keeping its version.
+
+        Keeping the version stops a replayed older event from restoring the list.
+        If no list is stored, do nothing.
         """

@@ -25,6 +25,7 @@ import {
   UploadBoxFilter,
   UploadBoxState,
 } from '../models/box';
+import { prioritizeBoxes, UploadBoxPriority } from '../models/box-priority';
 import {
   BoxUploadsPage,
   DEFAULT_UPLOADS_PAGE_SIZE,
@@ -58,6 +59,7 @@ export class UploadBoxService {
   // so the RS serves them under a separate /rpc prefix
   #boxesRpcUrl = `${this.#rsUrl}/rpc/upload-boxes`;
   #grantsUrl = `${this.#rsUrl}/upload-grants`;
+  #priorityUrl = `${this.#rsUrl}/upload-box-priority`;
   #wkvsUrl = this.#config.wkvsUrl;
   #storageLabelsUrl = `${this.#wkvsUrl}/values/storage_labels`;
 
@@ -73,6 +75,7 @@ export class UploadBoxService {
   #boxGrantsBucket = new CacheBucket();
   #userGrantsBucket = new CacheBucket();
   #fileUploadsBucket = new CacheBucket();
+  #priorityBucket = new CacheBucket();
 
   #boxesContext = volatileCacheContext(this.#boxesBucket);
   #fileStateCountsContext = volatileCacheContext(this.#fileStateCountsBucket);
@@ -80,6 +83,7 @@ export class UploadBoxService {
   #boxGrantsContext = volatileCacheContext(this.#boxGrantsBucket);
   #userGrantsContext = volatileCacheContext(this.#userGrantsBucket);
   #fileUploadsContext = volatileCacheContext(this.#fileUploadsBucket);
+  #priorityContext = volatileCacheContext(this.#priorityBucket);
 
   #loadAllUploadBoxes = signal<boolean>(false);
   // Sorted, so that the same boxes in another order make the same request
@@ -162,6 +166,16 @@ export class UploadBoxService {
       context: this.#fileStateCountsContext,
     };
   });
+
+  /**
+   * Resource for loading the upload box priority order, together with all
+   * upload boxes, which it refers to.
+   */
+  boxPriority = httpResource<UploadBoxPriority>(() =>
+    this.#loadAllUploadBoxes()
+      ? { url: this.#priorityUrl, context: this.#priorityContext }
+      : undefined,
+  );
 
   /**
    * Resource for loading human-readable storage labels.
@@ -346,6 +360,17 @@ export class UploadBoxService {
   );
 
   /**
+   * Signal for the upload boxes that are not archived, in priority order (see
+   * `prioritizeBoxes`). Undefined while the priority order loads, or if loading
+   * it failed.
+   */
+  prioritizedUploadBoxes = computed(() => {
+    if (this.boxPriority.error()) return undefined;
+    const priority = this.boxPriority.value();
+    return priority && prioritizeBoxes(this.uploadBoxes(), priority);
+  });
+
+  /**
    * The currently active filter applied to `filteredUploadBoxes`.
    */
   uploadBoxesFilter = computed(
@@ -442,17 +467,19 @@ export class UploadBoxService {
   }
 
   /**
-   * Fetch all upload boxes and their file state counts again, bypassing the
-   * HTTP cache.
+   * Fetch all upload boxes, their file state counts and their priority order
+   * again, bypassing the HTTP cache.
    * Boxes change outside the portal (files are uploaded with the GHGA Connector),
    * so entering the box list must not rely on what was fetched earlier.
    */
   reloadAllUploadBoxes(): void {
     this.#httpCache.delete(this.#boxesBucket);
     this.#httpCache.delete(this.#fileStateCountsBucket);
+    this.#httpCache.delete(this.#priorityBucket);
     if (this.#loadAllUploadBoxes()) {
       this.boxRetrievalResults.reload();
       this.fileStateCounts.reload();
+      this.boxPriority.reload();
     } else {
       this.loadAllUploadBoxes();
     }
@@ -584,6 +611,25 @@ export class UploadBoxService {
    */
   loadAllFileUploadsForBox(boxId: string): void {
     this.#loadAllFileUploadsForBox.set(boxId);
+  }
+
+  /**
+   * Save a new priority order. The RS answers 409 if the stored order is no
+   * longer the given version, or if the order holds other boxes than the ones
+   * that are not archived.
+   * @param version - the version of the order that the new order is based on
+   * @param boxIds - the IDs of all upload boxes that are not archived, in the new order
+   * @returns An observable that emits the saved priority order
+   */
+  saveBoxPriority(version: number, boxIds: string[]): Observable<UploadBoxPriority> {
+    return this.#http
+      .put<UploadBoxPriority>(this.#priorityUrl, { version, box_ids: boxIds })
+      .pipe(
+        tap((priority) => {
+          this.#httpCache.delete(this.#priorityBucket);
+          this.boxPriority.value.set(priority);
+        }),
+      );
   }
 
   /**
