@@ -34,7 +34,13 @@ from .conftest import (
     then,
     when,
 )
-from .conftest_2x import _session_headers, run_batch_upload
+from .conftest_2x import (
+    _create_upload_work_package,
+    _grant_upload_access,
+    _session_headers,
+    _store_upload_token,
+    run_batch_upload,
+)
 
 scenarios("../features/204_upload_box_priority.feature")
 
@@ -285,25 +291,7 @@ def grant_upload_access(
     full_name: str, user_name: str, box_name: str, fixtures: JointFixture
 ) -> Response:
     """Grant the user access to the upload box for a year."""
-    _, name = fixtures.auth.split_title(user_name)
-    registered_users = fixtures.state.get_state("registered users") or {}
-    user_id = registered_users.get(fixtures.auth.get_sub(name))
-    iva = fixtures.state.get_state("Phone iva")
-    assert user_id and iva and iva["id"], f"No verified user {user_name} in state"
-
-    valid_from = now_as_utc()
-    payload = {
-        "valid_from": valid_from.isoformat(),
-        "valid_until": valid_from.replace(year=valid_from.year + 1).isoformat(),
-        "user_id": user_id,
-        "iva_id": iva["id"],
-        "box_id": _box(fixtures, box_name)["id"],
-    }
-    return fixtures.http.post(
-        f"{fixtures.config.rs_url}/upload-grants",
-        headers=_session_headers(fixtures, full_name),
-        json=payload,
-    )
+    return _grant_upload_access(fixtures, full_name, user_name, box_name)
 
 
 @when(
@@ -316,26 +304,13 @@ def create_upload_work_package(
     full_name: str, box_name: str, fixtures: JointFixture
 ) -> Response:
     """Create an upload work package for the upload box."""
-    data = {
-        "type": "upload",
-        "research_data_upload_box_id": _box(fixtures, box_name)["id"],
-        "user_public_crypt4gh_key": fixtures.config.user_public_crypt4gh_key,
-    }
-    return fixtures.http.post(
-        f"{fixtures.config.wps_url}/work-packages",
-        headers=_session_headers(fixtures, full_name),
-        json=data,
-    )
+    return _create_upload_work_package(fixtures, full_name, box_name)
 
 
 @then(parse('the response contains an upload token for the "{box_name}" upload box'))
 def store_upload_token(box_name: str, fixtures: JointFixture, response: Response):
     """Store the upload token of the work package in the state."""
-    data = response.json()
-    assert set(data) == {"id", "token", "expires"}, data
-    fixtures.state.set_state(
-        f"upload token for {box_name}", f"{data['id']}:{data['token']}"
-    )
+    _store_upload_token(fixtures, response, box_name)
 
 
 class BlockingFiles:

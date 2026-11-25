@@ -24,6 +24,7 @@ from uuid import UUID
 
 from fixtures import Config, JointFixture, Response, StateStorage  # noqa: RUF100
 from fixtures.file import FileBatch, subset_file_batch_by_scope
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest_bdd import (  # noqa: RUF100
     given,
     then,
@@ -68,6 +69,71 @@ def _read_stable_box(
 
     fixtures.state.set_state(f"rdub_{storage_name}", box)
     return box
+
+
+# Upload access, shared by the storage boxes (200, 201) and the priority boxes (204).
+# `box_name` is the name the box has in the state: a storage name, or a name that a
+# feature gave to a box of its own.
+
+
+def _grant_upload_access(
+    fixtures: JointFixture, full_name: str, user_name: str, box_name: str
+) -> Response:
+    """Grant the user access to the named upload box for a year."""
+    _, name = fixtures.auth.split_title(user_name)
+    registered_users = fixtures.state.get_state("registered users") or {}
+    user_id = registered_users.get(fixtures.auth.get_sub(name))
+    iva = fixtures.state.get_state("Phone iva")
+    assert user_id and iva and iva["id"], f"No verified user {user_name} in state"
+    rdub = fixtures.state.get_state(f"rdub_{box_name}")
+    assert rdub, f"No {box_name} upload box in state"
+
+    valid_from = now_as_utc()
+    payload = {
+        "valid_from": valid_from.isoformat(),
+        "valid_until": valid_from.replace(year=valid_from.year + 1).isoformat(),
+        "user_id": user_id,
+        "iva_id": iva["id"],
+        "box_id": rdub["id"],
+    }
+    return fixtures.http.post(
+        f"{fixtures.config.rs_url}/upload-grants",
+        headers=_session_headers(fixtures, full_name),
+        json=payload,
+    )
+
+
+def _create_upload_work_package(
+    fixtures: JointFixture, full_name: str, box_name: str
+) -> Response:
+    """Create an upload work package for the named upload box, which must be open."""
+    rdub = fixtures.state.get_state(f"rdub_{box_name}")
+    assert rdub, f"No {box_name} upload box in state"
+    rdub_state = rdub.get("state")
+    assert rdub_state == "open", (
+        f"Expected an open {box_name} upload box, got {rdub_state}"
+    )
+    data = {
+        "type": "upload",
+        "research_data_upload_box_id": rdub["id"],
+        "user_public_crypt4gh_key": fixtures.config.user_public_crypt4gh_key,
+    }
+    return fixtures.http.post(
+        f"{fixtures.config.wps_url}/work-packages",
+        headers=_session_headers(fixtures, full_name),
+        json=data,
+    )
+
+
+def _store_upload_token(
+    fixtures: JointFixture, response: Response, box_name: str
+) -> None:
+    """Check the upload token of a new work package and store it in the state."""
+    data = response.json()
+    assert set(data) == {"id", "token", "expires"}, data
+    id_, token = data["id"], data["token"]
+    assert 20 <= len(id_) < 40 and 80 < len(token) < 120
+    fixtures.state.set_state(f"upload token for {box_name}", f"{id_}:{token}")
 
 
 @when(

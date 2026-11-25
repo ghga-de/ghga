@@ -38,7 +38,12 @@ from .conftest import (
     when,
     write_upload_tsv,
 )
-from .conftest_2x import _read_stable_box, _session_headers
+from .conftest_2x import (
+    _create_upload_work_package,
+    _read_stable_box,
+    _session_headers,
+    _store_upload_token,
+)
 from .utils import has_reached
 
 scenarios("../features/201_user_file_upload.feature")
@@ -50,23 +55,7 @@ scenarios("../features/201_user_file_upload.feature")
 )
 def create_work_package(full_name: str, fixtures: JointFixture, storage_name: str):
     """Create an upload work package for the specified storage scope."""
-    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
-    rdub_state = rdub.get("state")
-    assert rdub_state == "open", (
-        f"Expected active upload box for {storage_name}, got {rdub_state}"
-    )
-    data = {
-        "type": "upload",
-        "research_data_upload_box_id": rdub["id"],
-        "user_public_crypt4gh_key": fixtures.config.user_public_crypt4gh_key,
-    }
-    url = f"{fixtures.config.wps_url}/work-packages"
-
-    session = fixtures.auth.get_saved_session(
-        name=full_name, state_store=fixtures.state
-    )
-    headers = fixtures.auth.headers(session=session)
-    return fixtures.http.post(url, headers=headers, json=data)
+    return _create_upload_work_package(fixtures, full_name, storage_name)
 
 
 def _as_list(payload):
@@ -85,12 +74,7 @@ def _as_list(payload):
 @then(parse('the response contains an upload token for "{storage_name}" storage'))
 def check_upload_token(fixtures: JointFixture, response: Response, storage_name: str):
     """Check that the response contains an upload token and save it in the state."""
-    data = response.json()
-    assert set(data) == {"id", "token", "expires"}
-    id_, token = data["id"], data["token"]
-    assert 20 <= len(id_) < 40 and 80 < len(token) < 120
-    id_and_token = f"{id_}:{token}"
-    fixtures.state.set_state(f"upload token for {storage_name}", id_and_token)
+    _store_upload_token(fixtures, response, storage_name)
 
 
 @given("no upload work packages have been created yet")
