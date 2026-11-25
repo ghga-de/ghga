@@ -36,10 +36,12 @@ log = logging.getLogger(__name__)
 
 USER_ABORT_EXCEPTIONS = (KeyboardInterrupt, asyncio.CancelledError)
 
-# The file state, as reported by the Upload API, that marks a cancelled (deleted)
-#  upload. A file in any other state is considered already present in the box.
+# The file states, as reported by the Upload API, that mark a cancelled (deleted) or
+#  failed upload, whose file can be uploaded again, and an upload that was started
+#  but not completed. A file in any other state is considered already uploaded.
 _CANCELLED_STATE = "cancelled"
 _FAILED_STATE = "failed"
+_UNFINISHED_STATE = "init"
 
 # When listing skipped or failed aliases in a message, show at most this many before
 #  eliding the rest, so a large resume doesn't print a wall of text.
@@ -374,18 +376,69 @@ async def upload_files_from_list(  # noqa: PLR0913
     return BatchPassResult(failed=failed, rejected=rejected, halted=False)
 
 
-async def _already_uploaded_aliases(upload_client: UploadClient) -> set[str]:
-    """Return the set of aliases already present (non-cancelled) in the upload box.
+async def _aliases_in_box(upload_client: UploadClient) -> tuple[set[str], set[str]]:
+    """Return the aliases of the files in the upload box as (uploaded, unfinished).
 
-    These are queried from the Upload API and are used to skip files that have
-    already been uploaded, e.g. by a previous invocation of the batch upload.
+    Unfinished uploads were started but not completed, e.g. by an interrupted run.
+    Cancelled and failed uploads are in neither set.
     """
-    uploads = await upload_client.get_box_uploads()
-    return {
-        upload.alias
-        for upload in uploads
-        if (upload.state or "").lower() not in {_CANCELLED_STATE, _FAILED_STATE}
-    }
+    uploaded: set[str] = set()
+    unfinished: set[str] = set()
+    for upload in await upload_client.get_box_uploads():
+        state = (upload.state or "").lower()
+        if state == _UNFINISHED_STATE:
+            unfinished.add(upload.alias)
+        elif state not in {_CANCELLED_STATE, _FAILED_STATE}:
+            uploaded.add(upload.alias)
+    return uploaded, unfinished
+
+
+def _select_pending(
+    file_info_list: list[FileInfoForUpload],
+    *,
+    uploaded: set[str],
+    unfinished: set[str],
+    overwrite: bool,
+    shorten: bool,
+) -> list[FileInfoForUpload]:
+    """Return the files to upload, telling the user which ones are left out and why."""
+    skipped = [fi.alias for fi in file_info_list if fi.alias in uploaded]
+    if skipped:
+        CLIMessageDisplay.display(
+            f"Skipping {len(skipped)} file(s) already present in the upload box: "
+            + _summarize_aliases([_display_name(a, shorten=shorten) for a in skipped])
+        )
+
+    interrupted = [fi.alias for fi in file_info_list if fi.alias in unfinished]
+    if interrupted:
+        _report_unfinished(interrupted, overwrite=overwrite, shorten=shorten)
+
+    left_out = uploaded if overwrite else uploaded | unfinished
+    pending = [fi for fi in file_info_list if fi.alias not in left_out]
+    if not pending and not interrupted:
+        CLIMessageDisplay.success("All files are already uploaded. Nothing to do.")
+    return pending
+
+
+def _report_unfinished(aliases: list[str], *, overwrite: bool, shorten: bool) -> None:
+    """Tell the user that these files' uploads are unfinished and what happens to them.
+
+    Another Connector may still be sending such an upload, so it is only restarted
+    on request.
+    """
+    listed = _summarize_aliases([_display_name(a, shorten=shorten) for a in aliases])
+    if overwrite:
+        CLIMessageDisplay.display(
+            f"Restarting {len(aliases)} file(s) whose upload in the box is unfinished:"
+            + f" {listed}"
+        )
+    else:
+        CLIMessageDisplay.display(
+            f"Skipping {len(aliases)} file(s) whose upload in the box is unfinished,"
+            + f" e.g. after an interrupted run: {listed}. If no other Connector is"
+            + " uploading them, run the command again with --overwrite to restart"
+            + " them."
+        )
 
 
 def _report_dry_run(pending: list[FileInfoForUpload], *, shorten: bool) -> None:
@@ -486,12 +539,13 @@ async def run_batch_upload(  # noqa: PLR0913
 ) -> None:
     """Upload a batch of files, skipping those already uploaded and retrying failures.
 
-    Files whose alias is already present in the upload box (in any non-cancelled
-    state) are skipped, so re-running the command resumes where a previous run left
-    off. Files that fail to upload are retried up to ``max_retries`` times, waiting
-    ``BATCH_RETRY_BACKOFF_SEC`` seconds between passes. Files that turn out to be
-    already Crypt4GH encrypted are rejected when it is their turn to upload and are
-    not retried.
+    Files already uploaded to the box are skipped, so re-running the command resumes
+    where a previous run left off. Files whose upload in the box is unfinished, e.g.
+    after an interrupted run, are skipped as well unless ``overwrite`` is True, which
+    restarts them. Files that fail to upload are retried up to ``max_retries`` times,
+    waiting ``BATCH_RETRY_BACKOFF_SEC`` seconds between passes. Files that turn out
+    to be already Crypt4GH encrypted are rejected when it is their turn to upload and
+    are not retried.
 
     If ``dry_run`` is True, the upload box is still queried so that already-uploaded
     files are reported as skipped, but the files that remain are only listed - no
@@ -503,20 +557,19 @@ async def run_batch_upload(  # noqa: PLR0913
     its alias as long as it has not reached the "interrogated" state (re-encrypted).
     """
     try:
-        already_uploaded = await _already_uploaded_aliases(upload_client)
+        uploaded, unfinished = await _aliases_in_box(upload_client)
     except Exception as err:
         CLIMessageDisplay.failure(f"Batch upload failed: {err!s}")
+        return
 
-    skipped = [fi.alias for fi in file_info_list if fi.alias in already_uploaded]
-    if skipped:
-        CLIMessageDisplay.display(
-            f"Skipping {len(skipped)} file(s) already present in the upload box: "
-            + _summarize_aliases([_display_name(a, shorten=shorten) for a in skipped])
-        )
-
-    pending = [fi for fi in file_info_list if fi.alias not in already_uploaded]
+    pending = _select_pending(
+        file_info_list,
+        uploaded=uploaded,
+        unfinished=unfinished,
+        overwrite=overwrite,
+        shorten=shorten,
+    )
     if not pending:
-        CLIMessageDisplay.success("All files are already uploaded. Nothing to do.")
         return
 
     if dry_run:

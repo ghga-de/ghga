@@ -594,6 +594,90 @@ async def test_run_batch_upload_does_not_skip_cancelled_or_failed():
         assert captured == ["cancelled-file", "failed-file"]
 
 
+async def test_run_batch_upload_stops_when_box_listing_fails():
+    """If the box contents can't be listed, the batch reports it and uploads nothing."""
+    with NamedTemporaryFile() as f:
+        file_infos = [make_file_info_for_upload(path=Path(f.name), alias="fresh")]
+        upload_client = AsyncMock()
+        upload_client.get_box_uploads.side_effect = RuntimeError("listing failed")
+
+        fake_batch_cycle = AsyncMock()
+        with (
+            patch(
+                "ghga_connector.core.uploading.batch_processing.upload_files_from_list",
+                fake_batch_cycle,
+            ),
+            patch(
+                "ghga_connector.core.uploading.batch_processing.CLIMessageDisplay"
+            ) as mock_display,
+        ):
+            await run_batch_upload(
+                upload_client=upload_client,
+                file_info_list=file_infos,
+                my_private_key=SecretBytes(b"\x00" * 32),
+                max_concurrent_uploads=1,
+            )
+
+    fake_batch_cycle.assert_not_called()
+    mock_display.failure.assert_called_once_with("Batch upload failed: listing failed")
+
+
+@pytest.mark.parametrize("overwrite", [True, False])
+async def test_run_batch_upload_restarts_unfinished_only_with_overwrite(
+    overwrite: bool,
+):
+    """A file whose upload in the box is unfinished is skipped with a hint, unless
+    overwrite is set, which restarts it. Uploaded files are skipped either way.
+    """
+    with NamedTemporaryFile() as f1, NamedTemporaryFile() as f2:
+        file_infos = [
+            make_file_info_for_upload(path=Path(f1.name), alias="interrupted"),
+            make_file_info_for_upload(path=Path(f2.name), alias="done"),
+        ]
+        upload_client = _make_upload_client(
+            [
+                UploadedFileInfo(file_id=uuid4(), alias="interrupted", state="init"),
+                UploadedFileInfo(file_id=uuid4(), alias="done", state="interrogated"),
+            ]
+        )
+
+        captured: list[list[str]] = []
+
+        async def fake_batch_cycle(*, file_info_list, **_kwargs):
+            captured.append([fi.alias for fi in file_info_list])
+            return BatchPassResult(failed=[], halted=False)
+
+        with (
+            patch(
+                "ghga_connector.core.uploading.batch_processing.upload_files_from_list",
+                fake_batch_cycle,
+            ),
+            patch(
+                "ghga_connector.core.uploading.batch_processing.CLIMessageDisplay"
+            ) as mock_display,
+        ):
+            await run_batch_upload(
+                upload_client=upload_client,
+                file_info_list=file_infos,
+                my_private_key=SecretBytes(b"\x00" * 32),
+                max_concurrent_uploads=1,
+                max_retries=0,
+                overwrite=overwrite,
+            )
+
+    messages = " ".join(
+        str(call.args[0]) for call in mock_display.display.call_args_list
+    )
+    if overwrite:
+        assert captured == [["interrupted"]]
+        assert "Restarting 1 file(s)" in messages
+    else:
+        assert captured == []
+        assert "--overwrite" in messages
+        # Not every file is uploaded, so no success is reported
+        mock_display.success.assert_not_called()
+
+
 @pytest.mark.parametrize("overwrite", [True, False])
 async def test_run_batch_upload_applies_overwrite(overwrite: bool):
     """Test that the user-supplied overwrite flag is applied to each upload pass.

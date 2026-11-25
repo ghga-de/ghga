@@ -287,6 +287,30 @@ async def test_do_rm_delete_404(capsys):
 
 
 @pytest.mark.asyncio
+async def test_run_ends_after_termination_signal(monkeypatch):
+    """After SIGTERM or SIGHUP stopped a command, the shell ends instead of prompting."""
+    prompts: list[str] = []
+
+    class FakeSession:
+        def __init__(self, **_kwargs):
+            pass
+
+        async def prompt_async(self, prompt: str) -> str:
+            prompts.append(prompt)
+            return "ls"
+
+    monkeypatch.setattr(ubox_shell, "PromptSession", FakeSession)
+    monkeypatch.setattr(ubox_shell, "termination_requested", lambda: True)
+
+    shell = UboxShell(
+        upload_client=FakeUploadClient(), my_private_key=SecretBytes(b"key")
+    )
+    await shell.run()
+
+    assert len(prompts) == 1
+
+
+@pytest.mark.asyncio
 async def test_do_upload_glob(monkeypatch, tmp_path: Path):
     """The upload command with a glob uploads each match using its file name."""
     for name in ("one.bam", "two.bam"):

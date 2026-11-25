@@ -29,6 +29,7 @@ from ghga_connector.core.main import (
     async_ubox,
     decrypt_file,
 )
+from ghga_connector.core.termination import TerminatedError, cancel_on_termination
 from ghga_connector.core.utils import modify_for_debug
 
 cli = typer.Typer(no_args_is_help=True)
@@ -36,14 +37,24 @@ cli = typer.Typer(no_args_is_help=True)
 # Standard shell exit code for a process terminated by SIGINT (Ctrl+C).
 _SIGINT_EXIT_CODE = 130
 
+# Shells report a process ended by a signal with this plus the signal number.
+_SIGNAL_EXIT_CODE_BASE = 128
+
 
 def _catch_cancellations(coroutine) -> None:
-    """Run an async command, exiting cleanly if the user aborts with Ctrl+C."""
+    """Run an async command, exiting cleanly if the user aborts with Ctrl+C.
+
+    A command wrapped in `cancel_on_termination` also exits cleanly on SIGTERM or
+    SIGHUP, with the exit code a shell reports for that signal.
+    """
     try:
         asyncio.run(coroutine)
     except KeyboardInterrupt:
         CLIMessageDisplay.failure("The operation was aborted by the user.")
         raise typer.Exit(code=_SIGINT_EXIT_CODE) from None
+    except TerminatedError as err:
+        CLIMessageDisplay.failure(str(err))
+        raise typer.Exit(code=_SIGNAL_EXIT_CODE_BASE + err.signum) from None
 
 
 @cli.command(name="batch-upload", no_args_is_help=True)
@@ -86,10 +97,10 @@ def batch_upload(  # noqa: PLR0913
     ),
     overwrite: bool = typer.Option(
         False,
-        help="Replace any existing upload for each file's alias in the upload box,"
-        + " instead of the request being rejected as a duplicate. Use this to replace"
-        + " existing, ongoing file uploads. Note that this does not overwrite files"
-        + " that have already been re-encrypted.",
+        help="Restart the files whose upload in the box is unfinished, e.g. after an"
+        + " interrupted run, instead of skipping them. Use this only if no other"
+        + " Connector is uploading these files. Files that were uploaded completely"
+        + " are always skipped.",
     ),
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."
@@ -98,18 +109,21 @@ def batch_upload(  # noqa: PLR0913
     """Upload a batch of files described by a TSV file.
 
     Files already present in the upload box are skipped, so the command can be re-run
-    to resume an interrupted batch. Files that fail to upload are retried automatically.
+    to resume an interrupted batch; a file whose upload was interrupted is restarted
+    with --overwrite. Files that fail to upload are retried automatically.
     """
     modify_for_debug(debug)
     _catch_cancellations(
-        async_batch_upload(
-            tsv=tsv,
-            my_public_key_path=my_public_key_path,
-            my_private_key_path=my_private_key_path,
-            max_retries=max_retries,
-            dry_run=dry_run,
-            shorten=shorten_names,
-            overwrite=overwrite,
+        cancel_on_termination(
+            async_batch_upload(
+                tsv=tsv,
+                my_public_key_path=my_public_key_path,
+                my_private_key_path=my_private_key_path,
+                max_retries=max_retries,
+                dry_run=dry_run,
+                shorten=shorten_names,
+                overwrite=overwrite,
+            )
         )
     )
 
@@ -133,9 +147,11 @@ def ubox(
     """Open an interactive shell to manage an upload box (upload, ls, rm)."""
     modify_for_debug(debug)
     _catch_cancellations(
-        async_ubox(
-            my_public_key_path=my_public_key_path,
-            my_private_key_path=my_private_key_path,
+        cancel_on_termination(
+            async_ubox(
+                my_public_key_path=my_public_key_path,
+                my_private_key_path=my_private_key_path,
+            )
         )
     )
 

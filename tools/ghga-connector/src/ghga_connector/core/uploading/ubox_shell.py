@@ -33,6 +33,7 @@ from pydantic import SecretBytes
 
 from ghga_connector.config import get_config
 from ghga_connector.core.message_display import CLIMessageDisplay
+from ghga_connector.core.termination import termination_requested
 from ghga_connector.core.uploading.api_calls import UploadClient
 from ghga_connector.core.uploading.batch_processing import (
     parse_file_info_for_upload,
@@ -223,7 +224,9 @@ class UboxShell:
                 CLIMessageDisplay.display("")
                 continue
 
-            if not await self._handle_line(line):
+            # An upload stopped by SIGTERM or SIGHUP returns here as on Ctrl+C,
+            #  but unlike Ctrl+C it ends the shell
+            if not await self._handle_line(line) or termination_requested():
                 break
 
     async def _handle_line(self, line: str) -> bool:
