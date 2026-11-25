@@ -34,7 +34,9 @@
     "private_key_passphrase": {
       "anyOf": [
         {
-          "type": "string"
+          "format": "password",
+          "type": "string",
+          "writeOnly": true
         },
         {
           "type": "null"

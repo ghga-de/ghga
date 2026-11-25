@@ -164,10 +164,11 @@ class Interrogator(InterrogatorPort):
         self._storage_alias = config.storage_alias
         self._interrogation_bucket_id = config.interrogation_bucket_id
         self._central_client = central_client
+        passphrase = config.data_hub_crypt4gh_private_key_passphrase
         self._data_hub_private_key = SecretBytes(
             get_private_key(
                 config.data_hub_crypt4gh_private_key_path,
-                lambda: config.data_hub_crypt4gh_private_key_passphrase,
+                lambda: passphrase.get_secret_value() if passphrase else None,
             )
         )
         self._s3_client = s3_client
