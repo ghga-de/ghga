@@ -19,6 +19,9 @@ for the full set of configurable values.
 | Name | Description | Value |
 |------|-------------|-------|
 | `config.host` | IP of the host. | `"127.0.0.1"` |
+| `config.enable_opentelemetry` | If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled. | `false` |
+| `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
+| `config.enable_otel_metrics` | Also export metrics via OTLP. Requires `enable_opentelemetry` and a collector with a metrics pipeline. | `false` |
 | `config.log_level` | The minimum log level to capture. | `"INFO"` |
 | `config.service_name` | Short name of this service. NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"top"` |
 | `config.service_instance_id` | String that uniquely identifies this service instance in log messages | `"default"` |

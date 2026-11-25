@@ -26,7 +26,7 @@ license = "Apache-2.0"
 dependencies = [
     "typer >= 0.24",
     "ghga-event-schemas ~= 13.2",
-    "hexkit[akafka,mongodb] >= 9.0",
+    "hexkit[akafka,mongodb,opentelemetry-akafka,opentelemetry-mongodb] >= 9.0",
     "pydantic[email]>=2, <3",
 ]
 

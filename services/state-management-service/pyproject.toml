@@ -26,7 +26,7 @@ license = "Apache-2.0"
 dependencies = [
     "typer >= 0.25",
     "ghga-service-commons[api] >= 7.0",
-    "hexkit[mongodb,s3,akafka] >= 8.1",
+    "hexkit[mongodb,s3,akafka,opentelemetry-mongodb,opentelemetry-s3,opentelemetry-akafka,opentelemetry-fastapi] >= 9",
     "hvac>=2",
 ]
 

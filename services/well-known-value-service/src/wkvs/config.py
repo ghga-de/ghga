@@ -21,6 +21,7 @@ from pydantic_settings import BaseSettings
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
 
 
 class WellKnownConfig(BaseSettings):
@@ -52,7 +53,7 @@ SERVICE_NAME: str = "wkvs"
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
-class Config(ApiConfigBase, WellKnownConfig, LoggingConfig):
+class Config(ApiConfigBase, WellKnownConfig, LoggingConfig, OpenTelemetryConfig):
     """Config parameters and their defaults."""
 
     service_name: str = SERVICE_NAME

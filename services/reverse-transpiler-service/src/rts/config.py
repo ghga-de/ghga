@@ -20,6 +20,7 @@ from pydantic import Field
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
 from rts.adapters.inbound.event_sub import EventSubTranslatorConfig
@@ -32,6 +33,7 @@ __all__ = ["Config"]
 
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
+    OpenTelemetryConfig,
     SheetNameConfig,
     ApiConfigBase,
     LoggingConfig,

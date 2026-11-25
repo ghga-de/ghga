@@ -59,6 +59,9 @@ for the full set of configurable values.
 | `config.kafka_max_retries` | The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. | `0` |
 | `config.kafka_dlq_topic` | The name of the topic used to resolve error-causing events. | `"dlq"` |
 | `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
+| `config.enable_opentelemetry` | If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled. | `false` |
+| `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
+| `config.enable_otel_metrics` | Also export metrics via OTLP. Requires `enable_opentelemetry` and a collector with a metrics pipeline. | `false` |
 
 ## Parameters
 

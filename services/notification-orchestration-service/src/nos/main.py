@@ -16,6 +16,7 @@
 """Top-level functions for the service"""
 
 from hexkit.log import configure_logging
+from hexkit.opentelemetry import configure_opentelemetry
 from hexkit.providers.mongodb.migrations import MigrationManager
 from nos.config import Config
 from nos.inject import prepare_event_subscriber
@@ -29,6 +30,7 @@ async def consume_events(run_forever: bool = True):
     config = Config()
 
     configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)
