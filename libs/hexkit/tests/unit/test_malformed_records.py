@@ -32,6 +32,7 @@ from unittest.mock import AsyncMock, Mock
 from uuid import UUID, uuid1, uuid4
 
 import pytest
+from aiokafka.errors import MessageSizeTooLargeError
 from pydantic import UUID4
 
 from hexkit.correlation import get_correlation_id
@@ -162,6 +163,15 @@ async def run_once(
     consumer = AsyncMock()
     consumer_cls = Mock(return_value=consumer)
     producer = AsyncMock()
+
+    async def send_and_wait(topic, *, key, value, headers):
+        # The mock producer does not serialize, so check the size as aiokafka does
+        size = len(json.dumps(value).encode("ascii")) + len(key)
+        size += sum(len(name) + len(data) for name, data in headers)
+        if size > MAX_MESSAGE_SIZE:
+            raise MessageSizeTooLargeError("The message is too large.")
+
+    producer.send_and_wait.side_effect = send_and_wait
     error: Exception | None = None
 
     async with (
@@ -305,7 +315,7 @@ def assert_dlq_copy(record: RawRecord, result: RunResult) -> None:
 @pytest.mark.parametrize("enable_dlq", [True, False], ids=["dlq_on", "dlq_off"])
 async def test_translator_error_with_non_ascii_message(enable_dlq: bool):
     """A translator error that echoes a non-ASCII value reaches the DLQ escaped."""
-    error = ValueError("unexpected name 'Jürgen' " + "x" * 2000)
+    error = ValueError("unexpected name 'Jürgen' " + "x" * 5000)
     result = await run_once(
         RawRecord(value='{"name": "Jürgen"}'.encode()),
         enable_dlq=enable_dlq,
@@ -321,8 +331,55 @@ async def test_translator_error_with_non_ascii_message(enable_dlq: bool):
     assert published is not None
     exc_msg = published["headers"][HeaderNames.EXC_MSG]
     assert exc_msg.startswith("unexpected name 'J\\xfcrgen'")
-    assert len(exc_msg) == 1000
+    assert len(exc_msg) == 4000
     assert published["value"] == {"name": "Jürgen"}
+
+
+async def test_dlq_copy_too_large_with_long_exception_message():
+    """A DLQ copy that is too large only because of a long exception message is
+    published whole, with the message cut short.
+    """
+    value = json.dumps({"text": "x" * 17_000}).encode()
+    result = await run_once(
+        RawRecord(value=value),
+        enable_dlq=True,
+        translator=RecordingTranslator(error=ValueError("y" * 5000)),
+    )
+    assert result.error is None
+    assert result.committed
+    assert result.producer.send_and_wait.await_count == 2
+    published = result.dlq_publish
+    assert published is not None
+    assert published["value"] == {"text": "x" * 17_000}
+    assert published["headers"][HeaderNames.EXC_MSG] == "y" * 200
+
+
+async def test_dlq_copy_too_large():
+    """A DLQ copy that outgrows the maximum message size once re-encoded as ASCII
+    JSON is published as a wrapper instead, so the consumer does not stop on it.
+    """
+    text = "\u5b57" * 6000  # 3 bytes each in UTF-8, 6 characters each escaped
+    value = json.dumps({"text": text}, ensure_ascii=False).encode()
+    assert len(value) < MAX_MESSAGE_SIZE
+    result = await run_once(
+        RawRecord(value=value),
+        enable_dlq=True,
+        translator=RecordingTranslator(error=ValueError("bad text")),
+    )
+    assert result.error is None
+    assert result.committed
+    assert result.producer.send_and_wait.await_count == 3
+    published = result.dlq_publish
+    assert published is not None
+    wrapper = published["value"]
+    assert wrapper["decode_error"] == "payload too large for the DLQ, kept as JSON"
+    assert wrapper["raw_value_truncated"] is True
+    raw = base64.b64decode(wrapper["raw_value_b64"])
+    compact = json.dumps({"text": text}, ensure_ascii=False, separators=(",", ":"))
+    assert compact.encode().startswith(raw)
+    headers = published["headers"]
+    assert headers[HeaderNames.EXC_CLASS] == "ValueError"
+    assert headers[HeaderNames.EXC_MSG] == "bad text"
 
 
 def mutate(record: RawRecord, rng: random.Random) -> RawRecord:

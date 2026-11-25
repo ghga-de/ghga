@@ -164,7 +164,8 @@ A record it cannot decode — a non-ASCII key, a value that is not JSON or not a
 - With the DLQ disabled, the subscriber raises `KafkaEventSubscriber.MalformedRecordError` without committing the offset, just as for a failing translator.
   The critical log names the topic, partition and offset, so an operator can move the consumer group past the record.
 
-Header values are decoded leniently, with undecodable bytes replaced, so a foreign header alone never stops the consumer.
+Header values are decoded leniently, with undecodable bytes replaced, so a foreign header value alone never stops the consumer.
+Header names are different: aiokafka decodes them as UTF-8 while it reads the batch, before the provider sees the record, so a header name that is not UTF-8 still stops the consumer, with the DLQ enabled or not.
 
 ## Offset Management
 

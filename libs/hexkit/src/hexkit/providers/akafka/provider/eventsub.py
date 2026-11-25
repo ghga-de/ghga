@@ -35,6 +35,7 @@ from typing import Any, Literal, Protocol, TypeVar, cast
 from uuid import UUID, uuid4
 
 from aiokafka import AIOKafkaConsumer
+from aiokafka.errors import MessageSizeTooLargeError
 from opentelemetry import trace
 from opentelemetry.propagate import extract
 from opentelemetry.propagators import textmap
@@ -63,7 +64,7 @@ log = logging.getLogger(__name__)
 CHANGE_EVENT_TYPE = "upserted"
 DELETE_EVENT_TYPE = "deleted"
 EventOrDaoSubProtocol = DaoSubscriberProtocol | EventSubscriberProtocol
-TextmapHeaders = list[tuple[str, bytes]]
+TextmapHeaders = Sequence[tuple[str, bytes | None]]
 
 tracer = trace.get_tracer_provider().get_tracer("hexkit.providers.akafka")
 
@@ -170,11 +171,18 @@ class ComboTranslator(EventSubscriberProtocol):
         """
         # The subscriber filters by topic and by type separately, so a type of
         # interest can still arrive on a topic that has no translator for it.
+        # Such an event is ignored, like one whose type is of no interest at all.
         translator = self.translators.get(topic, {}).get(type_)
         if translator is None:
-            raise RuntimeError(
-                f"No translator is registered for type '{type_}' on topic '{topic}'."
+            log.info(
+                "Ignored event of type '%s' on topic '%s': no translator handles"
+                + " this type on this topic. Key=%s, event_id=%s.",
+                type_,
+                topic,
+                key,
+                event_id,
             )
+            return
 
         if isinstance(translator, DaoSubscriberProtocol):
             if type_ == CHANGE_EVENT_TYPE:
@@ -212,12 +220,16 @@ class HeaderNames:
 
 
 class ConsumerEvent(Protocol):
-    """Duck type of an event as received from a KafkaConsumerCompatible."""
+    """Duck type of an event as received from a KafkaConsumerCompatible.
+
+    The key and value are what the deserializers return, a marker for a part that
+    could not be decoded among them.
+    """
 
     topic: str
-    key: str
-    value: JsonObject
-    headers: list[tuple[str, bytes]]
+    key: "str | _UndecodableRecordPart"
+    value: "JsonObject | _UndecodableRecordPart"
+    headers: Sequence[tuple[str, bytes | None]]
     partition: int
     offset: int
     timestamp: int
@@ -346,8 +358,13 @@ _JSON_TYPE_NAMES = {
     type(None): "null",
 }
 
-# The most characters of an exception text or escaped key that go into a DLQ copy
+# The most characters of an exception class name or escaped key in a DLQ copy
 _DLQ_HEADER_MAX_CHARS = 1000
+# The most characters of an exception text in a DLQ copy; a validation error with
+# several entries runs long, and whoever resolves the event needs all of it
+_DLQ_EXC_MSG_MAX_CHARS = 4000
+# The exception text kept when a DLQ copy is too large with the full one
+_DLQ_SHORT_EXC_MSG_CHARS = 200
 # Room for the headers and the JSON around the payload of a malformed record's DLQ copy
 _DLQ_ENVELOPE_BYTES = 8192
 
@@ -381,10 +398,10 @@ def _deserialize_value(raw: bytes | None) -> JsonObject | _UndecodableRecordPart
     return value
 
 
-def _ascii_for_header(text: str) -> str:
+def _ascii_for_header(text: str, *, max_chars: int = _DLQ_HEADER_MAX_CHARS) -> str:
     """Make text safe for a DLQ header, which the publisher encodes as ASCII."""
     escaped = text.encode("ascii", errors="backslashreplace").decode("ascii")
-    return escaped[:_DLQ_HEADER_MAX_CHARS]
+    return escaped[:max_chars]
 
 
 def _wrap_undecodable_value(
@@ -638,25 +655,83 @@ class KafkaEventSubscriber(InboundProviderBase):
             dlq_event_id,
             event.event_id,
         )
-        await self._dlq_publisher.publish(  # type: ignore
-            payload=event.payload,
-            type_=event.type_,
-            topic=self._dlq_topic,
-            key=event.key,
-            event_id=dlq_event_id,
-            headers={
-                HeaderNames.EXC_CLASS: _ascii_for_header(exc.__class__.__name__),
-                HeaderNames.EXC_MSG: _ascii_for_header(str(exc)),
-                HeaderNames.ORIGINAL_TOPIC: event.topic,
-                HeaderNames.ORIGINAL_EVENT_ID: str(event.event_id),
-                HeaderNames.SERVICE_NAME: self._service_name,
-            },
+        headers = {
+            HeaderNames.EXC_CLASS: _ascii_for_header(exc.__class__.__name__),
+            HeaderNames.EXC_MSG: _ascii_for_header(
+                str(exc), max_chars=_DLQ_EXC_MSG_MAX_CHARS
+            ),
+            HeaderNames.ORIGINAL_TOPIC: event.topic,
+            HeaderNames.ORIGINAL_EVENT_ID: str(event.event_id),
+            HeaderNames.SERVICE_NAME: self._service_name,
+        }
+
+        await self._publish_dlq_copy(
+            event=event, dlq_event_id=dlq_event_id, headers=headers
         )
         log.info(
             "Published event to DLQ topic '%s'. DLQ event_id=%s, original_event_id=%s.",
             self._dlq_topic,
             dlq_event_id,
             event.event_id,
+        )
+
+    async def _publish_dlq_copy(
+        self, *, event: ExtractedEventInfo, dlq_event_id: UUID, headers: dict[str, str]
+    ) -> None:
+        """Publish the DLQ copy of an event, shrinking it if it is too large.
+
+        The copy is encoded as ASCII JSON and carries extra headers, so it can outgrow
+        a record that fit; raising would stop the consumer on it. A short exception
+        message comes first, then the payload as base64-encoded JSON, cut to fit.
+        """
+
+        async def publish(payload: JsonObject) -> None:
+            await self._dlq_publisher.publish(  # type: ignore
+                payload=payload,
+                type_=event.type_,
+                topic=self._dlq_topic,
+                key=event.key,
+                event_id=dlq_event_id,
+                headers=headers,
+            )
+
+        try:
+            await publish(event.payload)
+            return
+        except MessageSizeTooLargeError as err:
+            log.warning(
+                "The DLQ copy of event %s is too large (%s), retrying with a short"
+                + " exception message.",
+                event.event_id,
+                err,
+            )
+        headers[HeaderNames.EXC_MSG] = headers[HeaderNames.EXC_MSG][
+            :_DLQ_SHORT_EXC_MSG_CHARS
+        ]
+        try:
+            await publish(event.payload)
+            return
+        except MessageSizeTooLargeError as err:
+            log.error(
+                "The DLQ copy of event %s is still too large (%s), publishing its"
+                + " payload as base64-encoded JSON, cut if it does not fit.",
+                event.event_id,
+                err,
+            )
+        try:
+            # UTF-8 is more compact than the escaped ASCII the publisher writes
+            raw = json.dumps(
+                event.payload, ensure_ascii=False, separators=(",", ":")
+            ).encode("utf-8")
+        except UnicodeEncodeError:  # a lone surrogate
+            raw = json.dumps(event.payload, separators=(",", ":")).encode("ascii")
+        await publish(
+            _wrap_undecodable_value(
+                _UndecodableRecordPart(
+                    raw=raw, error="payload too large for the DLQ, kept as JSON"
+                ),
+                max_bytes=self._max_message_size - _DLQ_ENVELOPE_BYTES - len(event.key),
+            )
         )
 
     async def _retry_event(self, *, event: ExtractedEventInfo, retries_left: int):

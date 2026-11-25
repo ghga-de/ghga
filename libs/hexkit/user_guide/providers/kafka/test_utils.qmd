@@ -130,6 +130,7 @@ assert recorder.recorded_events[0].type_ == "email_sent"
 
 Both `expect_events()` and `record_events()` only consider events published *inside* the context block: on entry, the recorder notes the topic's current offsets, and on exit it consumes exactly the events published since then.
 This also means the recorder never waits indefinitely for events that were expected but not published — it simply reports the mismatch.
+The recorder decodes records as a subscriber does; a record that a subscriber would treat as malformed raises an `UndecodableEventError` that names its partition and offset.
 
 If you need to compare manually recorded events against expectations later, the module-level `check_recorded_events()` function performs the same validation that `expect_events()` runs on exit.
 

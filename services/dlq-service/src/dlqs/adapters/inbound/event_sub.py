@@ -17,6 +17,7 @@
 import logging
 from collections.abc import Mapping
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import UUID4, ValidationError
 
@@ -47,6 +48,16 @@ class DLQSubTranslator(DLQSubscriberProtocol):
         headers: Mapping[str, str],
     ) -> None:
         """Consume an event"""
+        if event_id.version != 4:
+            # The subscriber accepts any UUID version. Derive the ID rather than
+            # draw a new one, so a redelivery is still recognized as a duplicate.
+            original_id = event_id
+            event_id = UUID(int=event_id.int, version=4)
+            log.warning(
+                "DLQ event ID %s is not a UUID4, storing the event as %s",
+                original_id,
+                event_id,
+            )
         try:
             event = RawDLQEvent(
                 payload=payload,
