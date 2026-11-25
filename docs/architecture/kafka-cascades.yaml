@@ -16,7 +16,7 @@
 #            HTML, so they may hold markup and must escape a literal < or &.
 # topics:    the reference table; omit subscribers when nothing in the repo subscribes.
 
-updated: 2026-11-10
+updated: 2026-11-25
 
 services:
   MASS: metadata search & access service
@@ -81,6 +81,14 @@ fragments:
         service: WPS
         action: upserts <span class='m'>uploadBoxes</span>, used for upload work packages
         terminal: true
+  priority_echo:
+    params: [reason]
+    nodes:
+    - event: {topic: upload-box-priority, type: upserted, class: outbox}
+      service: FIS
+      action: stores the list in <span class='m'>uploadBoxPriority</span> and hands DHFS the waiting files in its order
+      condition: '{{reason}}; a version no newer than the stored one is ignored'
+      terminal: true
   audit_leaf:
     nodes:
     - event: {topic: audit-records, type: audit_record_logged, class: persisted}
@@ -188,10 +196,7 @@ flows:
       service: WPS
       action: upserts <span class='m'>uploadBoxes</span>
       terminal: true
-    - event: {topic: upload-box-priority, type: upserted, class: outbox}
-      service: —
-      action: the box joins the end of the priority list; nothing subscribes yet
-      terminal: true
+    - use: {fragment: priority_echo, reason: the box joins the end of the list}
     - use: audit_leaf
 - id: box-archive
   lane: Upload boxes
@@ -218,10 +223,7 @@ flows:
         action: refreshes its view of the upload
         terminal: true
       - use: {fragment: box_echo, reason: box state changed}
-    - event: {topic: upload-box-priority, type: upserted, class: outbox}
-      service: —
-      action: the box leaves the priority list; nothing subscribes yet
-      terminal: true
+    - use: {fragment: priority_echo, reason: the box leaves the list}
     - use: audit_leaf
 - id: box-update
   lane: Upload boxes
@@ -283,10 +285,7 @@ flows:
       service: WPS
       action: deletes the <span class='m'>uploadBoxes</span> row
       terminal: true
-    - event: {topic: upload-box-priority, type: upserted, class: outbox}
-      service: —
-      action: the box leaves the priority list; nothing subscribes yet
-      terminal: true
+    - use: {fragment: priority_echo, reason: the box leaves the list}
     - use: audit_leaf
 - id: box-priority-repair
   lane: Upload boxes
@@ -299,10 +298,7 @@ flows:
     action: adds the missing boxes to the priority list, oldest last change first, and drops archived or deleted ones
     condition: writes, publishes and audits only if the list changed
     children:
-    - event: {topic: upload-box-priority, type: upserted, class: outbox}
-      service: —
-      action: published, nothing subscribes yet
-      terminal: true
+    - use: {fragment: priority_echo, reason: the repaired list}
     - use: audit_leaf
 - id: accession-map
   lane: Upload boxes
@@ -730,6 +726,7 @@ topics:
   class: outbox
   types: upserted
   producer: RS
+  subscribers: FIS
 - topic: file-upload-boxes
   class: outbox
   types: upserted · deleted

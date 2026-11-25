@@ -403,7 +403,7 @@
   // kafka-map-data:start
   // Generated from docs/architecture/kafka-cascades.yaml by scripts/kafka_map.py.
   // Edit the YAML and run `just kafka-map`; do not edit this block.
-  var META = { "updated": "2026-11-10", "topics": 24, "entrypoints": 23 };
+  var META = { "updated": "2026-11-25", "topics": 24, "entrypoints": 23 };
 
   var SVC = {
     "MASS": "metadata search & access service",
@@ -579,8 +579,9 @@
           },
           {
             "e": { "tp": "upload-box-priority", "ty": "upserted", "k": "outbox" },
-            "s": "—",
-            "a": "the box joins the end of the priority list; nothing subscribes yet",
+            "s": "FIS",
+            "a": "stores the list in <span class='m'>uploadBoxPriority</span> and hands DHFS the waiting files in its order",
+            "cond": "the box joins the end of the list; a version no newer than the stored one is ignored",
             "term": true
           },
           {
@@ -679,8 +680,9 @@
           },
           {
             "e": { "tp": "upload-box-priority", "ty": "upserted", "k": "outbox" },
-            "s": "—",
-            "a": "the box leaves the priority list; nothing subscribes yet",
+            "s": "FIS",
+            "a": "stores the list in <span class='m'>uploadBoxPriority</span> and hands DHFS the waiting files in its order",
+            "cond": "the box leaves the list; a version no newer than the stored one is ignored",
             "term": true
           },
           {
@@ -797,8 +799,9 @@
           },
           {
             "e": { "tp": "upload-box-priority", "ty": "upserted", "k": "outbox" },
-            "s": "—",
-            "a": "the box leaves the priority list; nothing subscribes yet",
+            "s": "FIS",
+            "a": "stores the list in <span class='m'>uploadBoxPriority</span> and hands DHFS the waiting files in its order",
+            "cond": "the box leaves the list; a version no newer than the stored one is ignored",
             "term": true
           },
           {
@@ -824,8 +827,9 @@
         "kids": [
           {
             "e": { "tp": "upload-box-priority", "ty": "upserted", "k": "outbox" },
-            "s": "—",
-            "a": "published, nothing subscribes yet",
+            "s": "FIS",
+            "a": "stores the list in <span class='m'>uploadBoxPriority</span> and hands DHFS the waiting files in its order",
+            "cond": "the repaired list; a version no newer than the stored one is ignored",
             "term": true
           },
           {
@@ -1505,7 +1509,7 @@
     ["accession-maps", "outbox", "upserted · deleted", "RS", "WPS, DINS"],
     ["audit-records", "persist", "audit_record_logged", "RS", null],
     ["research-data-upload-boxes", "outbox", "upserted · deleted", "RS", "WPS"],
-    ["upload-box-priority", "outbox", "upserted", "RS", null],
+    ["upload-box-priority", "outbox", "upserted", "RS", "FIS"],
     ["file-upload-boxes", "outbox", "upserted · deleted", "UCS", "RS"],
     ["file-uploads", "outbox", "upserted · deleted", "UCS", "FIS, IFRS"],
     ["interrogations", "persist", "file_interrogation_success · _failed", "FIS", "UCS"],
