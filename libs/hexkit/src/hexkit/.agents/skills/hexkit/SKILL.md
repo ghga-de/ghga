@@ -74,6 +74,7 @@ Look at the stored data, not the event, when choosing between the outbox and the
 - Delivery is at least once, so every translator is idempotent.
 - Let an exception propagate from the translator: it triggers the retries (`kafka_max_retries`, `kafka_retry_backoff`) and then the dead letter queue (`kafka_enable_dlq`), which needs a `dlq_publisher` passed to `construct()` ([Dead Letter Queue](https://ghga-de.github.io/ghga/hexkit/user-guide/arch_concepts/dlq.md)).
   A caught and logged exception commits the offset, and the event is lost.
+- A record whose key is not ASCII or whose value is not a JSON object never reaches the translator: it goes to the DLQ wrapped, or, with the DLQ off, raises `MalformedRecordError` ([Malformed Records](https://ghga-de.github.io/ghga/hexkit/user-guide/providers/kafka/subscriber.md#malformed-records)).
 - One subscriber takes one translator; combine several, outbox translators included, with `ComboTranslator`.
 - `service_name` is the consumer group, so all instances of a service share the events.
 - Correlation IDs travel with events and logs on their own; set one only where work starts without a request or event, such as a job, with `set_new_correlation_id()` ([Correlation IDs](https://ghga-de.github.io/ghga/hexkit/user-guide/observability_tools/correlation_ids.md)).

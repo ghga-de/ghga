@@ -37,6 +37,9 @@ from hexkit.providers.akafka.provider.eventsub import HeaderNames
 
 log = logging.getLogger(__name__)
 
+# Stored for a missing service or topic, since the API addresses events by both
+UNKNOWN = "unknown"
+
 
 def stored_event_from_raw_event(event: RawDLQEvent) -> StoredDLQEvent:
     """Convert a RawDLQEvent object to a StoredDLQEvent object
@@ -46,19 +49,31 @@ def stored_event_from_raw_event(event: RawDLQEvent) -> StoredDLQEvent:
     The new event ID is used as the DLQ ID, and the old event ID is stored in DLQInfo.
     """
     # Extract the DLQ info from the headers
-    og_topic = event.headers[HeaderNames.ORIGINAL_TOPIC]
-    service = event.headers.get(HeaderNames.SERVICE_NAME, "")
+    og_topic = event.headers.get(HeaderNames.ORIGINAL_TOPIC) or UNKNOWN
+    service = event.headers.get(HeaderNames.SERVICE_NAME) or UNKNOWN
+    if UNKNOWN in (og_topic, service):
+        log.warning(
+            "DLQ Event %s arrived without an original topic or service name",
+            event.dlq_id,
+        )
 
-    og_event_id = (
-        UUID(event.headers.get(HeaderNames.ORIGINAL_EVENT_ID))
-        if HeaderNames.ORIGINAL_EVENT_ID in event.headers
-        else None
-    )
-    if not og_event_id:
+    og_event_id: UUID | None = None
+    found_event_id = event.headers.get(HeaderNames.ORIGINAL_EVENT_ID)
+    if found_event_id is None:
         log.info(
             "DLQ Event %s did not arrive with an existing 'original_event_id'",
             event.dlq_id,
         )
+    else:
+        with suppress(ValueError):
+            og_event_id = UUID(found_event_id)
+        if og_event_id is None or og_event_id.version != 4:
+            log.warning(
+                "DLQ Event %s arrived with an invalid 'original_event_id': %r",
+                event.dlq_id,
+                found_event_id[:100],
+            )
+            og_event_id = None
     exc_class = event.headers.get(HeaderNames.EXC_CLASS, "")
     exc_msg = event.headers.get(HeaderNames.EXC_MSG, "")
     dlq_info = DLQInfo(
@@ -145,13 +160,14 @@ class DLQManager(DLQManagerPort):
         stored_event = stored_event_from_raw_event(event)
         try:
             await self._dao.insert(stored_event)
+        except ResourceAlreadyExistsError:
+            # Each DLQ publish gets a new event ID, so this is a redelivery
+            log.info("DLQ event %s is already stored", stored_event.dlq_id)
         except Exception as err:
-            already_exists = isinstance(err, ResourceAlreadyExistsError)
             error = self.DLQInsertionError(
-                dlq_id=stored_event.dlq_id,
-                already_exists=already_exists,
+                dlq_id=stored_event.dlq_id, already_exists=False
             )
-            log.error(error, exc_info=not already_exists)  # log TB if misc
+            log.error(error, exc_info=True)
             raise error from err
 
     async def get_service_topic_summary(self) -> dict[str, Counter[str]]:

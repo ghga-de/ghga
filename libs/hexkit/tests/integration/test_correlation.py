@@ -201,23 +201,13 @@ async def test_context_var_setter():
 
 
 @pytest.mark.parametrize(
-    "expected_correlation_id,cid_in_header,exception",
-    [
-        (VALID_CORRELATION_ID, True, None),
-        (VALID_CORRELATION_ID, False, None),
-        ("invalid", True, InvalidCorrelationIdError),
-        ("invalid", False, None),
-        ("", True, None),
-        ("", False, None),
-    ],
+    "header_correlation_id",
+    [str(VALID_CORRELATION_ID), "invalid", NON_V4_UUID, "", None],
+    ids=["valid", "invalid", "non_v4", "empty", "missing"],
 )
-async def test_correlation_consuming(
-    expected_correlation_id: str | UUID4,
-    cid_in_header: bool,
-    exception,
-):
+async def test_correlation_consuming(header_correlation_id: str | None):
     """Verify the logic in the Kafka consumer provider that retrieves and sets the
-    correlation ID.
+    correlation ID: a valid one is kept, a missing or invalid one replaced.
     Uses a mock because event consumption with bad data can only be tested by
     bypassing the publisher validation.
     """
@@ -228,10 +218,9 @@ async def test_correlation_consuming(
     headers: list[tuple[str, bytes]] = [("type", b"test_type")]
 
     # include the correlation ID header if the test case calls for it
-    if cid_in_header:
-        headers.append(
-            ("correlation_id", bytes(str(expected_correlation_id), encoding="ascii"))
-        )
+    if header_correlation_id is not None:
+        headers.append(("correlation_id", header_correlation_id.encode("ascii")))
+    consumed_correlation_ids: list[UUID4] = []
 
     # establish a mock event object:
     Event = namedtuple(
@@ -283,18 +272,21 @@ async def test_correlation_consuming(
             key: Ascii,
             event_id: UUID4,
         ) -> None:
-            # Make sure the IDs match
-            if not cid_in_header:
-                assert False, "Translator called but event should have been ignored"
-            assert get_correlation_id() == expected_correlation_id
+            consumed_correlation_ids.append(get_correlation_id())
 
     # Instantiate and run the consumer
     test_translator = TestTranslator(config=config)
     async with KafkaEventSubscriber.construct(
         config=config, translator=test_translator, kafka_consumer_cls=consumer_cls
     ) as kafka_event_subscriber:
-        with pytest.raises(exception) if exception else nullcontext():
-            await kafka_event_subscriber.run(forever=False)
+        await kafka_event_subscriber.run(forever=False)
+
+    assert len(consumed_correlation_ids) == 1
+    if header_correlation_id == str(VALID_CORRELATION_ID):
+        assert consumed_correlation_ids[0] == VALID_CORRELATION_ID
+    else:
+        validate_correlation_id(consumed_correlation_ids[0])
+        assert consumed_correlation_ids[0] != VALID_CORRELATION_ID
 
 
 @pytest.mark.parametrize(

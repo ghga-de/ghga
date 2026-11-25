@@ -16,13 +16,15 @@
 """Unit tests for the DLQ Manager"""
 
 from contextlib import nullcontext
+from datetime import UTC, datetime
 from typing import cast
 from unittest.mock import AsyncMock, Mock
-from uuid import UUID
+from uuid import UUID, uuid1
 
 import pytest
 
-from dlqs.core.dlq_manager import stored_event_from_raw_event
+from dlqs.adapters.inbound.event_sub import DLQSubTranslator
+from dlqs.core.dlq_manager import UNKNOWN, stored_event_from_raw_event
 from dlqs.inject import prepare_core
 from dlqs.models import EventCore, PublishableEventData, StoredDLQEvent
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
@@ -440,3 +442,89 @@ async def test_get_service_topic_summary():
         },
         utils.UFS: {utils.USER_EVENTS: 4},
     }
+
+
+@pytest.mark.parametrize(
+    "header", [HeaderNames.ORIGINAL_TOPIC, HeaderNames.SERVICE_NAME]
+)
+@pytest.mark.parametrize("value", [None, ""], ids=["missing", "empty"])
+def test_stored_event_without_topic_or_service(header: str, value: str | None):
+    """A missing original topic or service name is stored as 'unknown', since the
+    API cannot address an empty path segment.
+    """
+    dlq_event = utils.graph_event()
+    if value is None:
+        del dlq_event.headers[header]
+    else:
+        dlq_event.headers[header] = value
+    stored_dlq_event = stored_event_from_raw_event(dlq_event)
+    stored_value = (
+        stored_dlq_event.topic
+        if header == HeaderNames.ORIGINAL_TOPIC
+        else stored_dlq_event.dlq_info.service
+    )
+    assert stored_value == UNKNOWN
+
+
+@pytest.mark.parametrize(
+    "original_event_id",
+    ["not-a-uuid", str(uuid1()), ""],
+    ids=["garbage", "uuid1", "empty"],
+)
+def test_stored_event_with_invalid_original_event_id(original_event_id: str):
+    """An original event ID that is not a UUID4 is stored as None."""
+    dlq_event = utils.graph_event()
+    dlq_event.headers[HeaderNames.ORIGINAL_EVENT_ID] = original_event_id
+    stored_dlq_event = stored_event_from_raw_event(dlq_event)
+    assert stored_dlq_event.dlq_info.original_event_id is None
+
+
+@pytest.mark.asyncio
+async def test_store_event_duplicate_is_success():
+    """Storing a redelivered DLQ event succeeds without a second copy."""
+    dlq_event = utils.graph_event()
+    dao = InMemDLQEventDao()
+
+    async with prepare_core(
+        config=DEFAULT_CONFIG,
+        dao_override=dao,
+        publisher_override=AsyncMock(),
+    ) as dlq_manager:
+        await dlq_manager.store_event(event=dlq_event)
+        await dlq_manager.store_event(event=dlq_event)
+
+    assert len(dao.resources) == 1
+
+
+@pytest.mark.asyncio
+async def test_store_event_other_db_error():
+    """A database error other than a duplicate still raises."""
+    mock_dao = AsyncMock()
+    mock_dao.insert.side_effect = RuntimeError("database down")
+
+    async with prepare_core(
+        config=DEFAULT_CONFIG,
+        dao_override=mock_dao,
+        publisher_override=AsyncMock(),
+    ) as dlq_manager:
+        with pytest.raises(dlq_manager.DLQInsertionError):
+            await dlq_manager.store_event(event=utils.graph_event())
+
+
+@pytest.mark.asyncio
+async def test_translator_drops_invalid_event():
+    """An event that does not validate as a RawDLQEvent is logged and dropped,
+    since raising would stop the consumer.
+    """
+    dlq_manager = AsyncMock()
+    translator = DLQSubTranslator(dlq_manager=dlq_manager)
+    await translator.consume(
+        payload=["not", "an", "object"],  # type: ignore[arg-type]
+        type_="some_type",
+        topic=DEFAULT_CONFIG.kafka_dlq_topic,
+        key="key",
+        event_id=TEST_UUID,
+        timestamp=datetime.now(UTC),
+        headers={HeaderNames.CORRELATION_ID: utils.TEST_CID},
+    )
+    dlq_manager.store_event.assert_not_called()
