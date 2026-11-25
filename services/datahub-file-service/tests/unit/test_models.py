@@ -174,3 +174,10 @@ def test_config_validator():
 
     # No error when False:
     _ = get_config(client_reraise_from_retry_error=False)
+
+
+def test_config_dump_masks_passphrase():
+    """Test that the dump the startup log shows masks the key file passphrase."""
+    config = get_config(data_hub_crypt4gh_private_key_passphrase="s3cret")
+    dump = config.model_dump(mode="json")
+    assert dump["data_hub_crypt4gh_private_key_passphrase"] == "**********"
