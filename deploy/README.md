@@ -54,7 +54,7 @@ Adoption changes vs upstream: Emissary `Mapping`/`AuthService` paths pruned (rou
 
 Key decisions:
 
-- **Hybrid boundary** ([ADR-0031](../docs/adrs/adr-0031-helm-chart-boundary-hybrid.md)): app charts own app-coupled CRDs (HTTPRoute, DestinationRule[toggle], NetworkPolicy, KafkaUser[toggle]); the GitOps/platform layer (`devops-kubernetes-hub`, not in this repo) owns the edge `Gateway`, the edge-auth object, and per-env config.
+- **Hybrid boundary** ([ADR-0031](../docs/adrs/adr-0031-helm-chart-boundary-hybrid.md)): app charts own app-coupled CRDs (HTTPRoute, DestinationRule[toggle], NetworkPolicy, AuthorizationPolicy[toggle], KafkaUser[toggle]); the GitOps/platform layer (`devops-kubernetes-hub`, not in this repo) owns the edge `Gateway`, the edge-auth object, and per-env config.
 - **Self-contained edge = Envoy Gateway** ([ADR-0032](../docs/adrs/adr-0032-self-contained-edge-envoy-gateway.md)): `helm install ghga` is one command, runs real Gateway-API routing + real Envoy ext_authz against the auth-adapter, no external ops.
   Full Istio is reserved for the periodic staging check.
 - **Secrets**: K8s Secrets in the demo, Vault Agent + cert-manager in prod ([ADR-0035](../docs/adrs/adr-0035-secrets-and-tls.md)).

@@ -1,0 +1,30 @@
+authorizationPolicy:
+  enabled: true
+  callers:
+    caller:
+      - methods: ["GET"]
+        paths: ["/health"]
+        ports: [8080]
+    other-ns:
+      - allowAll: true
+    multi:
+      - methods: ["POST"]
+        paths: ["/items"]
+      - methods: ["DELETE"]
+        paths: ["/items/{*}"]
+  identities:
+    caller:
+      serviceAccount: caller
+    other-ns:
+      namespace: elsewhere
+      serviceAccount: other-sa
+    multi:
+      principals: ["cluster.local/ns/{{ .Release.Namespace }}/sa/multi"]
+  extraRules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/{{ .Release.Namespace }}-ingress/sa/gateway"]
+    - allowAnySource: true
+      when:
+        - key: request.headers[x-test]
+          values: ["yes"]

@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-06-30
+amended: 2026-11-25
 tags: [deploy]
 related: [ADR-0028, ADR-0032, ADR-0033, ADR-0035]
 ---
@@ -42,6 +43,13 @@ App charts own the resources that are one-to-one with a workload: `HTTPRoute`, `
 Each one can be switched off in the values, so the chart works with or without Istio, Envoy Gateway or Strimzi.
 
 The platform layer owns what is cluster-wide: the edge `Gateway`, the edge auth object (Istio `AuthorizationPolicy` in production, Envoy Gateway `SecurityPolicy` in the demo), extension-provider registration and per-environment values.
+
+**Amended 2026-11-25:** App charts also own the workload's Istio `AuthorizationPolicy`, an `ALLOW` policy built from the same helpers as the workload's Service and Deployment, so it cannot drift off them.
+Production runs Istio in ambient mode, where only the waypoint can check paths and methods, so a policy with callers binds to the Service through `targetRefs`; one that denies all traffic selects the pods, where ztunnel enforces it.
+Which services call it, and with which methods and paths, is a fact of the code, so the callee lists its callers in its chart values, keyed by the caller's chart or instance name, and CI checks each path against the callee's OpenAPI spec.
+Who a caller is differs per environment, so the platform layer sets the identities (ServiceAccount, namespace, trust domain) in a separate map, required for every caller, adds raw rules for what no chart knows, such as the ingress gateway, and enables the policy; both maps merge key by key, so an environment can change or drop a single caller.
+The policy fails closed: a caller that restricts nothing must say so with `allowAll`, a raw rule without a source with `allowAnySource`, and an enabled policy without rules fails the render unless `denyAll` asks for it, since an `ALLOW` policy without rules denies everything.
+The mesh-wide default deny, `PeerAuthentication`, and guardrails as `DENY` policies stay with the platform layer, and Istio evaluates `DENY` before `ALLOW`, so no app chart can override them.
 `devops-kubernetes-hub` stays outside this repo.
 
 App charts keep a binding contract, so the platform layer attaches its resources without patching templates.

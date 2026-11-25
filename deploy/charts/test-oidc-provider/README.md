@@ -176,6 +176,12 @@ for the full set of configurable values.
 | `probe.hostname` | Public hostname the blackbox exporter probes (combined with the API base path and healthEndpoint below to build the target URL) | `"default.ghga.dev"` |
 | `healthEndpoint` | Path appended to the probe target URL (after the API base path) | `"/health"` |
 | `destinationRule.enabled` | Render an Istio DestinationRule for this service | `false` |
+| `authorizationPolicy.enabled` | Render an Istio ALLOW AuthorizationPolicy for this workload, bound to its Service for the waypoint | `false` |
+| `authorizationPolicy.denyAll` | Render the policy with no rules, denying all traffic to the workload; overrides callers. Required to enable the policy without callers | `false` |
+| `authorizationPolicy.trustDomain` | Istio trust domain the callers' principals are built in | `"cluster.local"` |
+| `authorizationPolicy.callers` | Allowed callers, keyed by the caller's chart or instance name, each a list of operations | `{}` |
+| `authorizationPolicy.identities` | Who each caller is, keyed like callers: serviceAccount (and namespace if it differs) or principals. Required for every caller | `{}` |
+| `authorizationPolicy.extraRules` | Raw Istio rules added as they are, such as the ingress gateway; each needs from unless it sets allowAnySource: true. Templated | `[]` |
 | `networkPolicy.enabled` | Render a NetworkPolicy restricting ingress traffic to the pod | `false` |
 | `networkPolicy.ingress` | Only allow traffic from namespaces labeled `ghga-ingress: allow`, on the Service's own ports | `[{"from": [{"namespaceSelector": {"matchLabels": {"ghga-ingress": "allow"}}}]}]` |
 | `strimziApiVersion` | apiVersion used for the rendered Strimzi KafkaUser resource | `"kafka.strimzi.io/v1"` |

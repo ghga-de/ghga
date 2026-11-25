@@ -150,6 +150,7 @@ Routing is Gateway API `HTTPRoute` only; the Emissary paths and the `istio-ext-a
 - pod/service **label + annotation passthrough**;
 - **named ports with `http-`/`grpc-` prefixes** and stable Service names;
 - **per-workload ServiceAccounts** (Strimzi `KafkaUser` principals / mesh identity bind to the SA);
+- the workload `AuthorizationPolicy` binds to the chart's own Service for the ambient waypoint, or selects the pods by the Deployment's labels when it denies all; the chart lists the in-mesh callers and what each may do, the platform layer sets their identities and adds the gateway;
 - injectable OTLP / Kafka / Mongo / S3 / Vault / OIDC config; customisable probes;
 - secret consumption toggle: Vault Agent (prod) vs env-from-Secret (demo);
 - seed/secret-gen **Jobs default to `sidecar.istio.io/inject: "false"`**.

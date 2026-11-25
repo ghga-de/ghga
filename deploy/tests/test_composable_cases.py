@@ -399,3 +399,205 @@ def test_migration_init_container(rendered_chart):
         {"configMapRef": {"name": "my-env-configmap"}},
         {"secretRef": {"name": "my-env-secret"}},
     ]
+
+
+def test_authorization_policy(rendered_chart):
+    """The AuthorizationPolicy is off by default and, when on, binds to the chart's
+    own Service, which the ambient waypoint enforces it on. Each caller becomes one
+    rule, in key order, followed by the extra rules.
+    """
+    assert "AuthorizationPolicy" not in rendered_chart("common.yaml")
+
+    manifests = rendered_chart("common.yaml", "authorization_policy.yaml")
+    spec = manifests["AuthorizationPolicy"]["spec"]
+    assert spec["targetRefs"] == [
+        {
+            "kind": "Service",
+            "group": "",
+            "name": manifests["Service"]["metadata"]["name"],
+        }
+    ]
+    assert "selector" not in spec
+    assert spec["action"] == "ALLOW"
+    assert spec["rules"] == [
+        {
+            "from": [{"source": {"principals": ["cluster.local/ns/test/sa/caller"]}}],
+            "to": [
+                {
+                    "operation": {
+                        "paths": ["/health"],
+                        "methods": ["GET"],
+                        "ports": ["8080"],
+                    }
+                }
+            ],
+        },
+        {
+            "from": [{"source": {"principals": ["cluster.local/ns/test/sa/multi"]}}],
+            "to": [
+                {"operation": {"paths": ["/items"], "methods": ["POST"]}},
+                {"operation": {"paths": ["/items/{*}"], "methods": ["DELETE"]}},
+            ],
+        },
+        {
+            "from": [
+                {"source": {"principals": ["cluster.local/ns/elsewhere/sa/other-sa"]}}
+            ]
+        },
+        {
+            "from": [
+                {"source": {"principals": ["cluster.local/ns/test-ingress/sa/gateway"]}}
+            ]
+        },
+        {"when": [{"key": "request.headers[x-test]", "values": ["yes"]}]},
+    ]
+
+
+def test_authorization_policy_deny_all_selects_the_pods(rendered_chart):
+    """DenyAll has no L7 rules, so ztunnel enforces it on the pods themselves,
+    selected with the Deployment's own labels so the two cannot drift apart.
+    """
+    manifests = rendered_chart("common.yaml", "authorization_policy_deny_all.yaml")
+    spec = manifests["AuthorizationPolicy"]["spec"]
+    deployment_selector = manifests["Deployment"]["spec"]["selector"]["matchLabels"]
+    assert spec["selector"]["matchLabels"] == deployment_selector
+    assert "targetRefs" not in spec
+    assert "rules" not in spec
+
+
+def test_authorization_policy_deny_all_overrides_rules(rendered_chart):
+    """DenyAll drops the chart's callers and the extra rules, as for a consumer
+    that takes no calls.
+    """
+    manifests = rendered_chart(
+        "common.yaml",
+        "authorization_policy.yaml",
+        "authorization_policy_deny_all.yaml",
+    )
+    assert "rules" not in manifests["AuthorizationPolicy"]["spec"]
+
+
+def test_authorization_policy_merges_per_key(rendered_chart):
+    """An environment overlay changes one caller's identity without touching its
+    operations, and adds or drops single callers by key.
+    """
+    manifests = rendered_chart(
+        "common.yaml",
+        "authorization_policy.yaml",
+        "authorization_policy_override.yaml",
+    )
+    rules = manifests["AuthorizationPolicy"]["spec"]["rules"]
+    assert [rule["from"][0]["source"]["principals"][0] for rule in rules] == [
+        "prod.example/ns/test/sa/added",
+        "prod.example/ns/test/sa/caller-prod",
+    ]
+    assert rules[1]["to"][0]["operation"]["paths"] == ["/health"]
+
+
+def _policy(**values):
+    return {"authorizationPolicy": {"enabled": True, **values}}
+
+
+GET = [{"methods": ["GET"], "paths": ["/x"]}]
+SA = {"c": {"serviceAccount": "c"}}
+GATEWAY = {"from": [{"source": {"principals": ["gw"]}}]}
+
+
+@pytest.mark.parametrize(
+    "values, message",
+    [
+        (_policy(), "would deny all traffic"),
+        # callers
+        (_policy(callers={"c": []}, identities=SA), "has no operation"),
+        (_policy(callers={"c": {"methods": ["GET"]}}, identities=SA), "must be a list"),
+        (_policy(callers={"c": [{}]}, identities=SA), "restricts nothing"),
+        (_policy(callers={"c": [{"methods": []}]}, identities=SA), "is empty"),
+        (
+            _policy(callers={"c": [{"methods": [], "paths": ["/x"]}]}, identities=SA),
+            "methods is empty",
+        ),
+        (
+            _policy(callers={"c": [{"ports": [], "paths": ["/x"]}]}, identities=SA),
+            "ports is empty",
+        ),
+        (
+            _policy(callers={"c": [{"path": ["/x"]}]}, identities=SA),
+            "unknown operation key",
+        ),
+        (
+            _policy(callers={"c": [{"allowAll": True}, *GET]}, identities=SA),
+            "allowAll must be the",
+        ),
+        (
+            _policy(callers={"c": [{"allowAll": "false"}]}, identities=SA),
+            "allowAll must be true or false",
+        ),
+        # identities
+        (_policy(callers={"c": GET}), "identities.c is missing"),
+        (
+            _policy(callers={"c": GET}, identities={**SA, "d": SA["c"]}),
+            "identities.d has no caller",
+        ),
+        (
+            _policy(callers={"c": GET}, identities={"c": {"serviceaccount": "x"}}),
+            "unknown key",
+        ),
+        (
+            _policy(callers={"c": GET}, identities={"c": {"namespace": "elsewhere"}}),
+            "needs serviceAccount or principals",
+        ),
+        (
+            _policy(
+                callers={"c": GET},
+                identities={"c": {"principals": ["p"], "serviceAccount": "c"}},
+            ),
+            "principals replaces",
+        ),
+        (
+            _policy(
+                callers={"c": GET},
+                identities={"c": {"principals": [], "serviceAccount": "c"}},
+            ),
+            "principals is empty",
+        ),
+        (_policy(callers={"c": GET}, identities={"c": "ghga-c"}), "must be a map"),
+        # extraRules
+        (_policy(extraRules=[{}]), r"extraRules\[0\] is empty"),
+        (_policy(extraRules=[{"allowAnySource": True}]), r"extraRules\[0\] is empty"),
+        (
+            _policy(extraRules=[{"when": [{"key": "k", "values": ["v"]}]}]),
+            "has no from",
+        ),
+        (_policy(extraRules=[{"from": [{}]}]), r"from\[0\] needs a source"),
+        (_policy(extraRules=[{"from": [{"source": {}}]}]), r"from\[0\] needs a source"),
+        (
+            _policy(extraRules=[{**GATEWAY, "allowAnySource": "yes"}]),
+            "allowAnySource must be",
+        ),
+        # workload
+        (
+            {
+                **_policy(callers={"c": GET}, identities=SA),
+                "service": {"enabled": False},
+            },
+            "need the chart's Service",
+        ),
+    ],
+)
+def test_authorization_policy_fails_closed(rendered_chart, values, message):
+    """Anything that would allow more than it says, or that cannot be matched to a
+    caller, stops the render instead of opening the service.
+    """
+    with pytest.raises(AssertionError, match=message):
+        rendered_chart("common.yaml", values)
+
+
+def test_authorization_policy_ignores_allow_all_false(rendered_chart):
+    """AllowAll: false next to real restrictions is the same as leaving it out."""
+    manifests = rendered_chart(
+        "common.yaml",
+        _policy(callers={"c": [{"allowAll": False, **GET[0]}]}, identities=SA),
+    )
+    assert manifests["AuthorizationPolicy"]["spec"]["rules"][0]["to"] == [
+        {"operation": {"methods": ["GET"], "paths": ["/x"]}}
+    ]

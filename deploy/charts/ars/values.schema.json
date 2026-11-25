@@ -1758,6 +1758,44 @@
         }
       }
     },
+    "authorizationPolicy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render an Istio ALLOW AuthorizationPolicy for this workload, bound to its Service for the waypoint",
+          "default": false
+        },
+        "denyAll": {
+          "type": "boolean",
+          "description": "Render the policy with no rules, denying all traffic to the workload; overrides callers. Required to enable the policy without callers",
+          "default": false
+        },
+        "trustDomain": {
+          "type": "string",
+          "description": "Istio trust domain the callers' principals are built in",
+          "default": "cluster.local"
+        },
+        "callers": {
+          "type": "object",
+          "description": "Allowed callers, keyed by the caller's chart or instance name, each a list of operations",
+          "additionalProperties": true,
+          "default": {}
+        },
+        "identities": {
+          "type": "object",
+          "description": "Who each caller is, keyed like callers: serviceAccount (and namespace if it differs) or principals. Required for every caller",
+          "additionalProperties": true,
+          "default": {}
+        },
+        "extraRules": {
+          "type": "array",
+          "description": "Raw Istio rules added as they are, such as the ingress gateway; each needs from unless it sets allowAnySource: true. Templated",
+          "default": []
+        }
+      }
+    },
     "networkPolicy": {
       "type": "object",
       "additionalProperties": true,

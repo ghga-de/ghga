@@ -1,0 +1,3 @@
+authorizationPolicy:
+  enabled: true
+  denyAll: true

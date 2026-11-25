@@ -32,7 +32,7 @@ exports:
 
     # Merged onto every rendered resource's metadata - Deployment, CronJob, Job,
     # Service, HPA, DestinationRule, HTTPRoute, Probe, ConfigMap, ServiceAccount,
-    # NetworkPolicy, KafkaUser. There is deliberately no separate, narrower
+    # NetworkPolicy, AuthorizationPolicy, KafkaUser. There is deliberately no separate, narrower
     # per-workload-only labels/annotations value: Service is the one resource that
     # regularly needs its own (LB/ingress-controller annotations, scrape labels,
     # ...), and that's what service.labels/service.annotations below are for: for
@@ -270,6 +270,14 @@ exports:
 
     destinationRule:
       enabled: false
+
+    authorizationPolicy:
+      enabled: false
+      denyAll: false
+      trustDomain: cluster.local
+      callers: {}
+      identities: {}
+      extraRules: []
 
     networkPolicy:
       enabled: false

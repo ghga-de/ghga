@@ -183,6 +183,13 @@ probe:
 healthEndpoint: "/health"
 destinationRule:
   enabled: false
+authorizationPolicy:
+  enabled: false
+  denyAll: false
+  trustDomain: cluster.local
+  callers: {}
+  identities: {}
+  extraRules: []
 networkPolicy:
   enabled: false
   ingress:

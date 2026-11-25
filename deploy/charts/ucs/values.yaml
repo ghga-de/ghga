@@ -244,6 +244,34 @@ probe:
 healthEndpoint: "/health"
 destinationRule:
   enabled: false
+authorizationPolicy:
+  enabled: false
+  denyAll: false
+  trustDomain: cluster.local
+  callers:
+    rs:
+    - methods:
+      - POST
+      paths:
+      - /boxes
+      - /rpc/boxes/file-state-counts
+      - /rpc/boxes/{*}/requeue
+      - /rpc/boxes/{*}/uploads/{*}/requeue
+    - methods:
+      - PATCH
+      paths:
+      - "/boxes/{*}"
+    - methods:
+      - GET
+      paths:
+      - "/boxes/{*}/uploads"
+    - methods:
+      - DELETE
+      paths:
+      - "/boxes/{*}"
+      - "/boxes/{*}/uploads/{*}"
+  identities: {}
+  extraRules: []
 networkPolicy:
   enabled: false
   ingress:
