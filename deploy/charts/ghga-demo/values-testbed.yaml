@@ -19,6 +19,7 @@ sms:
 test-oidc-provider:
   enabled: true
   apiBasePathPrefix: /api
+  apiBasePath: /op.test/
   httpRoute:
     enabled: true
     port: 8080
