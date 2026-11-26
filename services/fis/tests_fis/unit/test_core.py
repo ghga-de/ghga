@@ -15,17 +15,22 @@
 
 """Unit tests for the core logic"""
 
+import logging
 from asyncio import sleep
+from collections.abc import Mapping
 from datetime import timedelta
+from typing import Any
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
 
-from fis.constants import MAX_FILES_PER_REQUEST
+from fis.constants import LEASE_SECONDS, MAX_FILES_PER_REQUEST
 from fis.core import models
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
 from fis.ports.outbound.dao import ResourceNotFoundError
 from fis.ports.outbound.secrets import SecretsClientPort
+from hexkit.protocols.dao import PreconditionFailedError
 from hexkit.utils import now_utc_ms_prec
 from tests_fis.fixtures.joint import JointRig
 from tests_fis.fixtures.utils import (
@@ -670,3 +675,169 @@ async def test_clear_upload_box_priority(rig: JointRig):
     stored_priority = await rig.upload_box_priority_dao.get_by_id("global")
     assert stored_priority.entries == []
     assert stored_priority.version == 4
+
+
+async def test_claim_file(rig: JointRig):
+    """Test that a claim leases a waiting file, that no claim gets the file while the
+    lease holds, and that a claim after the lease ran out gets it again.
+
+    The first claim runs over a file with `leased_until=None`, which the in-memory
+    DAO's `$lt` can't compare (GSI-2689).
+    """
+    handler = rig.interrogation_handler
+    claimant_id = uuid4()
+    assert await handler.claim_file(storage_alias=HUB1, claimant_id=claimant_id) is None
+
+    file = create_file_under_interrogation(HUB1)
+    await rig.file_dao.insert(file)
+
+    before_claim = now_utc_ms_prec()
+    claimed_file = await handler.claim_file(storage_alias=HUB1, claimant_id=claimant_id)
+    after_claim = now_utc_ms_prec()
+
+    assert claimed_file == models.BaseFileInformation(**file.model_dump())
+    stored_file = await rig.file_dao.get_by_id(file.id)
+    assert stored_file.claimed_at
+    assert before_claim <= stored_file.claimed_at <= after_claim
+    assert stored_file.leased_until == stored_file.claimed_at + timedelta(
+        seconds=LEASE_SECONDS
+    )
+    assert stored_file.leased_by == claimant_id
+    assert stored_file.times_claimed == 1
+    # The claim changes nothing but the lease fields, `state_updated` included
+    assert stored_file.model_dump(exclude=set(CLEARED_LEASE)) == file.model_dump(
+        exclude=set(CLEARED_LEASE)
+    )
+
+    assert await handler.claim_file(storage_alias=HUB1, claimant_id=uuid4()) is None
+
+    # Let the lease run out (actually just make it look like it did)
+    stored_file.leased_until = now_utc_ms_prec() - timedelta(seconds=1)
+    await rig.file_dao.update(stored_file)
+
+    # Now verify that a request from some other instance can grab the file
+    other_claimant_id = uuid4()
+    reclaimed_file = await handler.claim_file(
+        storage_alias=HUB1, claimant_id=other_claimant_id
+    )
+
+    # Check that it was claimed/is the same, and that times_claimed went up
+    assert reclaimed_file == claimed_file
+    stored_file = await rig.file_dao.get_by_id(file.id)
+    assert stored_file.leased_by == other_claimant_id
+    assert stored_file.times_claimed == 2
+
+
+async def test_claim_file_skips_unclaimable_files(rig: JointRig):
+    """Test that a claim doesn't serve a file that holds a lease, has been
+    interrogated, has left the inbox, or belongs to another storage alias.
+    """
+    leased_file = create_file_under_interrogation(HUB1)
+    give_lease(leased_file)
+    interrogated_file = create_file_under_interrogation(HUB1)
+    interrogated_file.state = "interrogated"
+    interrogated_file.interrogated = True
+    cancelled_file = create_file_under_interrogation(HUB1)
+    cancelled_file.state = "cancelled"
+    other_hub_file = create_file_under_interrogation(HUB2)
+    for file in [leased_file, interrogated_file, cancelled_file, other_hub_file]:
+        await rig.file_dao.insert(file)
+
+    assert (
+        await rig.interrogation_handler.claim_file(
+            storage_alias=HUB1, claimant_id=uuid4()
+        )
+        is None
+    )
+
+
+async def test_claim_file_after_losing_a_race(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a claim whose chosen file is leased by another claim first runs the
+    query again and leases a different file.
+    """
+    monkeypatch.setattr("hexkit.protocols.dao.sleep", AsyncMock())
+    files = [create_file_under_interrogation(HUB1) for _ in range(2)]
+    for file in files:
+        await rig.file_dao.insert(file)
+
+    rival_claimant_id = uuid4()
+    update = rig.file_dao.update
+
+    async def update_after_rival(
+        dto: models.FileUnderInterrogation,
+        *,
+        precondition: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Lease the chosen file to a rival just before the write, once"""
+        monkeypatch.setattr(rig.file_dao, "update", update)
+        rival_file = await rig.file_dao.get_by_id(dto.id)
+        give_lease(rival_file)
+        rival_file.leased_by = rival_claimant_id
+        await update(rival_file)
+        await update(dto, precondition=precondition)
+
+    monkeypatch.setattr(rig.file_dao, "update", update_after_rival)
+    claimant_id = uuid4()
+    claimed_file = await rig.interrogation_handler.claim_file(
+        storage_alias=HUB1, claimant_id=claimant_id
+    )
+
+    assert claimed_file
+    holders = {
+        file.id: (await rig.file_dao.get_by_id(file.id)).leased_by for file in files
+    }
+    assert holders[claimed_file.id] == claimant_id
+    assert set(holders.values()) == {claimant_id, rival_claimant_id}
+
+
+async def test_claim_file_gives_up(rig: JointRig, monkeypatch: pytest.MonkeyPatch):
+    """Test that a claim raises `FileClaimError` when every try loses the race."""
+    monkeypatch.setattr("hexkit.protocols.dao.sleep", AsyncMock())
+    file = create_file_under_interrogation(HUB1)
+    await rig.file_dao.insert(file)
+    update = AsyncMock(
+        side_effect=PreconditionFailedError(id_=file.id, precondition={})
+    )
+    monkeypatch.setattr(rig.file_dao, "update", update)
+
+    with pytest.raises(InterrogationHandlerPort.FileClaimError):
+        await rig.interrogation_handler.claim_file(
+            storage_alias=HUB1, claimant_id=uuid4()
+        )
+    # race_condition_retries tries 3 times by default
+    assert update.await_count == 3
+
+
+@pytest.mark.parametrize(
+    "claims_past_threshold, warns",
+    [(-1, False), (0, True), (3, True)],
+    ids=["below", "at", "above"],
+)
+async def test_claim_file_warning(
+    rig: JointRig,
+    caplog: pytest.LogCaptureFixture,
+    claims_past_threshold: int,
+    warns: bool,
+):
+    """Test that a claim logs a warning once it brings the file's `times_claimed` to
+    `times_claimed_warning_threshold`, and at every later claim.
+    """
+    times_claimed = rig.config.times_claimed_warning_threshold + claims_past_threshold
+    file = create_file_under_interrogation(HUB1)
+    file.times_claimed = times_claimed - 1
+    await rig.file_dao.insert(file)
+
+    with caplog.at_level(logging.INFO, logger="fis.core.interrogation"):
+        await rig.interrogation_handler.claim_file(
+            storage_alias=HUB1, claimant_id=uuid4()
+        )
+
+    warnings = [
+        record.getMessage()
+        for record in caplog.records
+        if record.levelno == logging.WARNING
+    ]
+    expected = f"File {file.id} has been claimed {times_claimed} times"
+    assert [expected in warning for warning in warnings] == ([True] if warns else [])
