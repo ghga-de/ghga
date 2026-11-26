@@ -42,9 +42,15 @@ from ghga_service_commons.utils.crypt import decrypt
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.central_api import CentralApiMock
-from tests.fixtures.utils import CENTRAL_CRYPT4GH_PRIVATE_KEY, DHFS_JWK
+from tests.fixtures.utils import (
+    CENTRAL_CRYPT4GH_PRIVATE_KEY,
+    DHFS_JWK,
+    make_file_upload,
+)
 
 pytestmark = pytest.mark.asyncio()
+
+CLAIMANT_ID = uuid4()
 
 
 def make_interrogation_success_report(storage_alias: str) -> InterrogationReport:
@@ -99,7 +105,7 @@ async def configured_central_client(
         config=config, make_base_transport=lambda _: central_api.as_transport()
     ) as httpx_client:
         yield CentralClient(
-            config=config, httpx_client=httpx_client, claimant_id=uuid4()
+            config=config, httpx_client=httpx_client, claimant_id=CLAIMANT_ID
         )
 
 
@@ -122,6 +128,12 @@ async def test_central_api_unavailable(config: Config):
             report = make_interrogation_success_report(config.storage_alias)
             await central_client.submit_interrogation_report(report=report)
 
+        with pytest.raises(ConnectionFailedError):
+            await central_client.validate_version()
+
+        with pytest.raises(ConnectionFailedError):
+            await central_client.claim_file()
+
 
 async def test_jwt_formation(
     config: Config, central_client: CentralClient, central_api: CentralApiMock
@@ -141,9 +153,13 @@ async def test_jwt_formation(
     await central_client.get_removable_files(object_ids=[])
     report = make_interrogation_success_report(config.storage_alias)
     await central_client.submit_interrogation_report(report=report)
+    await central_client.validate_version()
+    await central_client.claim_file()
+    await central_client.renew_lease(file_id=uuid4())
+    await central_client.release_file(file_id=uuid4())
 
     # Inspect the bearer token of every request that reached the Central API
-    assert len(central_api.requests) == 3
+    assert len(central_api.requests) == 7
     for request in central_api.requests:
         token = request.headers["Authorization"].removeprefix("Bearer ")
         context = await auth_context_provider.get_context(token)
@@ -157,7 +173,8 @@ async def test_responses_with_bad_format(
 ):
     """Test how the CentralClient handles responses that don't have the proper format.
 
-    This affects the .fetch_new_uploads() and .get_removable_files() methods.
+    This affects the .fetch_new_uploads(), .get_removable_files() and .claim_file()
+    methods.
     """
     central_api.on_fetch_new_uploads = respond(200, json={"Not correct": "At all"})
     with pytest.raises(CentralClient.ResponseFormatError):
@@ -167,6 +184,10 @@ async def test_responses_with_bad_format(
     with pytest.raises(CentralClient.ResponseFormatError):
         await central_client.get_removable_files(object_ids=[])
 
+    central_api.on_claim_file = respond(200, json={"Not correct": "At all"})
+    with pytest.raises(CentralClient.ResponseFormatError):
+        await central_client.claim_file()
+
 
 async def test_500_response_handling(
     config: Config, central_client: CentralClient, central_api: CentralApiMock
@@ -175,6 +196,10 @@ async def test_500_response_handling(
     central_api.on_fetch_new_uploads = respond(500)
     central_api.on_get_removable_files = respond(500)
     central_api.on_submit_report = respond(500)
+    central_api.on_validate_version = respond(500)
+    central_api.on_claim_file = respond(500)
+    central_api.on_renew_lease = respond(500)
+    central_api.on_release_file = respond(500)
 
     with pytest.raises(CentralClient.CentralAPIError):
         await central_client.fetch_new_uploads()
@@ -185,6 +210,18 @@ async def test_500_response_handling(
     with pytest.raises(CentralClient.CentralAPIError):
         report = make_interrogation_success_report(config.storage_alias)
         await central_client.submit_interrogation_report(report=report)
+
+    with pytest.raises(CentralClient.CentralAPIError):
+        await central_client.validate_version()
+
+    with pytest.raises(CentralClient.CentralAPIError):
+        await central_client.claim_file()
+
+    with pytest.raises(CentralClient.CentralAPIError):
+        await central_client.renew_lease(file_id=uuid4())
+
+    with pytest.raises(CentralClient.CentralAPIError):
+        await central_client.release_file(file_id=uuid4())
 
 
 async def test_426_response_handling(
@@ -194,6 +231,10 @@ async def test_426_response_handling(
     central_api.on_fetch_new_uploads = respond(426)
     central_api.on_get_removable_files = respond(426)
     central_api.on_submit_report = respond(426)
+    central_api.on_validate_version = respond(426)
+    central_api.on_claim_file = respond(426)
+    central_api.on_renew_lease = respond(426)
+    central_api.on_release_file = respond(426)
 
     with pytest.raises(CentralClient.UpgradeRequiredError):
         await central_client.fetch_new_uploads()
@@ -204,6 +245,53 @@ async def test_426_response_handling(
     with pytest.raises(CentralClient.UpgradeRequiredError):
         report = make_interrogation_success_report(config.storage_alias)
         await central_client.submit_interrogation_report(report=report)
+
+    with pytest.raises(CentralClient.UpgradeRequiredError):
+        await central_client.validate_version()
+
+    with pytest.raises(CentralClient.UpgradeRequiredError):
+        await central_client.claim_file()
+
+    with pytest.raises(CentralClient.UpgradeRequiredError):
+        await central_client.renew_lease(file_id=uuid4())
+
+    with pytest.raises(CentralClient.UpgradeRequiredError):
+        await central_client.release_file(file_id=uuid4())
+
+
+async def test_claim_file(central_client: CentralClient, central_api: CentralApiMock):
+    """Test that a claim returns the file on a 200 and None on a 204"""
+    file_upload = make_file_upload(decrypted_size=100, encrypted_size=128)
+    central_api.on_claim_file = respond(200, json=file_upload.model_dump(mode="json"))
+    assert await central_client.claim_file() == file_upload
+
+    central_api.on_claim_file = respond(204)
+    assert await central_client.claim_file() is None
+
+
+async def test_409_renewal_handling(
+    central_client: CentralClient, central_api: CentralApiMock
+):
+    """Test that a 409 on renewal raises a RenewalRefusedError, so the caller can
+    stop working on the file
+    """
+    central_api.on_renew_lease = respond(409)
+    with pytest.raises(CentralClient.RenewalRefusedError):
+        await central_client.renew_lease(file_id=uuid4())
+
+
+async def test_claimant_id_in_lease_calls(
+    central_client: CentralClient, central_api: CentralApiMock
+):
+    """Test that the client sends its claimant ID with every claim, renewal and release"""
+    file_id = uuid4()
+    await central_client.claim_file()
+    await central_client.renew_lease(file_id=file_id)
+    await central_client.release_file(file_id=file_id)
+    await central_client.claim_file()
+
+    bodies = [json.loads(request.content) for request in central_api.requests]
+    assert bodies == [{"claimant_id": str(CLAIMANT_ID)}] * 4
 
 
 async def test_report_submission(
