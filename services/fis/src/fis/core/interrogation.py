@@ -30,6 +30,7 @@ from fis.constants import (
     CLAIM_CANDIDATE_COUNT,
     LEASE_SECONDS,
     MAX_FILES_PER_REQUEST,
+    TIMES_CLAIMED_WARNING_THRESHOLD,
 )
 from fis.core import models
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
@@ -522,17 +523,25 @@ class InterrogationHandler(InterrogationHandlerPort):
                     precondition["times_claimed"] = {"$in": [0, None]}
                 await self._file_dao.update(claimed_file, precondition=precondition)
 
+                log_extra = {
+                    "file_id": file.id,
+                    "storage_alias": storage_alias,
+                    "claimant_id": claimant_id,
+                    "times_claimed": claimed_file.times_claimed,
+                }
                 log.info(
                     "Claimed file %s for claimant %s.",
                     file.id,
                     claimant_id,
-                    extra={
-                        "file_id": file.id,
-                        "storage_alias": storage_alias,
-                        "claimant_id": claimant_id,
-                        "times_claimed": claimed_file.times_claimed,
-                    },
+                    extra=log_extra,
                 )
+                if claimed_file.times_claimed >= TIMES_CLAIMED_WARNING_THRESHOLD:
+                    log.warning(
+                        "File %s has been claimed %i times without being interrogated.",
+                        file.id,
+                        claimed_file.times_claimed,
+                        extra=log_extra,
+                    )
                 return models.BaseFileInformation(**claimed_file.model_dump())
 
         # Not reached, since the loop raises this after the last try, but mypy can't tell
