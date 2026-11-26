@@ -157,16 +157,21 @@ class AsyncRetryTransport(httpx2.AsyncBaseTransport):
             # Close the current connection on an exception. This should also deal with
             # the RetryError once all attempts are exhausted
             if latest_response is not None:
-                try:
-                    if isinstance(error, RetryError):
-                        # The caller takes this response from the RetryError, so read
-                        #  its body while the connection is still open
+                if isinstance(error, RetryError):
+                    # The caller takes this response from the RetryError, so read
+                    #  its body while the connection is still open
+                    try:
                         await latest_response.aread()
+                    except Exception:
+                        log.warning(
+                            "Failed to read response during cleanup.", exc_info=True
+                        )
+                # Close even after a failed read, so the connection is not leaked
+                try:
                     await latest_response.aclose()
                 except Exception:
                     log.warning(
-                        "Failed to read or close response during cleanup.",
-                        exc_info=True,
+                        "Failed to close response during cleanup.", exc_info=True
                     )
             raise
 

@@ -71,6 +71,13 @@ class _FailingCloseResponse(httpx2.Response):
         raise RuntimeError("aclose failed")
 
 
+class _FailingReadResponse(_TrackedResponse):
+    """Response whose aread() always raises, to exercise cleanup error handling."""
+
+    async def aread(self) -> bytes:
+        raise RuntimeError("aread failed")
+
+
 def _no_wait(config: RetryTransportConfig) -> Callable[[RetryCallState], float]:
     """Wait strategy injecting zero delay so retry behavior tests stay fast."""
     return lambda retry_state: 0
@@ -288,6 +295,30 @@ async def test_cleanup_close_error_does_not_mask_original_exception():
 
     with pytest.raises(RetryError):
         await _retry_transport(transport).handle_async_request(_REQUEST)
+
+
+@pytest.mark.asyncio
+async def test_cleanup_read_error_still_closes_last_response(
+    caplog: pytest.LogCaptureFixture,
+):
+    """Ensure a failing aread() during cleanup is logged and the response still closed."""
+    responses = [
+        _TrackedResponse(RETRYABLE_STATUS_CODE),
+        _TrackedResponse(RETRYABLE_STATUS_CODE),
+        _FailingReadResponse(RETRYABLE_STATUS_CODE),
+    ]
+    transport = _mock_transport(responses)  # type: ignore[arg-type]
+
+    with (
+        caplog.at_level(logging.WARNING, logger=LOGGER_NAME),
+        pytest.raises(RetryError),
+    ):
+        await _retry_transport(transport).handle_async_request(_REQUEST)
+
+    assert responses[-1].closed
+    assert [record.getMessage() for record in caplog.records] == [
+        "Failed to read response during cleanup."
+    ]
 
 
 @pytest.mark.asyncio
