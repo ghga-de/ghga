@@ -19,6 +19,7 @@ import base64
 import hashlib
 import io
 import os
+from collections import deque
 from pathlib import Path
 
 import crypt4gh.keys
@@ -245,3 +246,54 @@ def test_process_file_raises_when_file_is_longer_than_announced(private_key):
     )
     with pytest.raises(exceptions.CiphertextSizeMismatch):
         run_process_file(encryptor, file_data)
+
+
+# The envelope and six segments fill exactly three parts of SMALL_PART_SIZE
+THREE_PARTS_FILE_SIZE = (
+    3 * SMALL_PART_SIZE - ENVELOPE_SIZE - 6 * (CIPHER_SEGMENT_SIZE - SEGMENT_SIZE)
+)
+
+
+@pytest.mark.parametrize("in_flight", [1, 3])
+@pytest.mark.parametrize("part_size", [SMALL_PART_SIZE, SMALL_PART_SIZE + 7])
+@pytest.mark.parametrize(
+    "file_size", [1, THREE_PARTS_FILE_SIZE, 5 * SMALL_PART_SIZE + 12345]
+)
+def test_process_file_reuses_parts_given_back(
+    private_key, in_flight: int, part_size: int, file_size: int
+):
+    """Make sure parts given back are reused for the next parts without touching a
+    part still in flight, that the last part comes at its exact size, and that no
+    buffer is kept once the file needs no more.
+
+    A part is read only when it is given back, as the upload does, so a buffer
+    reused too early would garble the output.
+    """
+    file_data = os.urandom(file_size)
+    encryptor = make_encryptor(private_key, file_size=file_size, part_size=part_size)
+    yielded: list[bytearray] = []
+    held: deque[tuple[int, bytearray]] = deque()
+    sent: list[tuple[int, bytes]] = []
+
+    def send_oldest() -> None:
+        number, part = held.popleft()
+        sent.append((number, bytes(part)))
+        encryptor.give_back(part)
+
+    file = io.BytesIO(file_data)
+    for number, part in encryptor.process_file(file=file):  # type: ignore[arg-type]
+        yielded.append(part)
+        held.append((number, part))
+        if len(held) == in_flight:
+            send_oldest()
+    while held:
+        send_oldest()
+
+    assert decrypt_parts(private_key, sent) == file_data  # type: ignore[arg-type]
+    total = encryptor.expected_ciphertext_size
+    sizes = [len(part) for _, part in sent]
+    assert sizes[:-1] == [part_size] * (len(sizes) - 1)
+    assert sizes[-1] == total - part_size * (len(sizes) - 1)
+    full_parts = [part for part in yielded if len(part) == part_size]
+    assert len({id(part) for part in full_parts}) == min(in_flight, len(full_parts))
+    assert encryptor._free.empty()

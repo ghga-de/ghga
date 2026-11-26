@@ -18,6 +18,7 @@
 import base64
 import math
 import os
+import queue
 from collections.abc import Generator
 from io import BufferedReader
 from typing import Any
@@ -80,6 +81,14 @@ class Crypt4GHEncryptor:
             file_size + num_segments * SEGMENT_OVERHEAD + ENVELOPE_SIZE
         )
 
+        # Full-size part buffers given back after their upload, for the next parts.
+        #  A new bytearray is zero-filled and, at this size, fresh memory from the
+        #  kernel, which a reused buffer skips. Filled on the event loop and emptied
+        #  on the encryption worker, hence the thread-safe queue.
+        self._free: queue.SimpleQueue[bytearray] = queue.SimpleQueue()
+        self._full_parts = self.expected_ciphertext_size // part_size
+        self._full_parts_taken = 0
+
         # Decode the Data Hub public key
         self._data_hub_public_key = base64.b64decode(
             get_crypt4gh_public_key(storage_alias)
@@ -100,6 +109,33 @@ class Crypt4GHEncryptor:
         """Get the size of the entire encrypted object (content + envelope)."""
         return self._ciphertext_size
 
+    def give_back(self, part: bytearray) -> None:
+        """Take back a part that nothing reads any more, to reuse its buffer.
+
+        Only call this once the part's upload and hashes are done. A buffer is kept
+        only while the file still needs as many full-size parts as are kept, so none
+        sits idle until the file ends.
+        """
+        wanted = self._full_parts - self._full_parts_taken - self._free.qsize()
+        if len(part) == self._part_size and wanted > 0:
+            self._free.put(part)
+
+    def _new_part(self) -> bytearray:
+        """Return the buffer for the next part, sized to what is left of the file.
+
+        The last part gets its exact size, so no buffer is ever trimmed in place,
+        which a reused one with a view still open on it would not allow. A reused
+        buffer is overwritten in full before it is yielded.
+        """
+        left = self.expected_ciphertext_size - self._ciphertext_size
+        if 0 < left < self._part_size:
+            return bytearray(left)
+        self._full_parts_taken += 1
+        try:
+            return self._free.get_nowait()
+        except queue.Empty:
+            return bytearray(self._part_size)
+
     def _finish_part(self, part: bytearray) -> bytearray:
         """Count a finished part toward the ciphertext size, and return it.
 
@@ -115,13 +151,13 @@ class Crypt4GHEncryptor:
         segment is encrypted straight into the current part behind its nonce. Only a
         segment that crosses the end of a part goes through a scratch buffer, to be
         split between that part and the next. The envelope opens the first part.
+        Each part's buffer comes from those given back by `give_back`, if any.
         """
-        part_size = self._part_size
         cipher = ChaCha20Poly1305(self._file_secret)
         plain = memoryview(bytearray(READ_SEGMENTS * SEGMENT_SIZE))
         scratch = memoryview(bytearray(SEGMENT_SIZE + SEGMENT_OVERHEAD))
 
-        part = bytearray(part_size)
+        part = self._new_part()
         view = memoryview(part)
         envelope = self._create_envelope()
         view[: len(envelope)] = envelope
@@ -138,7 +174,16 @@ class Crypt4GHEncryptor:
                 segment = plain[start : min(start + SEGMENT_SIZE, read)]
                 size = len(segment) + SEGMENT_OVERHEAD
                 nonce = nonces[index * NONCE_SIZE : (index + 1) * NONCE_SIZE]
-                if part_size - pos >= size:
+                if pos == len(part):
+                    # The next part is only taken once there is something to put in
+                    #  it, so a file that ends with a full part takes no buffer more
+                    view.release()
+                    part_number += 1
+                    yield part_number, self._finish_part(part)
+                    part = self._new_part()
+                    view = memoryview(part)
+                    pos = 0
+                if len(part) - pos >= size:
                     view[pos : pos + NONCE_SIZE] = nonce
                     cipher.encrypt_into(
                         nonce, segment, None, view[pos + NONCE_SIZE : pos + size]
@@ -148,29 +193,25 @@ class Crypt4GHEncryptor:
                     # The segment crosses the end of the part: split it
                     scratch[:NONCE_SIZE] = nonce
                     cipher.encrypt_into(nonce, segment, None, scratch[NONCE_SIZE:size])
-                    head = part_size - pos
+                    head = len(part) - pos
                     view[pos:] = scratch[:head]
                     view.release()
                     part_number += 1
                     yield part_number, self._finish_part(part)
-                    part = bytearray(part_size)
+                    part = self._new_part()
                     view = memoryview(part)
                     pos = size - head
                     view[:pos] = scratch[head:size]
-                if pos == part_size:
-                    view.release()
-                    part_number += 1
-                    yield part_number, self._finish_part(part)
-                    part = bytearray(part_size)
-                    view = memoryview(part)
-                    pos = 0
 
-        # The last part holds what is left, if anything
+        # The last part holds what is left. It is full unless the file is shorter than
+        #  announced, which the size check below then reports.
         view.release()
         if pos:
-            del part[pos:]
             part_number += 1
-            yield part_number, self._finish_part(part)
+            yield (
+                part_number,
+                self._finish_part(part if pos == len(part) else part[:pos]),
+            )
 
         # Finally, verify the encrypted size and raise an error if it doesn't match.
         if self._ciphertext_size != self.expected_ciphertext_size:

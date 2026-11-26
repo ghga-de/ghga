@@ -210,7 +210,9 @@ class Uploader:
         the order they were asked for, so the n-th request yields part n. Should the
         number differ, the URL is dropped and the upload fetches the right one. The
         part's MD5 and SHA-256 are computed in threads while it uploads, and recorded
-        once both are done.
+        once both are done. Then the part goes back to the encryptor, whose next part
+        may overwrite it; a part whose upload or hashes failed is not given back,
+        since a hash thread may still be reading it.
 
         Raises:
             UploadFileError: If there is a problem during content transfer.
@@ -251,9 +253,10 @@ class Uploader:
                         url=url,
                     ),
                 )
-                # Both are set in `.upload_file()`
+                # These are set in `.upload_file()`
                 self._checksums.set_part(part_number, md5=md5, sha256=sha256)
                 self._progress_bar.advance(len(part))
+                self._encryptor.give_back(part)
 
             except BaseException as exc:
                 # correctly reraise CancelledError, else this might get stuck waiting
@@ -275,6 +278,7 @@ class Uploader:
             CompleteFileUploadError: If there's an error completing the file upload.
         """
         # Encrypt and upload file parts in parallel
+        self._encryptor = encryptor
         self._checksums: Checksums = encryptor.checksums
         self._parts_submitted = 0
         self._progress_bar = self.new_progress_bar()

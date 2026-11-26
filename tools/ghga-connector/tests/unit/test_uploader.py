@@ -476,6 +476,59 @@ async def test_upload_file_sends_part_hashes_in_part_order():
     assert kwargs["encrypted_md5"] == expected.get_encrypted_checksum_for_s3()
 
 
+async def test_upload_file_gives_each_part_back_once_it_is_sent():
+    """Each part goes back to the encryptor, for its buffer to be reused, only after
+    its upload and hashes are done.
+    """
+    with NamedTemporaryFile() as f:
+        file_info = make_file_info_for_upload(
+            path=Path(f.name), alias=FILE_ALIAS, decrypted_size=10 * 1024**2
+        )
+        parts = make_parts(list(range(1, file_info.part_count + 1)))
+        events: list[tuple[str, int]] = []
+
+        async def upload_file_part(*, file_id, content, part_no, url=None):
+            await asyncio.sleep(0.01)
+            events.append(("sent", part_no))
+
+        upload_client = AsyncMock()
+        upload_client.upload_file_part.side_effect = upload_file_part
+        uploader = Uploader(
+            upload_client=upload_client,
+            file_info=file_info,
+            part_slots=asyncio.Semaphore(2),
+            progress=MagicMock(),
+        )
+        uploader._file_id = FILE_ID
+        uploader.new_progress_bar = MagicMock(return_value=MagicMock())
+        encryptor = make_mock_encryptor(parts=parts)
+        numbers = {id(part): number for number, part in parts}
+        encryptor.give_back.side_effect = lambda part: events.append(
+            ("back", numbers[id(part)])
+        )
+        await uploader.upload_file(encryptor=encryptor)
+
+    for number, _ in parts:
+        assert events.index(("sent", number)) < events.index(("back", number))
+    assert encryptor.give_back.call_count == len(parts)
+
+
+async def test_failed_part_is_not_given_back():
+    """A part whose upload failed is not given back, since a hash of it may still
+    be running.
+    """
+    upload_client = AsyncMock()
+    upload_client.upload_file_part.side_effect = RuntimeError("S3 error")
+    with NamedTemporaryFile() as f:
+        uploader, pool = make_prefetch_uploader(Path(f.name), upload_client)
+        with pytest.raises(exceptions.UploadFileError):
+            await uploader._upload_file_part(
+                make_dummy_file_processor(part_count=1), pool
+            )
+
+    uploader._encryptor.give_back.assert_not_called()  # type: ignore[attr-defined]
+
+
 async def test_upload_file_stops_before_complete_when_a_part_hash_is_missing():
     """A part number without hashes stops the upload before the complete call."""
     with NamedTemporaryFile() as f:
@@ -508,6 +561,7 @@ def make_prefetch_uploader(
     uploader._file_id = FILE_ID
     uploader._progress_bar = MagicMock()
     uploader._checksums = Checksums()
+    uploader._encryptor = make_mock_encryptor()
     return uploader, ThreadPoolExecutor(max_workers=1)
 
 
