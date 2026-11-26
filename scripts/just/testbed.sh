@@ -2,7 +2,7 @@
 # `just testbed [pytest args...]`: run the test-bed suite against the demo on kind.
 #
 # Harvests tokens and keys from the cluster secrets, port-forwards the services the suite
-# reaches directly (mailhog, lox24 — MinIO is published by kind), then runs pytest.
+# reaches directly (mailpit, lox24 — MinIO is published by kind), then runs pytest.
 set -euo pipefail
 
 # The suite shells out to ghga-datasteward-kit and ghga-connector and expects them
@@ -39,7 +39,7 @@ mkdir -p /tmp/submission /tmp/connector
 just testbed-hosts
 # set before the forwards start, so no failure after them leaves one running
 trap 'kill $(jobs -p) 2> /dev/null || true' EXIT
-$K port-forward svc/ghga-mailhog 8025:8025 > /dev/null 2>&1 &
+$K port-forward svc/ghga-mailpit 8025:8025 > /dev/null 2>&1 &
 # 18080, not the mock's own 8080, which `just fe-dev` serves the portal on
 $K port-forward svc/ghga-lox24-mock 18080:8080 > /dev/null 2>&1 &
 # MinIO needs no forward: kind publishes its S3 node port on the host's 9000

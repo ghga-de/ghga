@@ -168,7 +168,6 @@ class Notification(BaseModel):
     receiver: EmailStr
     created_time: datetime
     subject: str
-    body_text: str
 
     def is_recent(self, seconds: int = 30) -> bool:
         """Check if the notification is recent"""
@@ -283,17 +282,18 @@ def get_dataset_search_summary(content: dict) -> dict:
 
 
 def parse_notifications(raw_data: dict) -> list[Notification]:
-    """Parse Email data from Mailhog into a sorted list of Notification instances."""
+    """Parse a Mailpit message list into a sorted list of Notification instances."""
     return [
         Notification(
             id=item["ID"],
-            sender=item["Raw"]["From"],
-            receiver=item["Raw"]["To"][0],
+            sender=item["From"]["Address"],
+            receiver=item["To"][0]["Address"],
             created_time=datetime.fromisoformat(item["Created"]),
-            subject=item["Content"]["Headers"]["Subject"][0],
-            body_text=item["Content"]["Body"].split("--", 1)[0].strip(),
+            subject=item["Subject"],
         )
-        for item in sorted(raw_data["items"], key=lambda x: x["Created"], reverse=True)
+        for item in sorted(
+            raw_data["messages"], key=lambda x: x["Created"], reverse=True
+        )
     ]
 
 

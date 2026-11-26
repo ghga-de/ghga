@@ -9,7 +9,7 @@ set -euo pipefail
 
 K="kubectl --context kind-ghga"
 MPOD=$($K get pods -o name | grep mongodb | head -1)
-apps=$($K get deploy -o name | grep -vE "envoy|mongodb|kafka|minio|vault|mailhog|lox24|test-oidc|aai")
+apps=$($K get deploy -o name | grep -vE "envoy|mongodb|kafka|minio|vault|mailpit|lox24|test-oidc|aai")
 # Stop the services before dropping their databases, and wait until their pods are
 # gone: a pod still running writes new documents into the emptied database, and the
 # restarted service then finds data but no migration record, re-runs its migrations
