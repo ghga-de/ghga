@@ -30,7 +30,6 @@ from fis.constants import (
     CLAIM_CANDIDATE_COUNT,
     LEASE_SECONDS,
     MAX_FILES_PER_REQUEST,
-    TIMES_CLAIMED_WARNING_THRESHOLD,
 )
 from fis.core import models
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
@@ -535,7 +534,10 @@ class InterrogationHandler(InterrogationHandlerPort):
                     claimant_id,
                     extra=log_extra,
                 )
-                if claimed_file.times_claimed >= TIMES_CLAIMED_WARNING_THRESHOLD:
+                if (
+                    claimed_file.times_claimed
+                    >= self._config.times_claimed_warning_threshold
+                ):
                     log.warning(
                         "File %s has been claimed %i times without being interrogated.",
                         file.id,

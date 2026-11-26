@@ -76,6 +76,7 @@ for the full set of configurable values.
 | `config.max_lease_hold_seconds` | Upper bound on how long one claim can be kept alive through renewals. Defaults to three days. | `259200` |
 | `config.claim_backoff_base_seconds` | The first backoff after a release, in seconds. It doubles with each further claim of the same file, up to claim_backoff_cap_seconds. | `60` |
 | `config.claim_backoff_cap_seconds` | Upper bound on the backoff after a release, in seconds. | `3600` |
+| `config.times_claimed_warning_threshold` | Once a file has been claimed this many times, FIS logs a warning at that claim and at every later one. | `5` |
 
 ## Parameters
 

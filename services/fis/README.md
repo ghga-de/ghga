@@ -561,6 +561,9 @@ The service requires the following configuration parameters:
 - <a id="properties/claim_backoff_cap_seconds"></a>**`claim_backoff_cap_seconds`** *(integer)*: Upper bound on the backoff after a release, in seconds.
   Exclusive minimum: `0`.
   Default: `3600`.
+- <a id="properties/times_claimed_warning_threshold"></a>**`times_claimed_warning_threshold`** *(integer)*: Once a file has been claimed this many times, FIS logs a warning at that claim and at every later one.
+  Exclusive minimum: `0`.
+  Default: `5`.
 
 <!-- config-docs: end -->
 
