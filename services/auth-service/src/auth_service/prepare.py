@@ -86,9 +86,12 @@ async def prepare_event_subscriber(
     """Get an event subscriber for dataset deletion events."""
     async with prepare_event_handler(config) as handler:
         translator = EventSubTranslator(config=config, handler=handler)
-        async with KafkaEventSubscriber.construct(
-            config=config, translator=translator
-        ) as event_subscriber:
+        async with (
+            KafkaEventPublisher.construct(config=config) as dlq_publisher,
+            KafkaEventSubscriber.construct(
+                config=config, translator=translator, dlq_publisher=dlq_publisher
+            ) as event_subscriber,
+        ):
             yield event_subscriber
 
 

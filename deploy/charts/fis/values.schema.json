@@ -752,6 +752,69 @@
               }
             }
           }
+        },
+        "deadLetterQueue": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "topic": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "default": "kafka_dlq_topic"
+                },
+                "value": {
+                  "type": "string",
+                  "default": "dlq"
+                }
+              }
+            },
+            "kafkaUser": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "operations": {
+                  "type": "array",
+                  "default": [
+                    "Write"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "deadLetterQueueRetry": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "topic": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "name": {
+                  "default": null
+                },
+                "value": {
+                  "type": "string",
+                  "default": "retry"
+                }
+              }
+            },
+            "kafkaUser": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "operations": {
+                  "type": "array",
+                  "default": [
+                    "Read"
+                  ]
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -965,6 +1028,53 @@
           "title": "Enable Opentelemetry",
           "type": [
             "boolean",
+            "null"
+          ]
+        },
+        "kafka_enable_dlq": {
+          "default": false,
+          "description": "A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries",
+          "examples": [
+            true,
+            false
+          ],
+          "title": "Kafka Enable DLQ",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "kafka_max_retries": {
+          "default": 0,
+          "description": "The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue.",
+          "examples": [
+            0,
+            1,
+            2,
+            3,
+            5
+          ],
+          "minimum": 0,
+          "title": "Kafka Max Retries",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "kafka_retry_backoff": {
+          "default": 0,
+          "description": "The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt.",
+          "examples": [
+            0,
+            1,
+            2,
+            3,
+            5
+          ],
+          "minimum": 0,
+          "title": "Kafka Retry Backoff",
+          "type": [
+            "integer",
             "null"
           ]
         },
@@ -1487,36 +1597,6 @@
           ],
           "title": "Kafka Compression Type"
         },
-        "kafka_max_retries": {
-          "default": 0,
-          "description": "The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue.",
-          "examples": [
-            0,
-            1,
-            2,
-            3,
-            5
-          ],
-          "minimum": 0,
-          "title": "Kafka Max Retries",
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "kafka_enable_dlq": {
-          "default": false,
-          "description": "A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries",
-          "examples": [
-            true,
-            false
-          ],
-          "title": "Kafka Enable DLQ",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
         "kafka_dlq_topic": {
           "default": "dlq",
           "description": "The name of the topic used to resolve error-causing events.",
@@ -1526,23 +1606,6 @@
           "title": "Kafka DLQ Topic",
           "type": [
             "string",
-            "null"
-          ]
-        },
-        "kafka_retry_backoff": {
-          "default": 0,
-          "description": "The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt.",
-          "examples": [
-            0,
-            1,
-            2,
-            3,
-            5
-          ],
-          "minimum": 0,
-          "title": "Kafka Retry Backoff",
-          "type": [
-            "integer",
             "null"
           ]
         },

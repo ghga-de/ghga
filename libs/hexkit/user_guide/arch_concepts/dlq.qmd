@@ -95,6 +95,24 @@ That event then becomes the following when published to the DLQ topic:
 ```
 
 You can see that the DLQ event contains extra header information that can be used to deal with the event later.
+The `exc_class` and `exc_msg` headers are ASCII, with other characters escaped as `\xNN`; `exc_class` is cut to 1,000 characters, `exc_msg` to 4,000.
+
+### Malformed Records
+
+A record the subscriber cannot decode reaches the DLQ with `MalformedRecordError` as `exc_class` and the reason in `exc_msg`, and its key and payload are replaced so that the DLQ copy can be published:
+
+- A key that is not ASCII is escaped, `\xNN` for each byte outside ASCII.
+- A value that is valid JSON but not an object is wrapped as `{"non_object_value": <value>}`.
+- Any other value — not JSON, not UTF-8, or null — is wrapped as `{"raw_value_b64": <the bytes in base64, or null>, "decode_error": <reason>}`.
+  If the bytes would not fit into `kafka_max_message_size`, they are cut and `"raw_value_truncated": true` is added.
+
+An event that decoded fine can outgrow `kafka_max_message_size` once its DLQ copy is re-encoded as ASCII JSON with the extra headers.
+Its copy is then published with `exc_msg` cut to 200 characters, and if that is still too large, with the payload as base64-encoded UTF-8 JSON in the `raw_value_b64` wrapper, cut to fit; `exc_class` stays that of the original error.
+This sizing assumes the broker accepts `kafka_max_message_size`; if the broker's limit is lower, the DLQ publish fails and the consumer stops on the event.
+
+A DLQ consumer recognizes such an event by its `exc_class`, or by the `raw_value_b64` or `non_object_value` field.
+Republishing one sends the wrapper, not the original bytes, so resolve it by discarding it or by publishing a corrected event.
+A subscriber with the `DLQSubscriberProtocol` passes a malformed record on its own topic to its translator in the same wrapped form, since it cannot route the record to a DLQ.
 
 ## Consuming From the DLQ
 

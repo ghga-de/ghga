@@ -9,6 +9,16 @@ The service ships as the container image `ghga/dlqs` and the Helm chart [`dlqs`]
 The DLQ Service provides a way to manage Kafka topics designated as dead letter queues via a RESTful API interface.
 
 The DLQ Service subscribes to the configured DLQ topic and saves all inbound events to the database.
+The service has no DLQ of its own, so it never stops on an event's content:
+
+- An event without a usable original topic or service name, one that is missing or that cannot be a Kafka topic name, is saved under `unknown`.
+- An event ID that is not a UUID4 is replaced by a UUID4 derived from it.
+- An event MongoDB cannot store, such as one with a NUL byte or an integer beyond 64 bits in its payload or nested too deeply, is saved as a degraded copy, whose payload holds `payload_json_b64`, the original payload as base64-encoded JSON, `payload_truncated`, true if that was cut to 11 MiB, and `store_error`.
+- An event that still does not validate is logged and dropped.
+
+An event of an `unknown` service can only be discarded.
+A degraded copy is requeued with its original payload, decoded.
+A degraded copy whose payload was cut, a malformed record (`exc_class` is `MalformedRecordError`) and any other event whose payload is a subscriber's `raw_value_b64` wrapper can only be requeued with an override, since its payload is not the original one; so can an event of an `unknown` topic, whose override names the topic.
 Using the REST API to interact with a given service + topic, events can be previewed, discarded, modified, and requeued for the original service to re-consume them.
 When requeuing an event, the DLQ service publishes the event to a Kafka "retry" topic, whose name is automatically derived from the service name included in the event's DLQ information.
 

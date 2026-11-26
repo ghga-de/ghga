@@ -64,7 +64,8 @@ The main benefit of the context-variable approach is that hexkit's providers can
 
 - **Event publishing**: The [Kafka event publisher](../providers/kafka/publisher.qmd) stamps the current correlation ID into the `correlation_id` header of every published event.
   If no ID is set in the context, the behavior depends on the `generate_correlation_id` setting of the Kafka config: if `True` (the default), a new ID is generated on the fly; if `False`, publishing fails with a `CorrelationIdContextError`, which is the stricter choice for services that should only ever act as part of an existing request chain.
-- **Event consumption**: The [Kafka event subscriber](../providers/kafka/subscriber.qmd) requires the `correlation_id` header on every inbound event (events without one are treated as invalid) and sets it as the context correlation ID before invoking the translator.
+- **Event consumption**: The [Kafka event subscriber](../providers/kafka/subscriber.qmd) reads the `correlation_id` header of every inbound event and sets it as the context correlation ID before invoking the translator.
+  If the header is missing or not a UUID4, the subscriber generates a new ID and logs a warning, so the event is still processed and traceable from there on.
   Everything the translator does — logging, database writes, publishing follow-up events — therefore happens under the originating request's ID.
 - **Outbox publishing**: The [MongoDB + Kafka provider](../providers/mongokafka.qmd) stores the correlation ID alongside each outbox document, so that the change events it publishes carry the ID of the request that caused the change, even when they are (re)published later.
 - **Logging**: hexkit's [configurable logging](logging.qmd) includes the current correlation ID in every JSON log line, so log aggregation tools can filter all messages of one request chain across all services.

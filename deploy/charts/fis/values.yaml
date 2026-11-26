@@ -158,6 +158,20 @@ _topics:
     kafkaUser:
       operations:
       - Read
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+      - Write
+  deadLetterQueueRetry:
+    topic:
+      name:
+      value: retry
+    kafkaUser:
+      operations:
+      - Read
 _consumerGroup:
   operations:
   - Read
@@ -192,6 +206,9 @@ config:
   migration_wait_sec: 10
   migration_max_wait_sec: 600
   enable_opentelemetry: false
+  kafka_enable_dlq: true
+  kafka_max_retries: 3
+  kafka_retry_backoff: 2
   ekss_api_url: http://encryption-key-store:8080
 configPrefix: fis
 enableServiceLinks: true

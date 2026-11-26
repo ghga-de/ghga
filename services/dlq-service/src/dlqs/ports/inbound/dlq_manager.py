@@ -103,7 +103,10 @@ class DLQManagerPort(ABC):
     async def store_event(self, *, event: RawDLQEvent) -> None:
         """Store an event in the database with its service name and event ID.
 
-        Raises a `DLQInsertionError` if the insertion fails.
+        An event that cannot be stored as it is gets stored as a degraded copy,
+        since the DLQ service has no DLQ of its own and would otherwise stop on it.
+
+        Raises a `DLQInsertionError` if the insertion fails, and on a timeout.
         """
 
     @abstractmethod
@@ -168,7 +171,9 @@ class DLQManagerPort(ABC):
         - `DLQSequenceError`: if the dlq_id is not next in the event sequence.
         - `DLQEmptyError` if the DLQ for the service and topic is empty.
         - `DLQFetchNextError` if retrieval of the next event fails due to a DB error.
-        - `DLQValidationError` if the event fails validation (e.g. invalid topic).
+        - `DLQValidationError` if the event fails validation (e.g. invalid topic),
+          if its service is unknown, or if its payload is a wrapper or was cut when
+          stored and no override is given.
         - `DLQDeletionError` if the event could not be deleted from the DB after processing.
         """
 

@@ -17,6 +17,10 @@ config:
   mongo_dsn:
   host: 0.0.0.0
   enable_opentelemetry: false
+  kafka_enable_dlq: true
+  # retry before the DLQ, so a short database outage does not park an event there
+  kafka_max_retries: 3
+  kafka_retry_backoff: 2
   db_version_collection: "authDbVersions"
   migration_wait_sec: 10
   # replicas waiting on another one's migration fail after this, so a stuck lock shows
@@ -102,3 +106,19 @@ _topics:
     kafkaUser:
       operations:
       - Write
+  # as producer
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+      - Write
+  # as consumer
+  deadLetterQueueRetry:
+    topic:
+      name:
+      value: retry
+    kafkaUser:
+      operations:
+      - Read
