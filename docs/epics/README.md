@@ -145,4 +145,5 @@ An epic that was resolved in another way than its specification planned counts a
 - (93) [Giraffe](./epic-0093-giraffe.md): Early Data Lifecycle Rollout
 - (94) [Leafcutter Ant](./epic-0094-leafcutter-ant.md): File Leases for Multiple DHFS Instances
 - (95) [Shoebill](./epic-0095-shoebill/README.md): Upload Box Prioritization for Re-encryption
+- (96) [Cuckoo Wasp](./epic-0096-cuckoo-wasp.md): Test Bed Runs Against a Cluster
 <!-- epic-index:unfolding:end -->
