@@ -44,7 +44,7 @@ async def test_resource_upsert(
     """Try upserting with no pre-existing resource with matching ID (i.e. insert)"""
     # get all the documents in the collection
     results_all = await joint_fixture.handle_query(class_name=CLASS_NAME)
-    assert results_all.count > 0
+    assert results_all.total_count > 0
 
     # define content of resource
     content: dict = {
@@ -77,9 +77,9 @@ async def test_resource_upsert(
     # verify that the resource was added
     updated_resources = await joint_fixture.handle_query(class_name=CLASS_NAME)
     if is_insert:
-        assert updated_resources.count - results_all.count == 1
+        assert updated_resources.total_count - results_all.total_count == 1
     else:
-        assert updated_resources.count == results_all.count
+        assert updated_resources.total_count == results_all.total_count
 
     # remove unselected fields
     content = resource.content  # type: ignore
@@ -87,8 +87,8 @@ async def test_resource_upsert(
     del content["category"]
     del content["object"]["id"]
 
-    assert resource in updated_resources.hits
-    assert resource not in results_all.hits
+    assert resource in updated_resources.items
+    assert resource not in results_all.items
 
 
 async def test_resource_delete(joint_fixture: JointFixture):
@@ -97,8 +97,8 @@ async def test_resource_delete(joint_fixture: JointFixture):
     targeted_initial_results = await joint_fixture.handle_query(
         class_name=CLASS_NAME, query='"1HotelAlpha-id"'
     )
-    assert targeted_initial_results.count == 1
-    assert targeted_initial_results.hits[0].id_ == "1HotelAlpha-id"
+    assert targeted_initial_results.total_count == 1
+    assert targeted_initial_results.items[0].id_ == "1HotelAlpha-id"
 
     resource_info = event_schemas.SearchableResourceInfo(
         accession="1HotelAlpha-id", class_name=CLASS_NAME
@@ -119,7 +119,7 @@ async def test_resource_delete(joint_fixture: JointFixture):
         class_name=CLASS_NAME, query='"1HotelAlpha-id"'
     )
 
-    assert results_post_delete.count == 0
+    assert results_post_delete.total_count == 0
 
 
 async def test_event_subscriber_dlq(joint_fixture: JointFixture):

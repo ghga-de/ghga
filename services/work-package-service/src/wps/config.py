@@ -47,4 +47,3 @@ class Config(
     """Config parameters and their defaults."""
 
     service_name: str = SERVICE_NAME
-    db_name: str = "work-packages"

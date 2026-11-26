@@ -14,6 +14,7 @@ export const DEFAULT_TIME_ZONE = 'Europe/Berlin';
 export const DEFAULT_DATE_OUTPUT_FORMAT = 'yyyy-MM-dd';
 export const DEFAULT_DATE_INPUT_FORMAT = 'yyyy-MM-dd';
 export const FRIENDLY_DATE_FORMAT = 'd MMMM y';
+export const FRIENDLY_DATE_TIME_FORMAT = "d MMMM y 'at' HH:mm";
 export const DATE_INPUT_FORMAT_HINT = 'YYYY-MM-DD';
 
 export const DEFAULT_DATE_FORMATS: MatDateFormats = {

@@ -18,8 +18,6 @@
 
 from uuid import UUID
 
-from ghga_service_commons.utils.utc_dates import now_as_utc
-
 from .conftest import (
     Config,
     JointFixture,
@@ -32,6 +30,7 @@ from .conftest import (
     then,
     when,
 )
+from .conftest_2x import _grant_upload_access
 
 scenarios("../features/200_upload_initiated.feature")
 
@@ -119,33 +118,7 @@ def grant_user_access_to_upload_box(
     full_name: str, user_name: str, storage_name: str, fixtures: JointFixture
 ) -> Response:
     """Grant the specified user access to the data upload box for the specified storage scope."""
-    session = fixtures.auth.get_saved_session(
-        name=full_name, state_store=fixtures.state
-    )
-    assert session, f"No session found for {full_name}"
-
-    _, name = fixtures.auth.split_title(user_name)
-    sub = fixtures.auth.get_sub(name)
-    registered_users = fixtures.state.get_state("registered users") or {}
-    user_id = registered_users.get(sub)
-
-    iva = fixtures.state.get_state("Phone iva")
-    assert iva["id"]
-
-    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
-
-    url = f"{fixtures.config.rs_url}/upload-grants"
-    headers = fixtures.auth.headers(session=session)
-    valid_from = now_as_utc()
-    valid_until = valid_from.replace(year=valid_from.year + 1)
-    payload = {
-        "valid_from": valid_from.isoformat(),
-        "valid_until": valid_until.isoformat(),
-        "user_id": user_id,
-        "iva_id": iva["id"],
-        "box_id": rdub["id"],
-    }
-    return fixtures.http.post(url, headers=headers, json=payload)
+    return _grant_upload_access(fixtures, full_name, user_name, storage_name)
 
 
 @when(

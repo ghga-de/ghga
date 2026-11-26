@@ -28,6 +28,7 @@ The executable `pcs` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `publish-events` publishes pending events
+- `migrate-db` runs the database migrations
 
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
@@ -50,6 +51,9 @@ The service requires the following configuration parameters:
   Minimum: `0`.
   Maximum: `1`.
   Default: `1.0`.
+- <a id="properties/enable_otel_metrics"></a>**`enable_otel_metrics`** *(boolean)*: Also export metrics via OTLP.
+  Requires `enable_opentelemetry` and a collector with a metrics pipeline.
+  Default: `false`.
 - <a id="properties/file_deletion_request_topic"></a>**`file_deletion_request_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
 
   Examples:

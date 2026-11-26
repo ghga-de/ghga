@@ -25,7 +25,9 @@ import pytest
 
 from hexkit.correlation import set_correlation_id
 from hexkit.custom_types import JsonObject
+from hexkit.protocols.eventsub import EventSubscriberProtocol
 from hexkit.providers.akafka import (
+    ComboTranslator,
     KafkaConfig,
     KafkaEventPublisher,
     KafkaEventSubscriber,
@@ -214,3 +216,37 @@ async def test_kafka_event_subscriber(
         )
     else:
         assert translator.consume.await_count == 0
+
+
+class _TopicTypeTranslator(EventSubscriberProtocol):
+    """A translator that records the events it gets."""
+
+    def __init__(self, *, topic: str, type_: str):
+        self.topics_of_interest = [topic]
+        self.types_of_interest = [type_]
+        self.consumed: list[tuple[str, str]] = []
+
+    async def _consume_validated(self, *, payload, type_, topic, key, event_id):
+        self.consumed.append((topic, type_))
+
+
+async def test_combo_translator_ignores_type_without_translator_on_topic():
+    """A type of interest on a topic with no translator for it is ignored.
+
+    The subscriber filters by topic and by type separately, so such an event passes
+    both filters; it must not fail and end up retried or in the DLQ.
+    """
+    translator_a = _TopicTypeTranslator(topic="topic-a", type_="type-a")
+    translator_b = _TopicTypeTranslator(topic="topic-b", type_="type-b")
+    combo = ComboTranslator(translators=[translator_a, translator_b])
+    event_id = UUID("6f1b4e1c-2e9a-4f5e-9d1b-1a2b3c4d5e6f")
+
+    await combo.consume(
+        payload={}, type_="type-b", topic="topic-a", key="k", event_id=event_id
+    )
+    await combo.consume(
+        payload={}, type_="type-a", topic="topic-a", key="k", event_id=event_id
+    )
+
+    assert translator_a.consumed == [("topic-a", "type-a")]
+    assert translator_b.consumed == []

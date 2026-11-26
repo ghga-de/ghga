@@ -19,7 +19,7 @@
 # `docker login dhi.io` locally; DOCKERHUB_USERNAME/DOCKERHUB_TOKEN org secrets in CI.
 
 # renovate: track=python-base
-ARG PYTHON_BASE=3.13.15-alpine3.24
+ARG PYTHON_BASE=3.14.10-alpine3.24
 ARG BASE=dhi.io/python:${PYTHON_BASE}
 # single = one member per image (the release artifact); mono = every Python member in
 # one venv, for the demo, the integration gate and the dev cluster only (ADR-0045).
@@ -29,9 +29,12 @@ ARG VARIANT=single
 # hadolint ignore=DL3006
 FROM ${BASE}-sfw-dev AS workspace
 # Toolchain for source-building native wheels where musllinux wheels are unavailable.
+# No `apk upgrade` here: the runner stage starts from the plain base again and takes
+# only the venv, so an upgrade would never reach the image.
+# Alpine's python3-ndbm auto-installs next to the base's python-3.14, which already
+# ships its _dbm module, so the two collide; `!` keeps it out.
 # hadolint ignore=DL3018
-RUN apk upgrade --no-cache --available && \
-    apk add --no-cache build-base gcc g++ libffi-dev zlib-dev python3-dev
+RUN apk add --no-cache build-base gcc g++ libffi-dev zlib-dev python3-dev '!python3-ndbm'
 # uv ships a static (musl-compatible) binary.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
@@ -92,6 +95,17 @@ RUN ln -s /app/.venv/bin/python /app/entrypoint && test -e /app/entrypoint
 # hadolint ignore=DL3006
 FROM venv-${VARIANT} AS builder
 
+# ---- allocator: jemalloc, for members that preload it -----------------------------------
+# musl's default allocator, malloc can be slow at many small allocations.
+# A member that needs a faster allocator preloads jemalloc with LD_PRELOAD.
+# The runner has no package manager, so the library is copied in on its own
+# and does not appear in the image's package database.
+# hadolint ignore=DL3006
+FROM ${BASE}-sfw-dev AS allocator
+# `!python3-ndbm`: see the workspace stage.
+# hadolint ignore=DL3018
+RUN apk add --no-cache jemalloc '!python3-ndbm'
+
 # ---- runner: plain hardened base (non-root, no shell) -----------------------------------
 # hadolint ignore=DL3006
 FROM ${BASE} AS runner
@@ -100,6 +114,7 @@ ARG GIT_SHA=unknown
 ARG UID=1000
 COPY --from=builder --chown=${UID}:${UID} /app/.venv /app/.venv
 COPY --from=builder /app/entrypoint /app/entrypoint
+COPY --from=allocator /usr/lib/libjemalloc.so.2 /usr/lib/libjemalloc.so.2
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
     GHGA_PLATFORM_VERSION="${PLATFORM_VERSION}"

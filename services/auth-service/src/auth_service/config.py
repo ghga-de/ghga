@@ -17,7 +17,7 @@
 
 from typing import Literal
 
-from pydantic import AnyUrl, Field, HttpUrl, field_validator
+from pydantic import AnyUrl, Field, HttpUrl, SecretStr, field_validator
 
 from auth_service.auth_adapter.core.session_store import SessionConfig
 from auth_service.auth_adapter.core.totp import TOTPConfig
@@ -67,10 +67,10 @@ class Config(
         default=SERVICE_NAME, description="Short name of this service"
     )
 
-    auth_key: str | None = Field(  # type: ignore
+    auth_key: SecretStr | None = Field(  # type: ignore
         default=None,
-        description="internal public key for the auth service"
-        " (key pair for auth adapter)",
+        description="internal key: the public key for the users, claims and access"
+        " APIs, the private key (full key pair) for the auth adapter",
     )
 
     api_ext_path: str = Field(
@@ -94,7 +94,7 @@ class Config(
         description="path prefixes that can generate an internal auth token",
     )
 
-    basic_auth_credentials: str | None = Field(
+    basic_auth_credentials: SecretStr | None = Field(
         default=None,
         description="credentials for basic authentication, separated by whitespace",
     )
@@ -116,12 +116,6 @@ class Config(
         description="Which REST APIs should be provided.",
         title="Provide APIs",
         examples=['["ext_auth"]', '["users"]', '["claims", "access"]'],
-    )
-
-    run_consumer: bool = Field(
-        default=False,
-        description="Whether the service should run as an event consumer",
-        examples=["false", "true"],
     )
 
     add_as_data_stewards: list[UserWithIVA] = Field(

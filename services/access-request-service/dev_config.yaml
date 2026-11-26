@@ -9,11 +9,14 @@ cors_allowed_methods: []
 cors_allowed_headers: []
 
 mongo_dsn: "mongodb://mongodb:27017"
-db_name: "access-requests"
+db_name: access-request
 migration_wait_sec: 10
 db_version_collection: arsDbVersions
 
 access_request_topic: access_request_events
+
+notification_topic: notifications
+sms_notification_type: sms_notification
 
 dataset_change_topic: metadata_datasets
 dataset_upsertion_type: dataset_created

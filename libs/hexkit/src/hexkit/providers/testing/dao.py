@@ -15,7 +15,7 @@
 
 """A mock (in-memory) DAO"""
 
-from collections.abc import AsyncIterator, Callable, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Mapping
 from contextlib import AbstractAsyncContextManager, suppress
 from copy import deepcopy
 from functools import partial
@@ -26,19 +26,22 @@ from pydantic import BaseModel
 
 from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
+    BatchOperationError,
+    DaoError,
+    DaoFactoryBase,
     FindResult,
     MultipleHitsFoundError,
     NoHitsFoundError,
     PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
-    resolve_filter,
+    ensure_distinct_ids,
 )
 from hexkit.providers.mongodb.provider import (
     document_to_dto,
     dto_to_document,
-    replace_id_field_in_find_mapping,
-    validate_find_mapping,
+    replace_id_field_in_find_filter,
+    validate_find_filter,
 )
 
 __all__ = ["SUPPORTED_MQL_OPERATORS", "MockDAOEmptyError", "new_mock_dao_class"]
@@ -46,13 +49,37 @@ __all__ = ["SUPPORTED_MQL_OPERATORS", "MockDAOEmptyError", "new_mock_dao_class"]
 DTO = TypeVar("DTO", bound=BaseModel)
 Document = dict[str, Any]
 
+
+def _null_safe(compare: Callable[[Any, Any], bool]) -> Callable[[Any, Any], bool]:
+    """Create a version of the `compare` function that won't raise a `TypeError`
+    when encountering `None` values.
+
+    This is done to match MongoDB's behavior. For example, when there is a nullable
+    datetime field on a model, some of the documents might have a timestamp while other
+    documents have a `null`/`None` value. When sorting or ordering on that field, e.g.
+    `$gt: some_date`, MongoDB will skip documents with the null value if the comparison
+    operator is $gt or $lt. By default, Python will raise a TypeError.
+
+    This (_null_safe) will not produce a function with complete parity with MongoDB,
+    it will only match the behavior with regard to null values. For more thorough
+    testing, we recommend using the MongoDB test container.
+    """
+
+    def null_safe_compare(stored_value: Any, target_value: Any) -> bool:
+        if stored_value is None or target_value is None:
+            return stored_value is None and target_value is None and compare(0, 0)
+        return compare(stored_value, target_value)
+
+    return null_safe_compare
+
+
 MQL_COMPARISON_OPERATORS: dict[str, Callable[[Any, Any], bool]] = {
     "$eq": lambda a, b: a == b,
-    "$gt": lambda a, b: a > b,
-    "$gte": lambda a, b: a >= b,
+    "$gt": _null_safe(lambda a, b: a > b),
+    "$gte": _null_safe(lambda a, b: a >= b),
     "$in": lambda a, b: a in b,
-    "$lt": lambda a, b: a < b,
-    "$lte": lambda a, b: a <= b,
+    "$lt": _null_safe(lambda a, b: a < b),
+    "$lte": _null_safe(lambda a, b: a <= b),
     "$ne": lambda a, b: a != b,
     "$nin": lambda a, b: a not in b,
 }
@@ -399,6 +426,7 @@ class BaseInMemDao(Generic[DTO]):
         raise NotImplementedError()
 
     def __init__(self) -> None:
+        # Keyed by each document's _id, the ID as the DTO serializes it, as in MongoDB
         self.resources: dict[ID, Document] = {}
 
     @property
@@ -421,25 +449,21 @@ class BaseInMemDao(Generic[DTO]):
             return self._deserialize(self.resources[id_])
         raise ResourceNotFoundError(id_=id_)
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     async def find_one(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
     ) -> DTO:
         """Find the resource that matches the specified filter.
 
         Args:
             filter_: A mapping of field names to the values to select on.
-            mapping: Deprecated alias for `filter_`.
 
         Raises:
-            InvalidMappingError: If `filter_` doesn't pass validation.
+            InvalidFilterError: If `filter_` doesn't pass validation.
             NoHitsFoundError: If no matching resource is found.
             MultipleHitsFoundError: If more than one matching resource is found.
         """
-        filter_ = resolve_filter(filter_, mapping)
         hits = self.find_all(filter_=filter_)
         try:
             dto = await hits.__anext__()
@@ -468,12 +492,10 @@ class BaseInMemDao(Generic[DTO]):
                 return False
         return True
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def find_all(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
@@ -482,21 +504,19 @@ class BaseInMemDao(Generic[DTO]):
 
         Args:
             filter_: A mapping of field names to the values to select on.
-            mapping: Deprecated alias for `filter_`.
 
         Raises:
             ValueError: If `skip` or `limit` is negative.
-            InvalidMappingError: If `filter_` doesn't pass validation.
+            InvalidFilterError: If `filter_` doesn't pass validation.
         """
-        filter_ = resolve_filter(filter_, mapping)
         skip = skip or 0
         if skip < 0:
             raise ValueError("skip must be >= 0")
         if limit is not None and limit < 0:
             raise ValueError("limit must be >= 0")
 
-        validate_find_mapping(filter_, dto_model=self._dto_model)
-        _filter = replace_id_field_in_find_mapping(filter_, self._id_field)
+        validate_find_filter(filter_, dto_model=self._dto_model)
+        _filter = replace_id_field_in_find_filter(filter_, self._id_field)
         predicates = build_predicates(_filter) if self._handle_mql else []
 
         matching = [
@@ -510,9 +530,8 @@ class BaseInMemDao(Generic[DTO]):
             desc = spec.startswith("-")
             field = spec.removeprefix("-")
             # Only the exact ID field is translated to the internal "_id" field, matching
-            # the MongoDB provider. Other fields (including nested sub-fields of the ID,
-            # which MongoDB cannot sort by) are looked up as-is and resolve to None when
-            # absent, sorting consistently rather than raising - again like MongoDB.
+            # the MongoDB provider. Other fields are looked up as-is and resolve to None
+            # when absent, sorting consistently rather than raising - again like MongoDB.
             doc_field = "_id" if field == self._id_field else field
             matching.sort(key=partial(_sort_key, field_path=doc_field), reverse=desc)
 
@@ -546,37 +565,39 @@ class BaseInMemDao(Generic[DTO]):
 
         Raises a ResourceAlreadyExistsError if a resource with a matching ID exists already.
         """
-        dto_id = getattr(dto, self._id_field)
+        document = self._serialize(dto)
+        dto_id = document["_id"]
         if dto_id in self.resources:
             raise ResourceAlreadyExistsError(id_=dto_id)
-        self.resources[dto_id] = self._serialize(dto)
+        self.resources[dto_id] = document
 
     async def update(
         self, dto: DTO, *, precondition: Mapping[str, Any] | None = None
     ) -> None:
         """Update a resource.
 
-        Raises an InvalidMappingError if `precondition` doesn't pass validation, a
+        Raises an InvalidFilterError if `precondition` doesn't pass validation, a
         ResourceNotFoundError if no resource with a matching ID is found, and a
         PreconditionFailedError if the resource doesn't match `precondition`.
         """
-        dto_id = getattr(dto, self._id_field)
+        document = self._serialize(dto)
+        dto_id = document["_id"]
 
-        # Validated before the existence check, so an invalid mapping produces the same
+        # Validated before the existence check, so an invalid filter produces the same
         # error here as it does in the MongoDB provider
         if precondition:
-            validate_find_mapping(precondition, dto_model=self._dto_model)
+            validate_find_filter(precondition, dto_model=self._dto_model)
 
         if dto_id not in self.resources:
             raise ResourceNotFoundError(id_=dto_id)
 
         if precondition:
-            criteria = replace_id_field_in_find_mapping(precondition, self._id_field)
+            criteria = replace_id_field_in_find_filter(precondition, self._id_field)
             predicates = build_predicates(criteria) if self._handle_mql else []
             if not self._resource_matches(self.resources[dto_id], criteria, predicates):
                 raise PreconditionFailedError(id_=dto_id, precondition=precondition)
 
-        self.resources[dto_id] = self._serialize(dto)
+        self.resources[dto_id] = document
 
     async def delete(self, id_: ID) -> None:
         """Delete a resource by ID.
@@ -589,8 +610,74 @@ class BaseInMemDao(Generic[DTO]):
 
     async def upsert(self, dto: DTO) -> None:
         """Upsert a resource."""
-        dto_id = getattr(dto, self._id_field)
-        self.resources[dto_id] = self._serialize(dto)
+        document = self._serialize(dto)
+        self.resources[document["_id"]] = document
+
+    async def _write_each(
+        self,
+        dtos: Collection[DTO],
+        write: Callable[[DTO], Awaitable[None]],
+        *,
+        ordered: bool,
+    ) -> None:
+        """Write the DTOs one by one, collecting each DaoError per ID.
+
+        Ordered, the batch ends at its first error other than a missing resource, like
+        an ordered MongoDB bulk write, which ends at its first write error and does not
+        count a missing resource as one.
+        """
+        dtos = list(dtos)
+        ids = [self._serialize(dto)["_id"] for dto in dtos]
+        ensure_distinct_ids(ids)
+        errors: dict[ID, DaoError] = {}
+        for position, dto in enumerate(dtos):
+            try:
+                await write(dto)
+            except DaoError as error:
+                errors[ids[position]] = error
+                if ordered and not isinstance(error, ResourceNotFoundError):
+                    skipped = ids[position + 1 :]
+                    raise BatchOperationError(
+                        errors=errors, not_attempted=skipped
+                    ) from error
+        if errors:
+            raise BatchOperationError(errors=errors)
+
+    async def insert_many(
+        self, dtos: Collection[DTO], *, ordered: bool = False
+    ) -> None:
+        """Insert resources one by one, collecting failures as MongoDB does.
+
+        This DAO has no unique indexes, so the only failure is an existing ID.
+        """
+        await self._write_each(dtos, self.insert, ordered=ordered)
+
+    async def update_many(
+        self, dtos: Collection[DTO], *, ordered: bool = False
+    ) -> None:
+        """Update resources one by one, collecting failures as MongoDB does.
+
+        A missing resource never stops a batch, not even an ordered one, but any other
+        failure stops an ordered batch.
+        """
+        await self._write_each(dtos, self.update, ordered=ordered)
+
+    async def upsert_many(
+        self, dtos: Collection[DTO], *, ordered: bool = False
+    ) -> None:
+        """Upsert resources one by one, collecting failures as MongoDB does.
+
+        This DAO has no unique indexes, so an upsert fails only where a test patched it.
+        """
+        await self._write_each(dtos, self.upsert, ordered=ordered)
+
+    async def delete_many(self, ids: Collection[ID]) -> None:
+        """Delete resources by ID, ignoring the ones that do not exist."""
+        if isinstance(ids, str):
+            raise TypeError("delete_many takes a collection of IDs, not a single ID")
+        for id_ in dict.fromkeys(ids):
+            with suppress(ResourceNotFoundError):
+                await self.delete(id_)
 
 
 def new_mock_dao_class(
@@ -602,7 +689,21 @@ def new_mock_dao_class(
     use MongoDB query language predicates (e.g. $ne, $in, $ge, etc.). Not all MQL
     operators are supported. Please see `SUPPORTED_MQL_OPERATORS` for a complete list
     of the currently supported MQL operators.
+
+    The MQL support is a testing aid, not an emulation of MongoDB. Operators follow
+    Python semantics, except where MongoDB's behavior is common in service code and
+    simple to match, such as comparing against null or missing fields. Other edge cases,
+    like ordering values of different types, may raise or match differently than
+    MongoDB. Cover those with integration tests against MongoDB instead.
+
+    Raises:
+        DaoFactoryBase.IdFieldNotFoundError: If `dto_model` has no field `id_field`.
+        DaoFactoryBase.IdTypeNotSupportedError: If the ID field is neither a string nor
+            an integer, which the DAO factories reject as well.
+        PydanticInvalidForJsonSchema: If `dto_model` has no JSON schema, from which
+            the check reads the ID field's type, as the DAO factories do.
     """
+    DaoFactoryBase._validate_dto_model_id(dto_model=dto_model, id_field=id_field)
 
     class MockDao(BaseInMemDao[DTO]):
         """Mock dao that stores data in memory"""

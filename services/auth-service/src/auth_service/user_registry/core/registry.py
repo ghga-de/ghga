@@ -28,7 +28,9 @@ from pydantic import UUID4
 from hexkit.protocols.dao import (
     Dao,
     NoHitsFoundError,
+    PreconditionFailedError,
     ResourceNotFoundError,
+    race_condition_retries,
 )
 from hexkit.utils import now_utc_ms_prec
 
@@ -58,6 +60,23 @@ from .config import INITIAL_USER_STATUS, UserRegistryConfig
 from .verification_codes import generate_code, hash_code, validate_code
 
 log = logging.getLogger(__name__)
+
+
+def _unchanged_user(user: User) -> dict[str, Any]:
+    """Get the precondition for writing back the given user.
+
+    Users are written back as a whole, so the write must not undo concurrent
+    changes of the status or of the daily IVA counter.
+    """
+    precondition: dict[str, Any] = {"status": user.status}
+    counter = user.ivas_created_today
+    if counter:
+        precondition["ivas_created_today.date"] = counter.date
+        precondition["ivas_created_today.count"] = counter.count
+    else:
+        precondition["ivas_created_today"] = None
+    return precondition
+
 
 __all__ = ["UserRegistry"]
 
@@ -214,26 +233,37 @@ class UserRegistry(UserRegistryPort):
         May raise UserDoesNotExistError or a UserUpdateError.
         """
         update_data = user_data.model_dump(exclude_unset=True)
-        try:
-            user = await self.get_user(user_id)
-        except self.UserRetrievalError as error:
-            raise self.UserUpdateError(user_id=user_id) from error
-        if "status" in update_data and user.status != update_data["status"]:
-            update_data["status_change"] = StatusChange(
-                previous=user.status,
-                by=changed_by or None,
-                context=(context or "").strip() or None,
-                change_date=now_utc_ms_prec(),
-            )
-        try:
-            user = user.model_copy(update=update_data)
-            await self._user_dao.update(user)
-        except ResourceNotFoundError as error:
-            log.warning("User not found: %s", error)
-            raise self.UserDoesNotExistError(user_id=user_id) from error
-        except Exception as error:
-            log.error("Could not update user: %s", error)
-            raise self.UserUpdateError(user_id=user_id) from error
+        async for attempt in race_condition_retries(
+            description=f"update user {user_id}",
+            error_on_failure=lambda: self.UserUpdateError(user_id=user_id),
+            logger=log,
+        ):
+            with attempt:
+                try:
+                    user = await self.get_user(user_id)
+                except self.UserRetrievalError as error:
+                    raise self.UserUpdateError(user_id=user_id) from error
+                changes = dict(update_data)
+                if "status" in changes and user.status != changes["status"]:
+                    changes["status_change"] = StatusChange(
+                        previous=user.status,
+                        by=changed_by or None,
+                        context=(context or "").strip() or None,
+                        change_date=now_utc_ms_prec(),
+                    )
+                try:
+                    await self._user_dao.update(
+                        user.model_copy(update=changes),
+                        precondition=_unchanged_user(user),
+                    )
+                except PreconditionFailedError:
+                    raise
+                except ResourceNotFoundError as error:
+                    log.warning("User not found: %s", error)
+                    raise self.UserDoesNotExistError(user_id=user_id) from error
+                except Exception as error:
+                    log.error("Could not update user: %s", error)
+                    raise self.UserUpdateError(user_id=user_id) from error
 
     async def delete_user(self, user_id: UUID4) -> None:
         """Delete a user.
@@ -270,8 +300,22 @@ class UserRegistry(UserRegistryPort):
         Also updates the daily IVA creation counter.
 
         Will raise a UserDoesNotExistError if the user does not exist.
-        May raise an IvaCreationError if the number of IVAs could not be checked.
+        May raise an IvaCreationError if the number of IVAs could not be checked
+        or counted.
         Will raise an TooManyIVAsError if limits are exceeded or in case of duplicates.
+        """
+        async for attempt in race_condition_retries(
+            description=f"count the IVAs created by user {user_id}",
+            error_on_failure=lambda: self.IvaCreationError(user_id=user_id),
+            logger=log,
+        ):
+            with attempt:
+                await self._check_and_count_iva(user_id, data)
+
+    async def _check_and_count_iva(self, user_id: UUID4, data: IvaBasicData) -> None:
+        """Check the IVA limits once and count the new IVA.
+
+        Raises a PreconditionFailedError if the user has changed concurrently.
         """
         # first check that the user actually exists
         try:
@@ -297,7 +341,8 @@ class UserRegistry(UserRegistryPort):
         # update the counter
         created_today = PeriodCounter(date=today, count=iva_count_today + 1)
         await self._user_dao.update(
-            user.model_copy(update={"ivas_created_today": created_today})
+            user.model_copy(update={"ivas_created_today": created_today}),
+            precondition=_unchanged_user(user),
         )
 
     async def create_iva(self, user_id: UUID4, data: IvaBasicData) -> UUID4:

@@ -24,6 +24,7 @@ import {
 } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { isSessionEnded } from '@app/auth/services/session-ended';
 import { IvaService } from '@app/ivas/services/iva';
 import { Notifier } from '@app/shared/services/notification';
 import { NormalizeInput } from '@app/shared/ui/normalize-input/normalize-input';
@@ -130,6 +131,11 @@ export class VerificationDialog {
           resolve(true);
         },
         error: (err) => {
+          // the session-ended interceptor has already told the user why
+          if (isSessionEnded(err)) {
+            resolve(false);
+            return;
+          }
           switch (err.status) {
             case 403:
               this.#notify.showError(

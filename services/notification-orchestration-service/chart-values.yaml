@@ -13,15 +13,23 @@ service:
 containerPorts:
   http: null
 
+migrationInitContainer:
+  executable: nos
+  executableArgs:
+  - migrate-db
+
 config:
   central_data_stewardship_email: helpdesk@ghga.de
   helpdesk_email: helpdesk@ghga.de
   kafka_enable_dlq: true
   db_version_collection: "nosDbVersions"
   migration_wait_sec: 10
+  # replicas waiting on another one's migration fail after this, so a stuck lock shows
+  migration_max_wait_sec: 600
 
 
-executableArgs: []
+executableArgs:
+- consume-events
 
 _topics:
   accessRequestEvents:

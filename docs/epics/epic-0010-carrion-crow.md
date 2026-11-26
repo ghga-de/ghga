@@ -4,7 +4,15 @@
 
 ## Scope
 
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/YQH9Cg>
+### Outline
+
+Explore principle technologies that might be used in the context of file handling without thinking about concrete implementation (e.g. about the service breakdown).
+
+The expected output for each of the components below is either a document or a demonstration/benchmarking script.
+
+### Not included
+
+- production-ready implementation, i.e. services
 
 ## Components of Exploration
 
@@ -71,7 +79,7 @@ Take samples from the Genome in a bottle (GIAB) project: <https://ftp-trace.ncbi
 ### crypt4GH
 
 - crypt4GH Documentation: <http://samtools.github.io/hts-specs/crypt4gh.pdf>
-- crypt4GH python utility: <https://crypt4gh.readthedocs.io/en/latest/>
+- crypt4GH python utility: <https://crypt4gh.readthedocs.io/latest/>
 - crypt4GH rust utility: <https://docs.rs/crypt4gh/latest/crypt4gh/>
 
 ## Human Resource/Time Estimation

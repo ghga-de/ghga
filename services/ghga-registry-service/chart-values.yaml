@@ -28,6 +28,8 @@ config:
   work_order_signing_key: '{}'
   db_version_collection: rsDbVersions
   migration_wait_sec: 5
+  # replicas waiting on another one's migration fail after this, so a stuck lock shows
+  migration_max_wait_sec: 600
   httpx_standard_timeout_sec: 60.0
   httpx_long_timeout_sec: 600.0
 
@@ -49,6 +51,14 @@ _topics:
     topic:
       name: research_data_upload_box_topic
       value: research-data-upload-boxes
+    kafkaUser:
+      operations:
+      - Write
+  uploadBoxPriorityTopic:
+    # as producer
+    topic:
+      name: upload_box_priority_topic
+      value: upload-box-priority
     kafkaUser:
       operations:
       - Write

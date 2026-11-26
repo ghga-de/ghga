@@ -11,9 +11,9 @@ import {
   inject,
   input,
   linkedSignal,
-  OnInit,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { form, FormField, validate } from '@angular/forms/signals';
 import { MatChipsModule } from '@angular/material/chips';
@@ -45,7 +45,7 @@ const ERROR_TICKET_ID = 'ID must be a number with up to 9 digits';
   ],
   templateUrl: './access-request-field-edit.html',
 })
-export class AccessRequestFieldEdit implements OnInit {
+export class AccessRequestFieldEdit {
   #config = inject(ConfigService);
   #baseTicketUrl = this.#config.helpdeskTicketUrl;
 
@@ -113,11 +113,14 @@ export class AccessRequestFieldEdit implements OnInit {
   #editedEffect = effect(() => this.edited.emit([this.name(), this.isModified()]));
 
   /**
-   * Populate the editable field with the values from the access request on component init.
+   * Take over a value that changes outside this editor, as when the backend
+   * appends to the internal note. Saving a text based on the old value would
+   * otherwise overwrite the change.
    */
-  ngOnInit(): void {
-    this.formModel.set({ field: this.#defaultValue() });
-  }
+  #resetEffect = effect(() => {
+    const field = this.#defaultValue();
+    untracked(() => this.formModel.set({ field }));
+  });
 
   edit = () => {
     this.isOpen.set(true);

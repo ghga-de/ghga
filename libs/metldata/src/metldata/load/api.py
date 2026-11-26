@@ -111,6 +111,7 @@ async def rest_api_factory(  # noqa: PLR0913
             check_artifact_resources(
                 artifact_resources=artifact_resources,
                 artifact_infos=artifact_info_dict,
+                publishable_artifacts=config.publishable_artifacts,
             )
         except ArtifactResourcesInvalid as error:
             raise HTTPException(status_code=422, detail=str(error)) from error

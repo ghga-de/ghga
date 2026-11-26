@@ -169,6 +169,7 @@ class Config(BaseSettings):
     fis_db_name: str = "fis"
     fis_files_collection: str = "files"
     fis_reports_collection: str = "reports"
+    fis_priority_collection: str = "uploadBoxPriority"
 
     # metldata
     metldata_db_name: str = "metldata"

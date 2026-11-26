@@ -22,10 +22,11 @@ dataset_change_topic: metadata-datasets
 dataset_deletion_type: dataset_deleted
 dataset_upsertion_type: dataset_created
 datasets_collection: datasets
-db_name: dev-db
+db_name: work-package
 db_version_collection: wpsDbVersions
 docs_url: /docs
 enable_opentelemetry: false
+enable_otel_metrics: false
 generate_correlation_id: true
 host: 127.0.0.1
 kafka_compression_type: null

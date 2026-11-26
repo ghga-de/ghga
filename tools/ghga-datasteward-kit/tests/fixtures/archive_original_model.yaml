@@ -819,6 +819,8 @@ classes:
         required: true
         inlined: true
         inlined_as_list: true
+        minimum_cardinality: 1
+        maximum_cardinality: 1
       samples:
         description: >-
           Information about one or more Sample entities associated with this submission.

@@ -230,8 +230,6 @@ function createHandlersForResponses(responses: {
         response = undefined;
       } else if (/post/.test(method)) {
         status = 201;
-      } else if (/patch|put|delete/.test(method)) {
-        status = 204;
       }
       if (DELAY && String(status)[0] === '2') {
         console.info(`Delaying response for ${DELAY} seconds...`);

@@ -55,9 +55,14 @@ class MemorySessionStore(SessionStore):
         raise RuntimeError("Could not create a new session.")
 
     async def save_session(self, session: Session, **kwargs: Any) -> None:
-        """Save an existing user session back to the store."""
+        """Save an existing user session back to the store.
+
+        A session that has been deleted in the meantime, e.g. by a logout or by
+        a concurrent check, is not saved again.
+        """
         await self._update_session(session, **kwargs)
-        self.store[session.session_id] = session
+        if session.session_id in self.store:
+            self.store[session.session_id] = session
 
     async def get_session(self, session_id: str) -> Session | None:
         """Get a valid user session with a given ID.

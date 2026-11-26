@@ -51,6 +51,26 @@ def _pyproject(name: str, version: str, markers: str = "") -> str:
     return manifest + (f"[tool.ghga]\n{markers}\n" if markers else "")
 
 
+@pytest.fixture(autouse=True)
+def descriptions(monkeypatch):
+    """No test reaches GitHub: a PR's description is looked up here, empty if absent."""
+    found: dict[int, str] = {}
+    monkeypatch.setattr(release_notes, "pr_description", lambda pr: found.get(pr, ""))
+    return found
+
+
+@pytest.fixture(autouse=True)
+def deleted_releases(monkeypatch):
+    """No test reaches GitHub: every tag has a release, except the ones added here."""
+    deleted: set[str] = set()
+
+    def release_tags():
+        return frozenset(release_notes._git("tag", "--list").split()) - deleted
+
+    monkeypatch.setattr(release_notes, "release_tags", release_tags)
+    return deleted
+
+
 @pytest.fixture
 def repo(tmp_path, monkeypatch):
     """A repo with a platform and a library release, and a mixed history between."""
@@ -116,8 +136,8 @@ def repo(tmp_path, monkeypatch):
     return tmp_path
 
 
-def _entry(kind="chore", text="x", pr=None, breaking=False, scope=None):
-    return Entry(kind, scope, text, pr, breaking, ())
+def _entry(kind="chore", text="x", pr=None, breaking=False, scope=None, upgrade=()):
+    return Entry(kind, scope, text, pr, breaking, (), tuple(upgrade))
 
 
 def test_final_release_compares_with_the_previous_final_release(repo):
@@ -142,6 +162,14 @@ def test_first_member_release_compares_with_the_first_platform_tag(repo):
 def test_first_final_platform_release_compares_with_the_first_candidate(repo):
     _git(repo, "tag", "--delete", "ghga/1.0.0")
     assert release_notes.previous_tag("ghga/1.1.0") == "ghga/1.1.0-rc.1"
+
+
+def test_final_release_skips_an_abandoned_release(repo):
+    """A tag whose release was deleted stays, but its changes go to the next release."""
+    _git(repo, "tag", "ghga/1.0.5", "ghga/1.1.0-rc.1")
+    assert release_notes.previous_tag("ghga/1.1.0") == "ghga/1.0.5"
+    released = frozenset({"ghga/1.0.0", "ghga/1.1.0"})
+    assert release_notes.previous_tag("ghga/1.1.0", released) == "ghga/1.0.0"
 
 
 def test_no_platform_tag_before_a_first_release(repo):
@@ -270,6 +298,120 @@ def test_render_lists_breaking_changes_first_and_drops_the_own_scope():
     assert "## Changes" in notes  # a breaking change is a change users notice
 
 
+def test_upgrade_lines_are_read_from_the_body():
+    """Several `Upgrade:` lines each give a note; a folded one is joined back into one."""
+    body = (
+        "- Rename the flag\n\n"
+        "Upgrade: rename `--db` to `--db-name`\n"
+        "Upgrade: set `config.db_name` from\n"
+        "  `mongodb.dbName` instead\n"
+        "BREAKING CHANGE: `--db` is gone"
+    )
+    entry = release_notes._entry("feat(ucs)!: rename (#9)", body, [])
+    assert entry.upgrade == (
+        "rename `--db` to `--db-name`",
+        "set `config.db_name` from `mongodb.dbName` instead",
+    )
+
+
+def test_upgrade_in_running_text_is_no_note():
+    entry = release_notes._entry("fix: x", "- An Upgrade: in a bullet", [])
+    assert entry.upgrade == ()
+
+
+def test_render_lists_upgrade_notes_above_the_pull_requests():
+    entries = [
+        _entry("chore", "a", 1, scope="ucs", upgrade=["drop `x`"]),
+        _entry("fix", "b", 2),
+    ]
+    notes = release_notes.render("ghga/1.1.0", "ghga/1.0.0", entries)
+    section = notes.split("## Upgrade notes\n\n")[1].split("## Pull requests")[0]
+    assert "- **ucs:** drop `x` (#1)" in section
+    assert "(#2)" not in section
+
+
+def test_render_without_upgrade_notes_has_no_section():
+    notes = release_notes.render("ghga/1.1.0", "ghga/1.0.0", [_entry("fix", pr=1)])
+    assert "## Upgrade notes" not in notes
+
+
+@pytest.fixture
+def renamed_flag(repo, monkeypatch):
+    """A release `ghga/1.2.0` with one PR, #20, whose commit message has no note."""
+    monkeypatch.setattr(release_notes, "shipped_prefixes", lambda path: SHIPPED)
+    _commit(repo, "services/s/app.py", "chore(s): rename a flag (#20)\n\n- Rename it")
+    _git(repo, "tag", "ghga/1.2.0")
+    return repo
+
+
+def test_upgrade_note_reaches_the_release_it_landed_in(renamed_flag, descriptions):
+    """The version is not known when the note is written; the tag range decides it."""
+    descriptions[20] = "Renames it.\r\n\r\nUpgrade: rename `--a` to `--b`\r\n"
+    text, _ = release_notes.notes("ghga/1.2.0", github=True)
+    assert "- **s:** rename `--a` to `--b` (#20)" in text
+    earlier, _ = release_notes.notes("ghga/1.1.0", github=True)
+    assert "## Upgrade notes" not in earlier
+
+
+def test_description_wins_over_the_commit_message(descriptions):
+    """Whoever merged may have copied the lines, dropped them or left them stale."""
+    descriptions.update({1: "Upgrade: from the PR", 2: "Upgrade: none"})
+    changes = [
+        _entry(pr=1, upgrade=["from the commit"]),
+        _entry(pr=2, upgrade=["copied, then the PR said none"]),
+        _entry(pr=None, upgrade=["pushed without a PR"]),
+    ]
+    taken = release_notes.with_descriptions(changes, strict=True)
+    assert [e.upgrade for e in taken] == [
+        ("from the PR",),
+        (),
+        ("pushed without a PR",),
+    ]
+
+
+def test_unreachable_github_fails_a_draft(renamed_flag, monkeypatch):
+    def offline(pr):
+        raise OSError("no network")
+
+    monkeypatch.setattr(release_notes, "pr_description", offline)
+    with pytest.raises(SystemExit, match="description of #20"):
+        release_notes.notes("ghga/1.2.0", github=True)
+
+
+def test_unreachable_github_falls_back_to_the_commit_messages(capsys, monkeypatch):
+    def offline(pr):
+        raise OSError("no network")
+
+    monkeypatch.setattr(release_notes, "pr_description", offline)
+    changes = [_entry(pr=1, upgrade=["copied at merge"]), _entry(pr=2)]
+    assert release_notes.with_descriptions(changes, strict=False) == changes
+    assert capsys.readouterr().err.count("warning:") == 1
+
+
+def _offline():
+    raise OSError("no network")
+
+
+def test_unlisted_releases_fail_a_draft(repo, monkeypatch):
+    monkeypatch.setattr(release_notes, "release_tags", _offline)
+    with pytest.raises(SystemExit, match="cannot list the GitHub releases"):
+        release_notes.notes("ghga/1.1.0", github=True)
+
+
+def test_unlisted_releases_count_every_tag(
+    renamed_flag, capsys, monkeypatch, deleted_releases
+):
+    """Printed notes still come out offline; every tag then counts as a release."""
+    _git(renamed_flag, "tag", "ghga/1.0.5", "ghga/1.1.0-rc.1")
+    deleted_releases.add("ghga/1.0.5")
+    skipping = release_notes.notes("ghga/1.1.0")
+    counting = release_notes.notes("ghga/1.1.0", "ghga/1.0.5")
+    assert skipping != counting
+    monkeypatch.setattr(release_notes, "release_tags", _offline)
+    assert release_notes.notes("ghga/1.1.0") == counting
+    assert "cannot list the GitHub releases" in capsys.readouterr().err
+
+
 def test_render_without_previous_release_offers_every_summary():
     notes = release_notes.render("ghga/1.0.0", None, [])
     for heading in ("## New features", "## Changes", "## Bug fixes"):
@@ -315,6 +457,14 @@ def test_companions_are_tagged_and_released_with_the_platform(companions):
 def test_unchanged_companion_keeps_no_tag(companions):
     release_notes.companion_releases("ghga/1.1.0")
     assert _git(companions, "tag", "--list", "idle/*") == "idle/1.0.0"
+
+
+def test_companion_after_an_abandoned_release_is_released(companions, deleted_releases):
+    """An abandoned release does not hide the changes made before it."""
+    _git(companions, "tag", "demo/1.0.5", "ghga/1.1.0")
+    deleted_releases.add("demo/1.0.5")
+    releases = release_notes.companion_releases("ghga/1.1.0")
+    assert "demo/1.1.0" in [tag for tag, _, _ in releases]
 
 
 def test_existing_companion_tag_is_reused(companions):

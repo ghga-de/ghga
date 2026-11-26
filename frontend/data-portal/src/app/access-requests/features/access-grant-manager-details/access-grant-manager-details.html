@@ -67,7 +67,7 @@
               >
             </p>
             <p>
-              <strong class="inline-block w-44">Email:</strong>
+              <strong class="inline-block w-44">LS Login email:</strong>
               <a appExtLink [href]="'mailto:' + ag.user_email" tabindex="-1">{{
                 ag.user_email
               }}</a>
@@ -114,8 +114,7 @@
                       routerLink="/dataset/{{ request.dataset_id }}"
                       data-umami-event="Access Grant Details AR List Dataset Clicked"
                       aria-label="View this dataset"
-                      >{{ request.dataset_id }}</a
-                    ><br />
+                      >{{ request.dataset_id }}</a><br />
                     from
                     {{
                       request.access_starts | date: friendlyDateFormat : periodTimeZone
@@ -154,8 +153,7 @@
                         class="text-tertiary hover:text-secondary focus:text-secondary"
                         routerLink="/dataset/{{ request.dataset_id }}"
                         data-umami-event="Granted Access Requests List Dataset Clicked"
-                        >{{ request.dataset_id }}</a
-                      ><br />
+                        >{{ request.dataset_id }}</a><br />
                       from
                       {{
                         request.access_starts

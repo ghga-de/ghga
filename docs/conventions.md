@@ -51,9 +51,12 @@ Two long-lived branches ([ADR-0038](adrs/adr-0038-branching-strategy.md)): **`de
 - **Pull requests into `dev` are squashed** — one pull request, one commit.
   Rebase merges are off.
 - **Hotfixes are the exception:** branch from `main`, merge back into `main` with a merge commit (`main` takes no squash), release, then merge `main` back into `dev` so the fix survives the next release.
+  The back-merge takes a merge commit too: a squash leaves `main`'s commits outside `dev`'s history, so the next release merge shows the hotfix again as a change.
 - **Release:** `dev` is merged into `main` with a merge commit (never squashed or rebased — that is why "Require linear history" is off for `main`).
 - **Long-lived feature branches** are allowed, and decided case by case.
 - Committing directly to either branch is blocked by `no-commit-to-branch` ([ADR-0036](adrs/adr-0036-pre-commit-hooks.md)).
+
+The GitHub rulesets, required checks included, are exported to ghga-de/deploy: tell DevOps when you change one.
 
 Which branch a tag is cut on is **enforced** by `release.yaml`, per lane — it tests membership of the branch's first-parent chain, so a back-merge does not launder a tag onto the wrong lane:
 
@@ -109,6 +112,14 @@ feat(upload): add UCS endpoints (#207)
 - Cover both routes in the UCS API tests
 ```
 
+**Upgrade notes** go at the end of a PR description: one line starting with `Upgrade:` for each action an upgrade requires, or `Upgrade: none`.
+An action is anything a deployment or a tool's user must change — a renamed CLI flag, a new or changed config setting, a changed chart value or `openapi.yaml` — said in their terms, e.g. `Upgrade: set ucs.config.storage_aliases for each box storage`.
+The line is required when the PR changes a `config_schema.json`, `example_config.yaml`, `openapi.yaml`, `chart-values.yaml` or `deploy/charts/*/values.yaml` other than the demo's `ghga-demo` and `aai`; elsewhere add it only for an action no such file shows, like a renamed CLI flag.
+A PR that changes a `config_schema.json`, `example_config.yaml` or chart values file also gets a comment that mentions `@ghga-de/devops-engineers` with its lines, so the deployments hear of them during review rather than at the release.
+A changed `openapi.yaml` concerns the API's clients rather than the deployments, so it needs the mention only when an upgrade must change the gateway or ingress configuration.
+The release is unknown while the PR is open; the release notes collect the lines from the descriptions of the PRs in each tag's range ([releases.md](releases.md#release-notes)), so they need not be copied into the commit message.
+The required `upgrade-note` check fails while a PR that needs the line lacks it; release merges and back-merges between `dev` and `main`, `renovate/*` and `automated/*` are exempt.
+
 **PR descriptions** are written for the reviewer: a few short paragraphs on what changed, why, and what to look at — not a summary of the diff, and not a report on how the work went.
 Plain language, no model register, no walls of text — a description that will not shorten is usually a PR that should be split into a stack.
 Write each paragraph on one line, not one sentence per line: GitHub renders every newline in a description or comment as a line break ([line wrapping](style.md#line-wrapping)).
@@ -136,7 +147,7 @@ How a release runs end to end is in [releases.md](releases.md).
 ## Toolchain
 
 - One `ruff` / `mypy` / `pytest` config at the repo root (in `pyproject.toml`); no per-member copies (the old `.template/` sync is retired).
-- `just` is the task facade ([ADR-0034](adrs/adr-0034-task-runner.md)); `uv` manages Python 3.13.
+- `just` is the task facade ([ADR-0034](adrs/adr-0034-task-runner.md)); `uv` manages Python 3.14.
 - One `.pre-commit-config.yaml` at the root covers **both** stacks ([ADR-0036](adrs/adr-0036-pre-commit-hooks.md)).
   `just hooks` installs it, `just hooks-all` runs everything.
   The ruff / mypy / prettier / eslint hooks take their version from `uv.lock` and `pnpm-lock.yaml`, not from a `rev:` pin, so a hook can never disagree with CI.

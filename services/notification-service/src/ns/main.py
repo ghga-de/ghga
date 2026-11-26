@@ -16,9 +16,11 @@
 """Service entry point function(s)."""
 
 from hexkit.log import configure_logging
+from hexkit.opentelemetry import configure_opentelemetry
+from hexkit.providers.mongodb.migrations import MigrationManager
 from ns.config import Config
 from ns.inject import prepare_event_subscriber
-from ns.migrations import run_db_migrations
+from ns.migrations import MIGRATION_MAP
 
 DB_VERSION = 2
 
@@ -28,8 +30,17 @@ async def consume_events(run_forever: bool = True):
     config = Config()
 
     configure_logging(config=config)
-
-    await run_db_migrations(config=config, target_version=DB_VERSION)
+    configure_opentelemetry(service_name=config.service_name, config=config)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)
+
+
+async def migrate_db() -> None:
+    """Run database migrations as a one-off command."""
+    config = Config()
+    configure_logging(config=config)
+    async with MigrationManager(
+        config=config, target_version=DB_VERSION, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()

@@ -11,7 +11,8 @@ global:
 commandPrefix: ''
 commandStyle: exec
 executable: auth-service
-executableArgs: []
+executableArgs:
+- run-rest
 deployment:
   enabled: true
 job:
@@ -34,15 +35,19 @@ image:
 replicaCount: 1
 revisionHistoryLimit: 1
 shareProcessNamespace: false
+secretEnvFiles:
+  enabled: false
+  dir: /vault/secrets
 podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
-  executable: ""
-  executableArgs: []
+  executable: auth-service
+  executableArgs:
+  - migrate-db
   env: []
   resources: {}
   volumeMounts: []
@@ -168,6 +173,20 @@ _topics:
     kafkaUser:
       operations:
       - Write
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+      - Write
+  deadLetterQueueRetry:
+    topic:
+      name:
+      value: retry
+    kafkaUser:
+      operations:
+      - Read
 _consumerGroup:
   operations:
   - Read
@@ -182,13 +201,13 @@ kafkaUser:
   caCertSecretName: kafka-cluster-ca-cert
 mongodb:
   dbName: auth-service
-  service:
-    namespace: mongodb
-    name: mongodb
 apiBasePath: /auth-ext/
 serviceName: auth-service
 serviceInstanceId:
   fromPodName: false
+otelExcludedUrls: /health$
+otelResource:
+  podName: true
 configMap:
   enabled: true
   mountPath: /etc/config.yaml
@@ -199,15 +218,18 @@ config:
   mongo_dsn:
   host: 0.0.0.0
   enable_opentelemetry: false
+  kafka_enable_dlq: true
+  kafka_max_retries: 3
+  kafka_retry_backoff: 2
   db_version_collection: "authDbVersions"
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
 configPrefix: auth_service
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5
-environment:
-  name: default
-cluster:
-  name: default
+concurrencyPolicy: Forbid
+activeDeadlineSeconds:
+startingDeadlineSeconds:
 httpRoute:
   enabled: false
   port: 8080
@@ -219,6 +241,49 @@ probe:
 healthEndpoint: "/health"
 destinationRule:
   enabled: false
+authorizationPolicy:
+  enabled: false
+  denyAll: false
+  trustDomain: cluster.local
+  callers:
+    wps:
+    - methods:
+      - GET
+      paths:
+      - /download-access/users/{*}/datasets
+      - /download-access/users/{*}/datasets/{*}
+      - /upload-access/users/{*}/boxes
+      - /upload-access/users/{*}/boxes/{*}
+    ars:
+    - methods:
+      - POST
+      paths:
+      - "/download-access/users/{*}/ivas/{*}/datasets/{*}"
+    - methods:
+      - GET
+      paths:
+      - "/download-access/grants"
+    - methods:
+      - DELETE
+      paths:
+      - "/download-access/grants/{*}"
+    rs:
+    - methods:
+      - POST
+      paths:
+      - "/upload-access/users/{*}/ivas/{*}/boxes/{*}"
+    - methods:
+      - GET
+      paths:
+      - /upload-access/grants
+      - /upload-access/users/{*}/boxes
+      - /upload-access/users/{*}/boxes/{*}
+    - methods:
+      - DELETE
+      paths:
+      - "/upload-access/grants/{*}"
+  identities: {}
+  extraRules: []
 networkPolicy:
   enabled: false
   ingress:
@@ -227,50 +292,3 @@ networkPolicy:
         matchLabels:
           ghga-ingress: allow
 strimziApiVersion: kafka.strimzi.io/v1
-vaultAgent:
-  enabled: false
-  annotations:
-    vault.hashicorp.com/tls-skip-verify: "false"
-    vault.hashicorp.com/agent-inject: "true"
-    vault.hashicorp.com/agent-init-first: "true"
-    vault.hashicorp.com/agent-cache-enable: "true"
-    vault.hashicorp.com/agent-pre-populate-only: "false"
-    vault.hashicorp.com/agent-run-as-same-user: "true"
-  role: ""
-  rolePrefix: ""
-  caCert: ""
-  tlsSecret: ""
-  service: ""
-  tlsServerName: ""
-  pgrepPattern: python
-  secrets:
-    generic: {}
-    mongodb:
-      enabled: false
-      secretPath: ""
-      connectionString: "mongodb://{{username}}:{{password}}@mongodb:27017/admin"
-    service:
-      enabled: false
-      secretPath: ""
-      pathPrefix: operational-secrets/data/unique/apps/archive
-    crypt4ghInternalPub:
-      enabled: false
-      secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-internal"
-      mountPath: /keys/crypt4gh-internal/crypt4gh.pub
-      dataKey: crypt4gh.pub
-      renderToFile: true
-      parameterName: CRYPT4GH_PUBLIC_KEY
-    crypt4ghInternalPriv:
-      enabled: false
-      secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-internal"
-      mountPath: /keys/crypt4gh-internal/crypt4gh.sec
-      dataKey: crypt4gh.sec
-      renderToFile: true
-      parameterName: CRYPT4GH_PRIVATE_KEY
-    crypt4ghExternalPriv:
-      enabled: false
-      secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-external"
-      mountPath: /keys/crypt4gh-external/crypt4gh.sec
-      dataKey: crypt4gh.sec
-      renderToFile: true
-      parameterName: CRYPT4GH_PRIVATE_KEY

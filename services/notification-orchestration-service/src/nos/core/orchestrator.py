@@ -140,7 +140,10 @@ class Orchestrator(OrchestratorPort):
             full_name=DATA_STEWARD_NAME,
             notification=notifications.ACCESS_REQUEST_CREATED_TO_DS.formatted(
                 full_user_name=user.name,
-                email=user.email,
+                requester_emails=notifications.requester_emails(
+                    contact_email=access_request.contact_email,
+                    ls_login_email=user.email,
+                ),
                 dataset_id=access_request.dataset_id,
                 dataset_title=access_request.dataset_title,
                 dac_alias=access_request.dac_alias,

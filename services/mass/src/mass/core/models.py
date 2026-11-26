@@ -15,11 +15,12 @@
 
 """Defines dataclasses for holding business-logic data"""
 
-from enum import Enum
-
 from pydantic import BaseModel, Field
 
 from hexkit.custom_types import JsonObject
+
+# the reserved name in a sort specification that stands for the relevance of a result
+RELEVANCE = "relevance"
 
 
 class FieldLabel(BaseModel):
@@ -80,28 +81,12 @@ class Filter(BaseModel):
 
 
 class QueryResults(BaseModel):
-    """Contains the facets, hit count, and hits"""
+    """Contains the facets, one page of search results, and their total count"""
 
     facets: list[Facet] = Field(default=[], description="Contains the faceted fields")
-    count: int = Field(default=0, description="The number of results found")
-    hits: list[Resource] = Field(default=[], description="The search results")
-
-
-class SortOrder(Enum):
-    """Represents the possible sorting orders"""
-
-    ASCENDING = "ascending"
-    DESCENDING = "descending"
-    RELEVANCE = "relevance"
-
-
-class SortingParameter(BaseModel):
-    """Represents a combination of a field to sort and the sort order"""
-
-    field: str = Field(
-        ...,
-        description=("Which field to sort results by."),
+    items: list[Resource] = Field(
+        default=[], description="The search results on the requested page"
     )
-    order: SortOrder = Field(
-        default=SortOrder.ASCENDING, description="Sort order to apply to sort_field"
+    total_count: int = Field(
+        default=0, description="The number of results found, ignoring skip and limit"
     )

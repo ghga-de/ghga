@@ -148,9 +148,7 @@ async def joint_fixture(
     ekss = EkssApiMock(config=config)
     async with (
         prepare_core(
-            config=config,
-            http_base_transport=ekss.as_transport(),
-            http_mount_env_proxies=False,
+            config=config, http_make_base_transport=lambda _: ekss.as_transport()
         ) as data_repository,
         prepare_rest_app(config=config, data_repo_override=data_repository) as app,
         prepare_event_subscriber(

@@ -140,7 +140,7 @@ async def test_single_valued_with_with_single_filter(
     results = await joint_fixture.call_search_endpoint(params)
 
     # Check that the expected names are returned
-    returned_names = [resource.content["name"] for resource in results.hits]
+    returned_names = [resource.content["name"] for resource in results.items]
     assert returned_names == names
 
     # Check that the facet only contains the filtered values
@@ -177,7 +177,7 @@ async def test_multi_valued_with_with_single_filter(
     results = await joint_fixture.call_search_endpoint(params)
 
     # Check that the expected names are returned
-    returned_names = [resource.content["name"] for resource in results.hits]
+    returned_names = [resource.content["name"] for resource in results.items]
     assert returned_names == names
 
     # Check that the facet only contains the filtered values
@@ -220,7 +220,7 @@ async def test_multiple_filters(joint_fixture: JointFixture):
     results = await joint_fixture.call_search_endpoint(params)
 
     # Only Jack and Garfield fulfill these conditions
-    returned_names = [resource.content["name"] for resource in results.hits]
+    returned_names = [resource.content["name"] for resource in results.items]
     assert returned_names == ["Jack", "Garfield"]
 
 
@@ -247,7 +247,7 @@ async def test_filter_for_common_friend(
     results = await joint_fixture.call_search_endpoint(params)
 
     # Check that the expected names are returned
-    returned_names = [resource.content["name"] for resource in results.hits]
+    returned_names = [resource.content["name"] for resource in results.items]
     assert returned_names == names
 
     # Check that the facet contains the friend in question
@@ -271,7 +271,7 @@ async def test_filter_for_couple_of_friends(joint_fixture: JointFixture):
     results = await joint_fixture.call_search_endpoint(params)
 
     # only Jack, Lady and Flipper have Hector, Sandy or Tramp as friend
-    returned_names = [resource.content["name"] for resource in results.hits]
+    returned_names = [resource.content["name"] for resource in results.items]
     assert returned_names == ["Jack", "Lady", "Flipper"]
 
     # Check that the facet contains the selected friends and all their co-friends
@@ -297,7 +297,7 @@ async def test_filter_animals_with_collars(joint_fixture: JointFixture):
     results = await joint_fixture.call_search_endpoint(params)
 
     # only Bruiser and Lady wear collars, Garfield does not
-    returned_names = [resource.content["name"] for resource in results.hits]
+    returned_names = [resource.content["name"] for resource in results.items]
     assert returned_names == ["Bruiser", "Lady"]
 
     # Check that the facet also has their other items
@@ -336,7 +336,7 @@ async def test_filter_animals_with_collars_or_pistols(joint_fixture: JointFixtur
     results = await joint_fixture.call_search_endpoint(params)
 
     # only Bruiser and Lady wear collars, only Jack has a pistol
-    returned_names = [resource.content["name"] for resource in results.hits]
+    returned_names = [resource.content["name"] for resource in results.items]
     assert returned_names == ["Jack", "Bruiser", "Lady"]
 
 
@@ -362,7 +362,7 @@ async def test_filter_for_fur_color(
     results = await joint_fixture.call_search_endpoint(params)
 
     # Check that the expected names are returned
-    returned_names = [resource.content["name"] for resource in results.hits]
+    returned_names = [resource.content["name"] for resource in results.items]
     assert returned_names == names
 
     # Check that the facet contains the color in question
@@ -373,3 +373,26 @@ async def test_filter_for_fur_color(
     assert facet.name == "Fur color"
     if names:
         assert any(option.value == color for option in facet.options)
+
+
+@pytest.mark.parametrize(
+    "ids,names",
+    [(["0"], []), (["1"], ["Jack"]), (["2", "3"], ["Bruiser", "Lady"])],
+    ids=range(1, 4),
+)
+async def test_filter_by_id(
+    ids: list[str], names: list[str], joint_fixture: JointFixture
+):
+    """Test that we can filter by the ID of the resources"""
+    params: QueryParams = {
+        "class_name": CLASS_NAME,
+        "filter_by": ["id_"] * len(ids),
+        "value": ids,
+    }
+
+    results = await joint_fixture.call_search_endpoint(params)
+
+    # Check that the expected names are returned
+    returned_names = [resource.content["name"] for resource in results.items]
+    assert returned_names == names
+    assert results.total_count == len(names)

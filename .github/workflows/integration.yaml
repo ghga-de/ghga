@@ -92,6 +92,8 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
       - uses: azure/setup-helm@v5
       - uses: helm/kind-action@v1
         with:
@@ -99,13 +101,14 @@ jobs:
           # deploy/kind-config.yaml, which publishes the gateway NodePort on port 80
           install_only: true
           # pinned (rather than "latest") so a bad/incomplete kind release doesn't
-          # break CI with a checksum-verification failure
-          version: v0.32.0
+          # break CI with a checksum-verification failure; .devcontainer/post-create.sh's
+          # KIND_VERSION
+          version: v0.33.0
 
       - name: Sync the workspace
         # needed by testbed-artifacts (ghga-datasteward-kit) and by the suite runner,
         # which mints a per-run crypt4gh keypair via the auth-km-jobs package
-        run: uv sync --locked --all-packages --all-extras
+        run: just sync --locked
 
       - name: Install the test-bed suite
         run: |

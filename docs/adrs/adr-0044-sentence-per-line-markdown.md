@@ -44,18 +44,16 @@ rumdl checks every Markdown file in the repo:
   MD013 runs in sentence-per-line mode, and the default rule set applies except MD033, since the READMEs place images and anchors with inline HTML.
 - **The hook fixes** what rumdl can fix and fails the commit, as the ruff hook does, so the fix is to stage the result.
   `just fmt` fixes the whole tree.
-  Rules whose fixes proved unreliable in the sweep (MD034, MD037, MD046) only report, so a person picks the markup.
-- **Excluded** are only the chart READMEs `just charts` generates; the imported ADRs and epics are checked like any other file, so no legacy rule needs upkeep.
-  Per-file ignores cover what a rule misreads, such as the `CLAUDE.md` stubs without a heading and the hexkit guide's links to generated reference pages.
+- **Excluded** are only the chart READMEs `just charts` generates and a pinned third-party skill; the imported ADRs and epics are checked like any other file, so no legacy rule needs upkeep.
+  Per-file ignores cover what a rule misreads, such as the pull request template without a heading and the hexkit guide's links to generated reference pages.
 
-One commit reflows the existing files with `rumdl fmt`, plus a one-off join of wrapped list items, which rumdl leaves alone.
+One commit reflows the existing files with `rumdl fmt`, plus a one-off join of wrapped list items, which rumdl then left alone.
 It changes line breaks, not text, apart from what the other rules fix, such as bare URLs and trailing colons in headings.
 
 ### Consequences
 
 - A diff of a Markdown file shows the changed sentences, and a merge conflict stays within one.
 - Nobody wraps by hand, and an agent's output passes after one `just fmt`.
-- rumdl does not flag a single sentence wrapped inside a list item, so review still catches those.
 - A long sentence shows as a long line, which makes it visible in review.
 - Raw files need soft wrap in the editor; the VS Code workspace settings turn it on for Markdown.
 - The sweep commit touches most Markdown files once, so blame on them points to it; it is listed in `.git-blame-ignore-revs`.

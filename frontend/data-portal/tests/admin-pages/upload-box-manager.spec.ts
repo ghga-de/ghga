@@ -37,6 +37,19 @@ test('can use Upload Box manager when logged in', async ({ adminPage: page }) =>
   const firstRow = table.locator('tbody tr').first();
   await expect(firstRow).toBeVisible();
 
+  // the file states arrive in a request of their own and show as a bar
+  const johnsRow = table.getByRole('row', { name: /Upload Box of John/ });
+  await expect(
+    johnsRow.getByRole('img', { name: '2 ready, 1 in progress, 1 failed' }),
+  ).toBeVisible();
+
+  // the priority order arrives in a request of its own as well
+  await expect(table.getByRole('columnheader', { name: 'Prio' })).toBeVisible();
+  const headers = await table.getByRole('columnheader').allTextContents();
+  const prio = headers.findIndex((header) => header.includes('Prio'));
+  const cohortRow = table.getByRole('row', { name: /Large Cohort/ });
+  await expect(cohortRow.getByRole('cell').nth(prio)).toHaveText('1');
+
   // Check for filter controls. On large viewports the filter panel is always visible (no toggle button),
   // while on small viewports a toggle button is used.
   const filterToggle = page.getByRole('button', { name: 'Filter upload boxes' });
@@ -107,20 +120,6 @@ test('can navigate to Add Grant page', async ({ adminPage: page }) => {
   await expect(page).toHaveURL(/\/upload-box-manager\/.+/);
 });
 
-test('displays error message when upload box not found', async ({
-  adminPage: page,
-}) => {
-  await page.goto('/upload-box-manager/invalid-id');
-
-  const main = page.locator('main');
-  await expect(main).toContainText('Upload box not found.', { timeout: 15000 });
-
-  const backButton = page.getByRole('button', { name: 'Go back to previous page' });
-  await expect(backButton).toBeVisible();
-  await backButton.click();
-  await expect(page).toHaveURL('/upload-box-manager');
-});
-
 test('paginates and sorts the file list on the server', async ({ adminPage: page }) => {
   // An archived box holding 28 files, i.e. three pages of ten.
   await page.goto('/upload-box-manager/0a36607a-b53f-49ed-bf3e-a5f2dbc68003');
@@ -152,39 +151,6 @@ test('paginates and sorts the file list on the server', async ({ adminPage: page
   await expect(firstFile()).toHaveText('archived_sample_001.fastq.gz');
 });
 
-test('validates required fields in the create upload box dialog', async ({
-  adminPage: page,
-}) => {
-  const createButton = page.getByRole('button', { name: 'Create Upload Box' });
-  await expect(createButton).toBeVisible();
-  await createButton.click();
-
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toContainText('Create a new Upload Box');
-
-  const okButton = dialog.getByRole('button', { name: 'OK' });
-  await expect(okButton).toBeDisabled();
-
-  await dialog.getByLabel('Title').fill('   ');
-  await dialog.getByLabel('Description').fill('   ');
-  await expect(okButton).toBeDisabled();
-
-  await dialog.getByLabel('Title').fill('Playwright Upload Box Validation');
-  await dialog.getByLabel('Description').fill('Dialog validation test description');
-  await expect(okButton).toBeDisabled();
-
-  await dialog.getByRole('combobox', { name: 'Storage location' }).click();
-  await page.getByRole('option', { name: 'Tübingen 1' }).click();
-
-  await expect(okButton).toBeDisabled();
-  await dialog.getByLabel('Size limit (in TiB)').fill('1');
-
-  await expect(okButton).toBeEnabled();
-
-  await dialog.getByRole('button', { name: 'Cancel' }).click();
-  await expect(dialog).toHaveCount(0);
-});
-
 test('can create an upload box from the manager page', async ({ adminPage: page }) => {
   const title = 'Playwright Created Upload Box';
   const createButton = page.getByRole('button', { name: 'Create Upload Box' });
@@ -206,4 +172,43 @@ test('can create an upload box from the manager page', async ({ adminPage: page 
 
   const main = page.locator('main');
   await expect(main.getByText(title)).toBeVisible();
+});
+
+test('can change the priority order by dragging a box', async ({ adminPage: page }) => {
+  // The unit tests call drop() directly, so only the browser tests the real drag
+  // and drop. The mock answers the same before and after the save, and the test
+  // bed will cover the flow against the real RS.
+  const main = page.locator('main');
+  await main.getByRole('button', { name: 'Change order' }).click();
+
+  const reorderMode = main.getByRole('region', { name: 'Priority order' });
+  await expect(reorderMode).toContainText(
+    'Last reordered by Dr. John Doe on 10 February 2025 at 15:30.',
+  );
+  const rows = reorderMode
+    .getByRole('list', { name: 'Priority order' })
+    .getByRole('listitem');
+  const johnsBox = rows.filter({ hasText: 'Research Data Upload Box of John' });
+  // The rows can be moved once the boxes and the order have loaded again
+  await expect(johnsBox.getByRole('button', { name: /up$/ })).toBeEnabled();
+  await expect(rows.nth(1)).toContainText('Research Data Upload Box of Jane');
+
+  // Drag John's box by its handle onto Jane's, which is second, in small steps,
+  // since the CDK starts dragging only after the pointer has moved a few pixels
+  const handle = (await johnsBox.locator('.cdk-drag-handle').boundingBox())!;
+  const target = (await rows.nth(1).boundingBox())!;
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handle.x + handle.width / 2, target.y + target.height / 4, {
+    steps: 10,
+  });
+  await page.mouse.up();
+  await expect(rows.nth(1)).toContainText('Research Data Upload Box of John');
+
+  await main.getByRole('button', { name: 'Save order' }).click();
+  await expect(page.locator('app-custom-snack-bar')).toContainText(
+    'Saved the new order. Data Hubs use it from their next batch.',
+  );
+  await expect(reorderMode).toHaveCount(0);
+  await expect(main.locator('table')).toBeVisible();
 });

@@ -20,17 +20,20 @@ import asyncio
 from ghga_service_commons.api import run_server
 from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 from hexkit.log import configure_logging
+from hexkit.opentelemetry import configure_opentelemetry
 
-from .api.main import app  # noqa: F401
 from .config import CONFIG, Config
 
 
 def run(config: Config = CONFIG):
     """Run the service"""
     configure_logging(config=config)
+    # FastAPI is instrumented by replacing its class, so the app module is imported
+    # only afterwards, by uvicorn
+    configure_opentelemetry(service_name=config.service_name, config=config)
     assert_tz_is_utc()
     print("Starting the test OIDC provider...")
-    asyncio.run(run_server(app="top.__main__:app", config=config))
+    asyncio.run(run_server(app="top.api.main:app", config=config))
 
 
 if __name__ == "__main__":

@@ -19,30 +19,33 @@
 Utilities for testing are located in `../testutils.py`.
 """
 
-from collections.abc import AsyncIterator, Callable, Collection, Mapping
+from collections.abc import AsyncIterator, Callable, Collection, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from functools import partial
 from typing import Any, Generic, Literal, TypeAlias
 
-from pymongo import AsyncMongoClient
+from pymongo import AsyncMongoClient, ReplaceOne
 from pymongo.asynchronous.collection import AsyncCollection
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import BulkWriteError, DuplicateKeyError
 
 from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
+    BatchOperationError,
     Dao,
+    DaoError,
     DaoFactoryProtocol,
+    DbTimeoutError,
     Dto,
     FindResult,
     IndexBase,
-    InvalidMappingError,
+    InvalidFilterError,
     MultipleHitsFoundError,
     NoHitsFoundError,
     PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
-    resolve_filter,
+    ensure_distinct_ids,
 )
 from hexkit.providers.mongodb.config import MongoDbConfig
 from hexkit.providers.mongodb.provider.client import ConfiguredMongoClient
@@ -58,48 +61,48 @@ __all__ = [
     "MongoDbDaoFactory",
     "MongoDbIndex",
     "get_single_hit",
-    "replace_id_field_in_find_mapping",
-    "validate_find_mapping",
+    "replace_id_field_in_find_filter",
+    "validate_find_filter",
 ]
 
 
-def validate_find_mapping(mapping: Mapping[str, Any], *, dto_model: type[Dto]):
-    """Validates a key/value mapping used in find methods against the provided DTO model
-    by checking if the mapping keys exist as model fields.
+def validate_find_filter(filter_: Mapping[str, Any], *, dto_model: type[Dto]):
+    """Validates a key/value filter used in find methods against the provided DTO model
+    by checking if the filter keys exist as model fields.
 
     Raises:
-        InvalidMappingError: If `mapping` doesn't pass validation.
+        InvalidFilterError: If `filter_` doesn't pass validation.
     """
     try:
-        validate_fields_in_model(model=dto_model, fields=set(mapping))
+        validate_fields_in_model(model=dto_model, fields=set(filter_))
     except FieldNotInModelError as error:
-        raise InvalidMappingError(
-            f"The provided find mapping was invalid: {error}."
+        raise InvalidFilterError(
+            f"The provided find filter was invalid: {error}."
         ) from error
 
 
-def replace_id_field_in_find_mapping(
-    mapping: Mapping[str, Any], id_field: str
+def replace_id_field_in_find_filter(
+    filter_: Mapping[str, Any], id_field: str
 ) -> Mapping[str, Any]:
-    """If the provided find mapping includes the ID field, it is replaced with MongoDB's
+    """If the provided find filter includes the ID field, it is replaced with MongoDB's
     internal ID field name.
     """
-    if id_field in mapping:
-        mapping = dict(mapping)
-        mapping["_id"] = mapping.pop(id_field)
+    if id_field in filter_:
+        filter_ = dict(filter_)
+        filter_["_id"] = filter_.pop(id_field)
 
-    return mapping
+    return filter_
 
 
 async def get_single_hit(
-    *, hits: AsyncIterator[Dto], mapping: Mapping[str, Any]
+    *, hits: AsyncIterator[Dto], filter_: Mapping[str, Any]
 ) -> Dto:
     """Asserts that there is exactly one hit in the provided AsyncIterator of hits and
     returns it.
 
     Args:
         hits: An AsyncIterator of hits resulting from a find operation.
-        mapping: The mapping that was used to obtain the hits.
+        filter_: The filter that was used to obtain the hits.
 
     Raises:
         NoHitsFoundError: If no hit was found.
@@ -108,7 +111,7 @@ async def get_single_hit(
     try:
         dto = await hits.__anext__()
     except StopAsyncIteration as error:
-        raise NoHitsFoundError(filter_=mapping) from error
+        raise NoHitsFoundError(filter_=filter_) from error
 
     try:
         _ = await hits.__anext__()
@@ -116,7 +119,113 @@ async def get_single_hit(
         # This is expected:
         return dto
 
-    raise MultipleHitsFoundError(filter_=mapping)
+    raise MultipleHitsFoundError(filter_=filter_)
+
+
+# MongoDB's error codes for a write that clashes with a unique index. MongoDB 2.4
+# raised 11001 for an update and 12582 for an insert into a capped collection.
+# Single writes, through pymongo, map only 11000 and report the other two as a plain
+# DaoError, but a batch follows what the codes mean, as pymongo's GridFS upload does.
+DUPLICATE_KEY_ERRORS = frozenset({11000, 11001, 12582})
+# MongoDB's error code for a write that ran out of its maxTimeMS
+MAX_TIME_MS_EXPIRED = 50
+# The error codes at which pymongo stops a bulk write that got them as a write concern
+# error, such as after a failover, and sends none of its later messages. This copies
+# pymongo's private `_RETRYABLE_ERROR_CODES`, and a unit test compares the two.
+RETRYABLE_ERRORS = frozenset(
+    {6, 7, 89, 91, 134, 189, 262, 9001, 10058, 10107, 11600, 11602, 13435, 13436}
+)
+
+
+def _insert_duplicate_error(id_: ID, key_value: dict[str, Any] | None) -> DaoError:
+    """Return the error that `insert` raises for a duplicate key.
+
+    A duplicate key on `_id` means the resource exists already. Without `keyValue`
+    the clashing index is unknown, and it is taken to be the ID's as well.
+    """
+    if key_value is not None and list(key_value) != ["_id"]:
+        return UniqueConstraintViolationError(unique_fields=key_value)
+    return ResourceAlreadyExistsError(id_=id_)
+
+
+def _replace_duplicate_error(id_: ID, key_value: dict[str, Any] | None) -> DaoError:
+    """Return the error that `update` and `upsert` raise for a duplicate key."""
+    return UniqueConstraintViolationError(unique_fields=key_value or {})
+
+
+def _write_concern_error(error: BulkWriteError) -> DaoError | None:
+    """Return the error a single write raises for the batch's write concern error.
+
+    Only the last one counts, as for pymongo. Unlike `BulkWriteError.timeout`, this
+    ignores the write errors, so a write that ran out of its maxTimeMS does not make
+    the write concern error a timeout.
+    """
+    concern_errors = error.details.get("writeConcernErrors")
+    if not concern_errors:
+        return None
+    last, info = concern_errors[-1], concern_errors[-1].get("errInfo", {})
+    if last.get("code") == MAX_TIME_MS_EXPIRED or info.get("wtimeout"):
+        return DbTimeoutError(last.get("errmsg"))
+    return DaoError(last.get("errmsg"))
+
+
+def _errors_from_bulk_write(
+    error: BulkWriteError,
+    ids: Sequence[ID],
+    *,
+    ordered: bool,
+    duplicate_key: Callable[[ID, dict[str, Any] | None], DaoError],
+) -> BatchOperationError:
+    """Turn the failures of a bulk write into an error that names each failed resource.
+
+    `ids` holds the ID of each operation, in the order the operations were passed to
+    the bulk write, and must be distinct, which the batch methods ensure before they
+    write. MongoDB names a failure by its index in that list, whether the batch is
+    ordered or not. `duplicate_key` returns the error that the operation's
+    single-resource method raises for a duplicate key. The error names the failed
+    resources in the order of `ids`.
+
+    A write concern error does not undo the writes: each attempted resource without a
+    write error of its own is named with the write concern's error, as its single
+    write raises it. pymongo stops a bulk write at a retryable write concern error,
+    though, so the later messages of a split batch were never sent, and the error does
+    not say which writes they held.
+
+    Raises:
+        DaoError: when pymongo stopped the bulk write at a retryable write concern
+            error, which leaves unknown which writes were applied.
+    """
+    concern_errors = error.details.get("writeConcernErrors")
+    if concern_errors and concern_errors[-1].get("code") in RETRYABLE_ERRORS:
+        raise DaoError(
+            "The batch stopped at a write concern error, so which writes were applied"
+            + f" is unknown: {concern_errors[-1].get('errmsg')}"
+        ) from error
+    write_errors = error.details["writeErrors"]
+    failures = {ids[failure["index"]]: failure for failure in write_errors}
+    # An ordered batch stops at its first failure and skips the rest
+    not_attempted: Sequence[ID] = ()
+    if ordered and write_errors:
+        not_attempted = ids[write_errors[0]["index"] + 1 :]
+    concern_error = _write_concern_error(error)
+    errors: dict[ID, DaoError] = {}
+    # Each failure gets the error that the single-resource method raises for it
+    for id_ in ids[: len(ids) - len(not_attempted)]:
+        failure = failures.get(id_)
+        if failure is None:
+            # An attempted write without an error of its own is applied but not
+            # confirmed, which its single method reports with this error
+            if concern_error:
+                errors[id_] = concern_error
+        elif failure["code"] == MAX_TIME_MS_EXPIRED:
+            errors[id_] = DbTimeoutError(failure["errmsg"])
+        elif failure["code"] in DUPLICATE_KEY_ERRORS:
+            errors[id_] = duplicate_key(id_, failure.get("keyValue"))
+        else:
+            # Any other failure, such as a failed document validation or a document
+            # over the size limit, has no error of its own
+            errors[id_] = DaoError(failure["errmsg"])
+    return BatchOperationError(errors=errors, not_attempted=not_attempted)
 
 
 FieldName: TypeAlias = str
@@ -258,7 +367,7 @@ class MongoDbDao(Generic[Dto]):
                 when resource with the id specified in the dto was not found
             PreconditionFailedError:
                 when the resource exists but doesn't match `precondition`
-            InvalidMappingError: when `precondition` doesn't pass validation
+            InvalidFilterError: when `precondition` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.
@@ -268,8 +377,8 @@ class MongoDbDao(Generic[Dto]):
         doc_filter: dict[str, Any] = id_filter
 
         if precondition:
-            validate_find_mapping(precondition, dto_model=self._dto_model)
-            criteria = replace_id_field_in_find_mapping(precondition, self._id_field)
+            validate_find_filter(precondition, dto_model=self._dto_model)
+            criteria = replace_id_field_in_find_filter(precondition, self._id_field)
             # A separate $and clause keeps an ID in the criteria from replacing the
             # one on the supplied dto instance
             doc_filter = {"$and": [id_filter, criteria]}
@@ -278,8 +387,8 @@ class MongoDbDao(Generic[Dto]):
             try:
                 result = await self._collection.replace_one(doc_filter, document)
             except DuplicateKeyError as error:
-                key_value = error.details.get("keyValue", {})  # type: ignore
-                raise UniqueConstraintViolationError(unique_fields=key_value) from error
+                key_value = error.details.get("keyValue")  # type: ignore
+                raise _replace_duplicate_error(document["_id"], key_value) from error
 
         if result.matched_count == 0:
             if precondition:
@@ -314,12 +423,10 @@ class MongoDbDao(Generic[Dto]):
         # (trusting MongoDB that matching on the _id field can only yield one or
         # zero matches)
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     async def find_one(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
     ) -> Dto:
         """Find the resource that matches the specified filter.
 
@@ -336,8 +443,6 @@ class MongoDbDao(Generic[Dto]):
             filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields
-            mapping:
-                Deprecated alias for `filter_`.
 
         Returns:
             Returns a hit in the form of the respective DTO model if exactly one hit
@@ -349,16 +454,13 @@ class MongoDbDao(Generic[Dto]):
             MultipleHitsFoundError:
                 Raised when obtaining more than one hit.
         """
-        filter_ = resolve_filter(filter_, mapping)
         hits = self.find_all(filter_=filter_)
-        return await get_single_hit(hits=hits, mapping=filter_)
+        return await get_single_hit(hits=hits, filter_=filter_)
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def find_all(  # noqa: C901
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
@@ -375,8 +477,6 @@ class MongoDbDao(Generic[Dto]):
             filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields.
-            mapping:
-                Deprecated alias for `filter_`.
             skip:
                 Number of matching resources to skip before yielding results.
                 Defaults to None (no skipping).
@@ -395,7 +495,6 @@ class MongoDbDao(Generic[Dto]):
         Returns:
             A FindResult that is async-iterable and also provides total_count().
         """
-        filter_ = resolve_filter(filter_, mapping)
         skip = skip or 0
 
         if skip < 0:
@@ -403,8 +502,8 @@ class MongoDbDao(Generic[Dto]):
         if limit is not None and limit < 0:
             raise ValueError("limit must be >= 0")
 
-        validate_find_mapping(filter_, dto_model=self._dto_model)
-        filter_ = replace_id_field_in_find_mapping(filter_, self._id_field)
+        validate_find_filter(filter_, dto_model=self._dto_model)
+        filter_ = replace_id_field_in_find_filter(filter_, self._id_field)
 
         # Convert generic sort spec to MongoDB-specific sort spec
         mongodb_sort: list[tuple[str, int]] = []
@@ -472,17 +571,16 @@ class MongoDbDao(Generic[Dto]):
                 when inserting the dto would violate a unique index constraint over some
                 field other than the ID field.
         """
-        document = self._dto_to_document(dto)
+        await self._insert_document(self._dto_to_document(dto))
+
+    async def _insert_document(self, document: dict[str, Any]) -> None:
+        """Insert an already converted document, see `insert`."""
         with translate_pymongo_errors():
             try:
                 await self._collection.insert_one(document)
             except DuplicateKeyError as error:
                 key_value = error.details.get("keyValue")  # type: ignore
-                if key_value is not None and list(key_value) != ["_id"]:
-                    raise UniqueConstraintViolationError(
-                        unique_fields=key_value
-                    ) from error
-                raise ResourceAlreadyExistsError(id_=document["_id"]) from error
+                raise _insert_duplicate_error(document["_id"], key_value) from error
 
     async def upsert(self, dto: Dto) -> None:
         """Update the provided resource if it already exists, create it otherwise.
@@ -497,15 +595,197 @@ class MongoDbDao(Generic[Dto]):
                 when upserting the dto would violate a unique index constraint over some
                 field other than the ID field.
         """
-        document = self._dto_to_document(dto)
+        await self._upsert_document(self._dto_to_document(dto))
+
+    async def _upsert_document(self, document: dict[str, Any]) -> None:
+        """Upsert an already converted document, see `upsert`."""
         with translate_pymongo_errors():
             try:
                 await self._collection.replace_one(
                     {"_id": document["_id"]}, document, upsert=True
                 )
             except DuplicateKeyError as error:
-                key_value = error.details.get("keyValue", {})  # type: ignore
-                raise UniqueConstraintViolationError(unique_fields=key_value) from error
+                key_value = error.details.get("keyValue")  # type: ignore
+                raise _replace_duplicate_error(document["_id"], key_value) from error
+
+    def _batch_documents(
+        self, dtos: Collection[Dto]
+    ) -> tuple[list[dict[str, Any]], list[ID]]:
+        """Return a batch's documents and their IDs, rejecting duplicate IDs.
+
+        The IDs are the documents' `_id` values, in the same order.
+
+        Raises:
+            ValueError: when two DTOs share an ID.
+        """
+        documents = [self._dto_to_document(dto) for dto in dtos]
+        ids = [document["_id"] for document in documents]
+        ensure_distinct_ids(ids)
+        return documents, ids
+
+    async def insert_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Create several resources in one call.
+
+        Please see the `Dao` protocol for the arguments and the errors.
+        """
+        if not dtos:
+            return
+        documents, ids = self._batch_documents(dtos)
+        await self._insert_documents(documents, ids, ordered=ordered)
+
+    async def _insert_documents(
+        self, documents: list[dict[str, Any]], ids: list[ID], *, ordered: bool
+    ) -> None:
+        """Insert already converted documents and their IDs, see `insert_many`."""
+        with translate_pymongo_errors():
+            try:
+                await self._collection.insert_many(documents, ordered=ordered)
+            except BulkWriteError as error:
+                raise _errors_from_bulk_write(
+                    error, ids, ordered=ordered, duplicate_key=_insert_duplicate_error
+                ) from error
+
+    async def _bulk_replace(
+        self,
+        documents: list[dict[str, Any]],
+        ids: list[ID],
+        extra: Mapping[str, Any],
+        *,
+        upsert: bool,
+        ordered: bool,
+    ) -> tuple[int, BatchOperationError | None]:
+        """Replace each document by its ID where `extra` also matches, in one write.
+
+        `ids` holds the documents' IDs, in the same order. Returns the number of matched
+        documents and the failures, if any, instead of raising them, because
+        `update_many` needs both.
+        """
+        operations = [
+            ReplaceOne({"_id": id_, **extra}, document, upsert=upsert)
+            for id_, document in zip(ids, documents, strict=True)
+        ]
+        with translate_pymongo_errors():
+            try:
+                result = await self._collection.bulk_write(operations, ordered=ordered)
+            except BulkWriteError as error:
+                failures = _errors_from_bulk_write(
+                    error, ids, ordered=ordered, duplicate_key=_replace_duplicate_error
+                )
+                # The caller raises it later, outside this except block
+                failures.__cause__ = error
+                return error.details["nMatched"], failures
+        return result.matched_count, None
+
+    async def upsert_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Create or replace several resources in one call, matched by their IDs.
+
+        Please see the `Dao` protocol for the arguments and the errors.
+        """
+        if not dtos:
+            return
+        documents, ids = self._batch_documents(dtos)
+        await self._upsert_documents(documents, ids, ordered=ordered)
+
+    async def _upsert_documents(
+        self, documents: list[dict[str, Any]], ids: list[ID], *, ordered: bool
+    ) -> None:
+        """Upsert already converted documents and their IDs, see `upsert_many`."""
+        # No criteria besides the ID ({}), so each document replaces whatever is
+        # stored under its ID, or is inserted where nothing is
+        _, failures = await self._bulk_replace(
+            documents, ids, {}, upsert=True, ordered=ordered
+        )
+        if failures:
+            raise failures
+
+    async def _existing_ids(
+        self, ids: Collection[ID], extra: Mapping[str, Any]
+    ) -> set[ID]:
+        """Return which of the IDs belong to stored documents that also match `extra`."""
+        with translate_pymongo_errors():
+            # Every ID goes into one filter; chunks can follow if a caller needs more
+            cursor = self._collection.find(
+                {"_id": {"$in": list(ids)}, **extra}, projection={"_id": True}
+            )
+            return {document["_id"] async for document in cursor}
+
+    async def _replace_existing(
+        self,
+        documents: list[dict[str, Any]],
+        ids: list[ID],
+        extra: Mapping[str, Any],
+        *,
+        ordered: bool,
+    ) -> None:
+        """Replace the documents that exist and match `extra`, and name the others.
+
+        `ids` holds the documents' IDs, in the same order.
+
+        A replacement that matches nothing is no write error, and the bulk result only
+        counts matches, so a lookup after the write names the IDs missing at that time.
+        A resource created in between is therefore not reported, although it was not
+        replaced, and one deleted in between is reported, although it was replaced.
+
+        Raises:
+            BatchOperationError: when some documents were missing or failed.
+            DaoError: when the lookup failed; a note names the batch's own failures.
+        """
+        matched, failures = await self._bulk_replace(
+            documents, ids, extra, upsert=False, ordered=ordered
+        )
+        errors = dict(failures.errors) if failures else {}
+        skipped = failures.not_attempted if failures else ()
+        unattempted = set(errors) | set(skipped)
+        attempted = [id_ for id_ in ids if id_ not in unattempted]
+        if matched < len(attempted):
+            try:
+                existing = await self._existing_ids(attempted, extra)
+            except DaoError as lookup_error:
+                # Raised alone, the lookup's error would hide the batch's own failures
+                if errors:
+                    named = ", ".join(
+                        f"{id_!r}: {type(error).__name__}"
+                        for id_, error in errors.items()
+                    )
+                    lookup_error.add_note(f"The batch had failed for {named}")
+                raise
+            errors |= {
+                id_: ResourceNotFoundError(id_=id_)
+                for id_ in attempted
+                if id_ not in existing
+            }
+        if errors:
+            cause = failures.__cause__ if failures else None
+            raise BatchOperationError(errors=errors, not_attempted=skipped) from cause
+
+    async def update_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Replace several existing resources in one call, matched by their IDs.
+
+        Please see the `Dao` protocol for the arguments and the errors.
+        """
+        if not dtos:
+            return
+        documents, ids = self._batch_documents(dtos)
+        await self._replace_existing(documents, ids, {}, ordered=ordered)
+
+    async def delete_many(self, ids: Collection[ID]) -> None:
+        """Delete several resources in one call; unknown IDs are ignored.
+
+        Please see the `Dao` protocol for the arguments.
+        """
+        if isinstance(ids, str):
+            raise TypeError("delete_many takes a collection of IDs, not a single ID")
+        if not ids:
+            return
+        with translate_pymongo_errors():
+            # Every ID goes into one filter; chunks can follow if a caller needs more
+            await self._collection.delete_many({"_id": {"$in": list(ids)}})
 
 
 class MongoDbDaoFactory(DaoFactoryProtocol[MongoDbIndex]):

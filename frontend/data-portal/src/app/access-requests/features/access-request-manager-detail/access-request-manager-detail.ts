@@ -16,11 +16,14 @@ import {
   OnInit,
   signal,
   Signal,
+  viewChild,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatRadioModule } from '@angular/material/radio';
@@ -35,7 +38,7 @@ import {
 import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class-pipe';
 import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class-pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
-import { UserSession } from '@app/auth/models/user';
+import { UserRegisteredData } from '@app/auth/models/user';
 import { Iva, IvaState } from '@app/ivas/models/iva';
 import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
@@ -53,8 +56,13 @@ import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
+import { html } from '@app/shared/utils/html';
 import { AccessRequestDurationEdit } from '../access-request-duration-edit/access-request-duration-edit';
+import { interval, map } from 'rxjs';
 import { AccessRequestFieldEdit } from '../access-request-field-edit/access-request-field-edit';
+import { VerificationSmsDialog } from '../verification-sms-dialog/verification-sms-dialog';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * The view component used for managing access requests in the access request manager.
@@ -96,11 +104,22 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   #confirmationService = inject(ConfirmationService);
   #notificationService = inject(Notifier);
   #accessRequestService = inject(AccessRequestService);
+  #dialog = inject(MatDialog);
 
   #authUrl = this.#config.authUrl;
   #usersUrl = `${this.#authUrl}/users`;
 
   #location = inject(NavigationTracker);
+
+  protected readonly minDays = this.#config.accessGrantMinDays;
+  private durationEdit = viewChild(AccessRequestDurationEdit);
+
+  /**
+   * The current time, ticking every minute, so the period warning keeps up with it.
+   */
+  #now = toSignal(interval(60_000).pipe(map(() => Date.now())), {
+    initialValue: Date.now(),
+  });
 
   id = input.required<string>();
   #request = this.#accessRequestService.accessRequest;
@@ -200,26 +219,24 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   #userId = computed(() => this.request()?.user_id);
 
   /**
-   * Resource for loading the external ID of the user who made the access request.
+   * Resource for loading the user who made the access request,
+   * whose LS ID and LS Login email are not part of the request.
    * Only loads when userId is set.
    */
-  userExtId = httpResource<string | undefined>(
+  requester = httpResource<UserRegisteredData | undefined>(
     () => {
       const userId = this.#userId();
       if (!userId) return undefined;
       return `${this.#usersUrl}/${userId}`;
     },
-    {
-      parse: (raw) => (raw as UserSession).ext_id,
-      defaultValue: undefined,
-    },
+    { defaultValue: undefined },
   );
 
   /**
    * The external ID with a zero-width space before the `@`, so that it can wrap there.
    */
   protected userExtIdText = computed(() =>
-    this.userExtId.value()?.split('@', 2).join('\u200B@'),
+    this.requester.value()?.ext_id.split('@', 2).join('\u200B@'),
   );
 
   /**
@@ -237,6 +254,29 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   changeable: Signal<boolean> = computed(
     () => this.request()?.status === AccessRequestStatus.pending,
   );
+
+  /**
+   * Whether the access period of a pending request has ended or is shorter than the
+   * minimum. A start in the past counts as now, since allowing the request moves it
+   * up to now.
+   */
+  protected periodWarning = computed<'ended' | 'short' | undefined>(() => {
+    const ar = this.request();
+    if (ar?.status !== AccessRequestStatus.pending) return undefined;
+    const now = this.#now();
+    const ends = new Date(ar.access_ends).getTime();
+    if (ends <= now) return 'ended';
+    const starts = Math.max(now, new Date(ar.access_starts).getTime());
+    if (ends - starts < this.minDays * DAY_MS) return 'short';
+    return undefined;
+  });
+
+  /**
+   * Open the editor of the access duration.
+   */
+  protected editDuration(): void {
+    this.durationEdit()?.open();
+  }
 
   #ivasErrorEffect = effect(() => {
     if (this.ivasError()) {
@@ -271,22 +311,27 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
     setTimeout(() => this.showTransition.set(false), 300);
     const id = this.id();
     if (id) {
-      // Has it been fetched individually already?
-      let ar = this.#request.error() ? undefined : this.#request.value();
-      if (ar && ar.id === id) {
+      const ar = this.#loadedRequest(id);
+      if (ar) {
         this.#cachedRequest.set(ar);
       } else {
-        // Has it been fetched as part of a list?
-        const requests = this.#requests.error() ? [] : this.#requests.value();
-        ar = requests.find((ar: AccessRequest) => ar.id === id);
-        if (ar) {
-          this.#cachedRequest.set(ar);
-        } else {
-          // If not, we need to fetch it now
-          this.#accessRequestService.loadAccessRequest(id);
-        }
+        // If not, we need to fetch it now
+        this.#accessRequestService.loadAccessRequest(id);
       }
     }
+  }
+
+  /**
+   * Find the request with the given ID among those the service has already fetched,
+   * individually or as part of a list.
+   * @param id - the ID of the access request
+   * @returns the access request, or undefined if it has not been fetched
+   */
+  #loadedRequest(id: string): AccessRequest | undefined {
+    const ar = this.#request.error() ? undefined : this.#request.value();
+    if (ar?.id === id) return ar;
+    const requests = this.#requests.error() ? [] : this.#requests.value();
+    return requests.find((ar: AccessRequest) => ar.id === id);
   }
 
   /**
@@ -308,14 +353,23 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
     if (!id) return;
     this.#accessRequestService.updateRequest(id, changes).subscribe({
       next: () => {
+        // take over the copy the service has updated, as this one is a snapshot
+        this.#cachedRequest.update((ar) => ar && (this.#loadedRequest(id) ?? ar));
         this.#notificationService.showSuccess(
           `Access request was successfully modified.`,
         );
       },
       error: (err) => {
         console.debug(err);
+        // a 422 carries the reason the backend refused the change
+        const detail =
+          err instanceof HttpErrorResponse && err.status === 422
+            ? err.error?.detail
+            : undefined;
         this.#notificationService.showError(
-          'Access request could not be modified. Please try again later',
+          typeof detail === 'string'
+            ? `Access request could not be modified: ${detail}`
+            : 'Access request could not be modified. Please try again later',
         );
       },
     });
@@ -348,11 +402,71 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   }
 
   /**
+   * Open the dialog for sending a verification code to the DAC by SMS.
+   * The backend records the sending in the internal note, so an unsaved
+   * edit of that note would be lost and needs to be confirmed first.
+   */
+  sendVerificationSms(): void {
+    if (this.#pendingEdits.has('internal_note')) {
+      this.#confirmationService.confirm({
+        title: 'Unsaved internal note',
+        message:
+          'Sending the code adds a line to the internal note,' +
+          ' which discards your unsaved changes of the note.',
+        cancelText: 'Cancel',
+        confirmText: 'Discard Changes',
+        confirmClass: 'danger',
+        callback: (wantsToDiscard) => {
+          if (wantsToDiscard) this.#openVerificationSmsDialog();
+        },
+      });
+    } else {
+      this.#openVerificationSmsDialog();
+    }
+  }
+
+  /**
+   * Open the dialog for sending a verification code and take over the new note.
+   * The dialog does not close by itself, since a send may still be running.
+   * If it closes with null, the note is unknown and the request is reloaded.
+   */
+  #openVerificationSmsDialog(): void {
+    const request = this.request();
+    if (!request) return;
+    this.#dialog
+      .open<VerificationSmsDialog, AccessRequest, string | null>(
+        VerificationSmsDialog,
+        {
+          data: request,
+          width: '40rem',
+          maxWidth: '95vw',
+          disableClose: true,
+        },
+      )
+      .afterClosed()
+      .subscribe((note) => {
+        if (note === undefined) return;
+        this.#pendingEdits.delete('internal_note');
+        if (note === null) {
+          this.#cachedRequest.set(undefined);
+          this.#accessRequestService.reloadAccessRequest(request.id);
+          return;
+        }
+        // the service has updated its copies, but this one is a snapshot
+        this.#cachedRequest.update((ar) => ar && { ...ar, internal_note: note });
+      });
+  }
+
+  /**
    * Allow the access request after confirmation.
    */
   safeAllow(): void {
     const request = this.request();
     if (!request || !this.selectedIvaIdRadioButton()) return;
+    if (this.periodWarning() === 'ended') {
+      this.#explainEndedPeriod(request);
+      return;
+    }
     const iva = this.ivas().find((iva) => iva.id === this.selectedIvaIdRadioButton());
     if (!iva) return;
     const ivaType = this.#ivaTypeName(iva);
@@ -367,13 +481,18 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
     );
     this.#confirmationService.confirm({
       title: 'Confirm approval of the access request',
-      message:
-        '<p>Please confirm that the access request shall be <strong>allowed</strong>' +
-        (startDateInFuture
-          ? ` for the period between <strong>${startDate}</strong> and`
-          : ` until`) +
-        ` <strong>${endDate}</strong>, and coupled to the address ${ivaType}: ${iva.value}.` +
-        `</p><p><strong>Once allowed, no further changes can be made to the access request!</strong></p>`,
+      message: html`<p>
+          Please confirm that the access request shall be
+          <strong>allowed</strong>
+          ${startDateInFuture ? html`for the period between <strong>${startDate}</strong> and` : 'until'}
+          <strong>${endDate}</strong>, and coupled to the address ${ivaType}:
+          ${iva.value}.
+        </p>
+        <p>
+          <strong
+            >Once allowed, no further changes can be made to the access request!</strong
+          >
+        </p>`,
       cancelText: 'Cancel',
       confirmText: 'Confirm allowance',
       confirmClass: 'success',
@@ -384,14 +503,44 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   }
 
   /**
+   * Explain why a request whose access period has ended cannot be allowed,
+   * and offer to open the editor of the access duration.
+   * @param request - the access request
+   */
+  #explainEndedPeriod(request: AccessRequest): void {
+    const endDate = this.#datePipe.transform(
+      request.access_ends,
+      this.friendlyDateFormat,
+    );
+    this.#confirmationService.confirm({
+      title: 'The access period has ended',
+      message: html`<p>
+          The requested access period ended on <strong>${endDate}</strong>, so the
+          access request cannot be allowed as it is.
+        </p>
+        <p>Set a new end date before allowing the request, or deny it.</p>`,
+      cancelText: 'Cancel',
+      confirmText: 'Edit access duration',
+      callback: (edit) => {
+        if (edit) this.editDuration();
+      },
+    });
+  }
+
+  /**
    * Deny the access request after confirmation.
    */
   safeDeny(): void {
     this.#confirmationService.confirm({
       title: 'Confirm denial of the access request',
-      message:
-        '<p>Please confirm that the access request shall be <strong>denied</strong>.' +
-        `</p><p><strong>Once denied, no further changes can be made to the access request!</strong></p>`,
+      message: html`<p>
+          Please confirm that the access request shall be <strong>denied</strong>.
+        </p>
+        <p>
+          <strong
+            >Once denied, no further changes can be made to the access request!</strong
+          >
+        </p>`,
       cancelText: 'Cancel',
       confirmText: 'Confirm denial',
       confirmClass: 'error',
@@ -407,7 +556,10 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
    * @param action String literal specifying the desired status change.
    */
   saveBeforeStatusChange(action: 'deny' | 'allow'): void {
-    if (this.hasPendingEdits()) {
+    // explain an ended period first, as discarding the edits would not help
+    if (action === 'allow' && this.periodWarning() === 'ended') {
+      this.safeAllow();
+    } else if (this.hasPendingEdits()) {
       this.#confirmationService.confirm({
         title: 'Unsaved changes',
         message: 'Do you want to continue without saving your changes?',

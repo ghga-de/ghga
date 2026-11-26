@@ -22,6 +22,7 @@ Require dependencies of the `akafka` extra. See the `pyproject.toml`.
 """
 
 import asyncio
+import base64
 import json
 import logging
 import ssl
@@ -34,13 +35,19 @@ from typing import Any, Literal, Protocol, TypeVar, cast
 from uuid import UUID, uuid4
 
 from aiokafka import AIOKafkaConsumer
+from aiokafka.errors import MessageSizeTooLargeError
 from opentelemetry import trace
 from opentelemetry.propagate import extract
 from opentelemetry.propagators import textmap
 from pydantic import UUID4, ValidationError
 
 from hexkit.base import InboundProviderBase
-from hexkit.correlation import correlation_id_from_str, set_correlation_id
+from hexkit.correlation import (
+    InvalidCorrelationIdError,
+    correlation_id_from_str,
+    new_correlation_id,
+    set_correlation_id,
+)
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.daosub import DaoSubscriberProtocol, DtoValidationError
 from hexkit.protocols.eventpub import EventPublisherProtocol
@@ -57,7 +64,7 @@ log = logging.getLogger(__name__)
 CHANGE_EVENT_TYPE = "upserted"
 DELETE_EVENT_TYPE = "deleted"
 EventOrDaoSubProtocol = DaoSubscriberProtocol | EventSubscriberProtocol
-TextmapHeaders = list[tuple[str, bytes]]
+TextmapHeaders = Sequence[tuple[str, bytes | None]]
 
 tracer = trace.get_tracer_provider().get_tracer("hexkit.providers.akafka")
 
@@ -75,7 +82,7 @@ class AIOKafkaOtelContextExtractor(textmap.Getter[TextmapHeaders]):
 
         for item_key, value in carrier:
             if item_key == key and value is not None:
-                return [value.decode()]
+                return [value.decode(errors="replace")]
         return None
 
     def keys(self, carrier: TextmapHeaders) -> list[str]:
@@ -162,11 +169,20 @@ class ComboTranslator(EventSubscriberProtocol):
             key: A key used for routing the event.
             event_id: The unique identifier of the event.
         """
-        translator = self.translators[topic][type_]
-
+        # The subscriber filters by topic and by type separately, so a type of
+        # interest can still arrive on a topic that has no translator for it.
+        # Such an event is ignored, like one whose type is of no interest at all.
+        translator = self.translators.get(topic, {}).get(type_)
         if translator is None:
-            # This should never happen, as the topic should have been filtered out:
-            raise RuntimeError
+            log.info(
+                "Ignored event of type '%s' on topic '%s': no translator handles"
+                + " this type on this topic. Key=%s, event_id=%s.",
+                type_,
+                topic,
+                key,
+                event_id,
+            )
+            return
 
         if isinstance(translator, DaoSubscriberProtocol):
             if type_ == CHANGE_EVENT_TYPE:
@@ -204,12 +220,16 @@ class HeaderNames:
 
 
 class ConsumerEvent(Protocol):
-    """Duck type of an event as received from a KafkaConsumerCompatible."""
+    """Duck type of an event as received from a KafkaConsumerCompatible.
+
+    The key and value are what the deserializers return, a marker for a part that
+    could not be decoded among them.
+    """
 
     topic: str
-    key: str
-    value: JsonObject
-    headers: list[tuple[str, bytes]]
+    key: "str | _UndecodableRecordPart"
+    value: "JsonObject | _UndecodableRecordPart"
+    headers: Sequence[tuple[str, bytes | None]]
     partition: int
     offset: int
     timestamp: int
@@ -288,16 +308,122 @@ class DLQEventInfo(ExtractedEventInfo):
 
     def __init__(self, event: ConsumerEvent | None = None, **kwargs):
         """Initialize an instance of ExtractedEventInfo."""
-        timestamp = (
-            utc_datetime_from_ms(event.timestamp) if event else now_utc_ms_prec()
-        )
+        timestamp = now_utc_ms_prec()
+        if event is not None:
+            try:
+                timestamp = utc_datetime_from_ms(event.timestamp)
+            except (OverflowError, OSError, ValueError) as err:
+                log.warning(
+                    "Event timestamp %r is out of range (%s), using the current time.",
+                    event.timestamp,
+                    err,
+                )
         self.timestamp = kwargs.pop("timestamp", timestamp)
         super().__init__(event=event, **kwargs)
 
 
 def headers_as_dict(event: ConsumerEvent) -> dict[str, str]:
-    """Extract the headers from a ConsumerEvent object and return them as a dict."""
-    return {name: value.decode("ascii") for name, value in event.headers}
+    """Extract the headers from a ConsumerEvent object and return them as a dict.
+
+    Values are decoded as UTF-8, with undecodable bytes replaced, and a null value
+    becomes an empty string, so a foreign header never stops the consumer.
+    """
+    return {
+        name: value.decode("utf-8", errors="replace") if value is not None else ""
+        for name, value in event.headers
+    }
+
+
+@dataclass(frozen=True)
+class _UndecodableRecordPart:
+    """What a deserializer returns for a key or value it cannot decode.
+
+    aiokafka runs the deserializers before it advances the position, so one that
+    raises yields the same record forever; returning this marker instead lets the
+    subscriber handle the record and move on.
+    """
+
+    raw: bytes | None
+    error: str
+    is_json: bool = False
+    json_value: Any = None
+
+
+_JSON_TYPE_NAMES = {
+    list: "an array",
+    str: "a string",
+    int: "a number",
+    float: "a number",
+    bool: "a boolean",
+    type(None): "null",
+}
+
+# The most characters of an exception class name or escaped key in a DLQ copy
+_DLQ_HEADER_MAX_CHARS = 1000
+# The most characters of an exception text in a DLQ copy; a validation error with
+# several entries runs long, and whoever resolves the event needs all of it
+_DLQ_EXC_MSG_MAX_CHARS = 4000
+# The exception text kept when a DLQ copy is too large with the full one
+_DLQ_SHORT_EXC_MSG_CHARS = 200
+# Room for the headers and the JSON around the payload of a malformed record's DLQ copy
+_DLQ_ENVELOPE_BYTES = 8192
+
+
+def _deserialize_key(raw: bytes | None) -> str | _UndecodableRecordPart:
+    """Decode a record key as ASCII; a null key becomes an empty string."""
+    if raw is None:
+        return ""
+    try:
+        return raw.decode("ascii")
+    except Exception:
+        return _UndecodableRecordPart(raw=raw, error="key is not ASCII")
+
+
+def _deserialize_value(raw: bytes | None) -> JsonObject | _UndecodableRecordPart:
+    """Decode a record value as a JSON object."""
+    if raw is None:
+        return _UndecodableRecordPart(raw=None, error="value is null (a tombstone)")
+    try:
+        value = json.loads(raw)
+    except Exception as err:  # also RecursionError for deeply nested input
+        return _UndecodableRecordPart(raw=raw, error=f"value is not valid JSON: {err}")
+    if not isinstance(value, dict):
+        kind = _JSON_TYPE_NAMES.get(type(value), "not an object")
+        return _UndecodableRecordPart(
+            raw=raw,
+            error=f"value is {kind}, not a JSON object",
+            is_json=True,
+            json_value=value,
+        )
+    return value
+
+
+def _ascii_for_header(text: str, *, max_chars: int = _DLQ_HEADER_MAX_CHARS) -> str:
+    """Make text safe for a DLQ header, which the publisher encodes as ASCII."""
+    escaped = text.encode("ascii", errors="backslashreplace").decode("ascii")
+    return escaped[:max_chars]
+
+
+def _wrap_undecodable_value(
+    part: _UndecodableRecordPart, *, max_bytes: int
+) -> JsonObject:
+    """Build a JSON object that carries an undecodable value to the DLQ.
+
+    The raw bytes are cut so that their base64 text stays within `max_bytes`.
+    """
+    if part.is_json:
+        wrapped: JsonObject = {"non_object_value": part.json_value}
+        if len(json.dumps(wrapped)) <= max_bytes:
+            return wrapped
+    wrapper: dict[str, Any] = {"raw_value_b64": None, "decode_error": part.error}
+    if part.raw is not None:
+        raw = part.raw
+        limit = max(max_bytes, 0) // 4 * 3
+        if len(raw) > limit:
+            raw = raw[:limit]
+            wrapper["raw_value_truncated"] = True
+        wrapper["raw_value_b64"] = base64.b64encode(raw).decode("ascii")
+    return wrapper
 
 
 KCC = TypeVar("KCC")
@@ -316,8 +442,8 @@ class KafkaConsumerCompatible(Protocol):
         group_id: str,
         auto_offset_reset: Literal["earliest"],
         enable_auto_commit: bool,
-        key_deserializer: Callable[[bytes], str],
-        value_deserializer: Callable[[bytes], str],
+        key_deserializer: Callable[[bytes | None], Any],
+        value_deserializer: Callable[[bytes | None], Any],
         max_partition_fetch_bytes: int,
     ):
         """
@@ -336,9 +462,9 @@ class KafkaConsumerCompatible(Protocol):
             enable_auto_commit:
                 Whether to enable auto-committing of offsets.
             key_deserializer:
-                Function to deserialize the keys into strings.
+                Function to deserialize the keys into strings. Must not raise.
             value_deserializer:
-                Function to deserialize the values into strings.
+                Function to deserialize the values into JSON objects. Must not raise.
             max_partition_fetch_bytes:
                 Maximum receivable message size
         """
@@ -367,6 +493,12 @@ class KafkaConsumerCompatible(Protocol):
 
 class KafkaEventSubscriber(InboundProviderBase):
     """Apache Kafka-specific event subscription provider."""
+
+    class MalformedRecordError(RuntimeError):
+        """Raised when a record's key or value cannot be decoded and the DLQ is off."""
+
+        def __init__(self, *, problems: Sequence[str]):
+            super().__init__("Malformed record: " + "; ".join(problems) + ".")
 
     class RetriesExhaustedError(RuntimeError):
         """Raised when an event has been retried the maximum number of times."""
@@ -447,10 +579,8 @@ class KafkaEventSubscriber(InboundProviderBase):
             group_id=config.service_name,
             auto_offset_reset="earliest",
             enable_auto_commit=False,
-            key_deserializer=lambda event_key: event_key.decode("ascii"),
-            value_deserializer=lambda event_value: json.loads(
-                event_value.decode("ascii")
-            ),
+            key_deserializer=_deserialize_key,
+            value_deserializer=_deserialize_value,
             max_partition_fetch_bytes=config.kafka_max_message_size,
         )
 
@@ -501,6 +631,7 @@ class KafkaEventSubscriber(InboundProviderBase):
         self._max_retries = config.kafka_max_retries
         self._enable_dlq = config.kafka_enable_dlq
         self._retry_backoff = config.kafka_retry_backoff
+        self._max_message_size = config.kafka_max_message_size
 
     async def _publish_to_dlq(self, *, event: ExtractedEventInfo, exc: Exception):
         """Publish the event to the corresponding DLQ topic.
@@ -524,25 +655,83 @@ class KafkaEventSubscriber(InboundProviderBase):
             dlq_event_id,
             event.event_id,
         )
-        await self._dlq_publisher.publish(  # type: ignore
-            payload=event.payload,
-            type_=event.type_,
-            topic=self._dlq_topic,
-            key=event.key,
-            event_id=dlq_event_id,
-            headers={
-                HeaderNames.EXC_CLASS: exc.__class__.__name__,
-                HeaderNames.EXC_MSG: str(exc),
-                HeaderNames.ORIGINAL_TOPIC: event.topic,
-                HeaderNames.ORIGINAL_EVENT_ID: str(event.event_id),
-                HeaderNames.SERVICE_NAME: self._service_name,
-            },
+        headers = {
+            HeaderNames.EXC_CLASS: _ascii_for_header(exc.__class__.__name__),
+            HeaderNames.EXC_MSG: _ascii_for_header(
+                str(exc), max_chars=_DLQ_EXC_MSG_MAX_CHARS
+            ),
+            HeaderNames.ORIGINAL_TOPIC: event.topic,
+            HeaderNames.ORIGINAL_EVENT_ID: str(event.event_id),
+            HeaderNames.SERVICE_NAME: self._service_name,
+        }
+
+        await self._publish_dlq_copy(
+            event=event, dlq_event_id=dlq_event_id, headers=headers
         )
         log.info(
             "Published event to DLQ topic '%s'. DLQ event_id=%s, original_event_id=%s.",
             self._dlq_topic,
             dlq_event_id,
             event.event_id,
+        )
+
+    async def _publish_dlq_copy(
+        self, *, event: ExtractedEventInfo, dlq_event_id: UUID, headers: dict[str, str]
+    ) -> None:
+        """Publish the DLQ copy of an event, shrinking it if it is too large.
+
+        The copy is encoded as ASCII JSON and carries extra headers, so it can outgrow
+        a record that fit; raising would stop the consumer on it. A short exception
+        message comes first, then the payload as base64-encoded JSON, cut to fit.
+        """
+
+        async def publish(payload: JsonObject) -> None:
+            await self._dlq_publisher.publish(  # type: ignore
+                payload=payload,
+                type_=event.type_,
+                topic=self._dlq_topic,
+                key=event.key,
+                event_id=dlq_event_id,
+                headers=headers,
+            )
+
+        try:
+            await publish(event.payload)
+            return
+        except MessageSizeTooLargeError as err:
+            log.warning(
+                "The DLQ copy of event %s is too large (%s), retrying with a short"
+                + " exception message.",
+                event.event_id,
+                err,
+            )
+        headers[HeaderNames.EXC_MSG] = headers[HeaderNames.EXC_MSG][
+            :_DLQ_SHORT_EXC_MSG_CHARS
+        ]
+        try:
+            await publish(event.payload)
+            return
+        except MessageSizeTooLargeError as err:
+            log.error(
+                "The DLQ copy of event %s is still too large (%s), publishing its"
+                + " payload as base64-encoded JSON, cut if it does not fit.",
+                event.event_id,
+                err,
+            )
+        try:
+            # UTF-8 is more compact than the escaped ASCII the publisher writes
+            raw = json.dumps(
+                event.payload, ensure_ascii=False, separators=(",", ":")
+            ).encode("utf-8")
+        except UnicodeEncodeError:  # a lone surrogate
+            raw = json.dumps(event.payload, separators=(",", ":")).encode("ascii")
+        await publish(
+            _wrap_undecodable_value(
+                _UndecodableRecordPart(
+                    raw=raw, error="payload too large for the DLQ, kept as JSON"
+                ),
+                max_bytes=self._max_message_size - _DLQ_ENVELOPE_BYTES - len(event.key),
+            )
         )
 
     async def _retry_event(self, *, event: ExtractedEventInfo, retries_left: int):
@@ -640,13 +829,18 @@ class KafkaEventSubscriber(InboundProviderBase):
                     raise retry_error from underlying_error
                 await self._publish_to_dlq(event=event, exc=underlying_error)
 
-    def _extract_info(self, event: ConsumerEvent) -> ExtractedEventInfo:
+    def _extract_info(
+        self, event: ConsumerEvent
+    ) -> tuple[ExtractedEventInfo, list[str]]:
         """Convert the raw event to either ExtractedEventInfo or DLQEventInfo.
 
         Also extract the original topic name from the header if it's a retried event.
         Automatically extracting the original topic name from retried events prevents
         having to do that separately in every service. The DLQ case is more limited, so
         leave it up to any DLQ topic consumers to extract the value themselves.
+
+        A key or value the deserializers could not decode is replaced by an ASCII key
+        or a wrapper payload; the second element of the result lists what was wrong.
         """
         event_info = (
             DLQEventInfo(event)
@@ -657,18 +851,36 @@ class KafkaEventSubscriber(InboundProviderBase):
             # The event is being consumed by from the retry topic, so we expect the
             # original topic to be in the headers.
             event_info.topic = event_info.headers.pop(HeaderNames.ORIGINAL_TOPIC, "")
-        return event_info
+
+        problems: list[str] = []
+        key: Any = event_info.key
+        if isinstance(key, _UndecodableRecordPart):
+            problems.append(key.error)
+            raw_key = key.raw or b""
+            event_info.key = raw_key.decode("ascii", errors="backslashreplace")[
+                :_DLQ_HEADER_MAX_CHARS
+            ]
+        payload: Any = event_info.payload
+        if isinstance(payload, _UndecodableRecordPart):
+            problems.append(payload.error)
+            event_info.payload = _wrap_undecodable_value(
+                payload,
+                max_bytes=self._max_message_size
+                - _DLQ_ENVELOPE_BYTES
+                - len(event_info.key),
+            )
+        return event_info, problems
 
     def _validate_extracted_info(self, event: ExtractedEventInfo):
         """Validate the extracted event info."""
-        correlation_id = event.headers.get(HeaderNames.CORRELATION_ID, "")
         errors = []
         if not event.type_:
             errors.append("event type is empty")
+        elif not event.type_.isascii():
+            # escape it, as the type ends up in the log
+            errors.append(f"event type {event.type_!r} is not ASCII")
         elif self._types_whitelist and event.type_ not in self._types_whitelist:
             errors.append(f"event type '{event.type_}' is not in the whitelist")
-        if not correlation_id:
-            errors.append("correlation_id is empty")
 
         # Check the topic field -- this happens after replacing 'retry' with og topic
         if event.topic == self._retry_topic:
@@ -679,9 +891,69 @@ class KafkaEventSubscriber(InboundProviderBase):
         elif not event.topic:
             # only occurs if original_topic header is empty
             errors.append("topic is empty")
+        elif not event.topic.isascii():
+            # only occurs if original_topic header is not ASCII
+            errors.append(f"topic {event.topic!r} is not ASCII")
         if errors:
             error = RuntimeError(", ".join(errors))
             raise error
+
+    @staticmethod
+    def _ensure_correlation_id(event: ExtractedEventInfo) -> UUID4:
+        """Return the event's correlation ID, replacing a missing or invalid one.
+
+        A replacement is written back into the headers, where a DLQ copy and the
+        DLQ service read it.
+        """
+        found = event.headers.get(HeaderNames.CORRELATION_ID, "")
+        try:
+            return correlation_id_from_str(found)
+        except InvalidCorrelationIdError:
+            correlation_id = new_correlation_id()
+            log.warning(
+                "%s. Generated a new one: %s.",
+                f"Invalid correlation ID {found[:100]!r}"
+                if found
+                else "No correlation ID header found",
+                correlation_id,
+            )
+            event.headers[HeaderNames.CORRELATION_ID] = str(correlation_id)
+            return correlation_id
+
+    async def _handle_malformed_record(
+        self,
+        *,
+        event: ConsumerEvent,
+        event_info: ExtractedEventInfo,
+        problems: list[str],
+    ) -> None:
+        """Publish a malformed record to the DLQ and commit, or raise if the DLQ is off.
+
+        Retries are skipped, since decoding the same bytes again fails again.
+        """
+        error = self.MalformedRecordError(problems=problems)
+        if not self._enable_dlq:
+            log.critical(
+                "Failed to decode event, and the DLQ is disabled. To skip it, move"
+                + " the consumer group's offset past it. Topic=%s, partition=%s,"
+                + " offset=%s, error: %s",
+                event.topic,
+                event.partition,
+                event.offset,
+                error,
+            )
+            raise error
+        log.error(
+            "Failed to decode event, sending it to the DLQ topic (%s)."
+            + " Topic=%s, partition=%s, offset=%s, error: %s",
+            self._dlq_topic,
+            event.topic,
+            event.partition,
+            event.offset,
+            error,
+        )
+        await self._publish_to_dlq(event=event_info, exc=error)
+        await self._consumer.commit()
 
     async def _consume_event(self, event: ConsumerEvent) -> None:
         """Consume an event by passing it down to the translator via the protocol."""
@@ -693,7 +965,7 @@ class KafkaEventSubscriber(InboundProviderBase):
         with tracer.start_as_current_span(
             name="KafkaEventSubscriber._consume_event", context=extracted_context
         ):
-            event_info = self._extract_info(event)
+            event_info, problems = self._extract_info(event)
             try:
                 self._validate_extracted_info(event_info)
             except RuntimeError as err:
@@ -701,7 +973,7 @@ class KafkaEventSubscriber(InboundProviderBase):
                     "Ignored event. Topic=%s, type=%s, key=%s, event_id=%s, errors: %s.",
                     event.topic,  # use actual topic, not event_info.topic
                     event_info.type_,
-                    event.key,
+                    event_info.key,
                     event_info.event_id,
                     str(err),
                 )  # ^ Depending on error, log arg(s) can be empty. Error will explain.
@@ -710,32 +982,52 @@ class KafkaEventSubscriber(InboundProviderBase):
                 await self._consumer.commit()
                 return
 
-            try:
-                log.info(
-                    "Consuming event. Topic=%s, type=%s, key=%s, event_id=%s.",
-                    event_info.topic,
-                    event_info.type_,
-                    event.key,
-                    event_info.event_id,
-                )
-                correlation_id = event_info.headers[HeaderNames.CORRELATION_ID]
-                async with set_correlation_id(correlation_id_from_str(correlation_id)):
-                    await self._handle_consumption(event=event_info)
-            except Exception:
-                # Errors only bubble up here if the DLQ isn't used
-                log.critical(
-                    "Failed to process event. It was NOT placed in the DLQ topic (%s)."
-                    + " Topic=%s, type=%s, key=%s, event_id=%s.",
-                    self._dlq_topic if self._enable_dlq else "DLQ is disabled",
-                    event_info.topic,
-                    event_info.type_,
-                    event.key,
-                    event_info.event_id,
-                )
-                raise
-            else:
-                # Only save consumed event offsets if it was successful or sent to DLQ
-                await self._consumer.commit()
+            correlation_id = self._ensure_correlation_id(event_info)
+            # Set before any DLQ publish, which needs a correlation ID in context
+            async with set_correlation_id(correlation_id):
+                if problems:
+                    if not self._using_dlq_protocol:
+                        await self._handle_malformed_record(
+                            event=event, event_info=event_info, problems=problems
+                        )
+                        return
+                    # A DLQ subscriber has no DLQ, so its translator gets the wrapper
+                    log.warning(
+                        "Passing malformed event to the translator. Topic=%s,"
+                        + " partition=%s, offset=%s, errors: %s.",
+                        event.topic,
+                        event.partition,
+                        event.offset,
+                        "; ".join(problems),
+                    )
+                await self._pass_to_translator(event_info=event_info)
+
+    async def _pass_to_translator(self, *, event_info: ExtractedEventInfo) -> None:
+        """Hand the event to the translator and commit once it is handled."""
+        try:
+            log.info(
+                "Consuming event. Topic=%s, type=%s, key=%s, event_id=%s.",
+                event_info.topic,
+                event_info.type_,
+                event_info.key,
+                event_info.event_id,
+            )
+            await self._handle_consumption(event=event_info)
+        except Exception:
+            # Errors only bubble up here if the DLQ isn't used
+            log.critical(
+                "Failed to process event. It was NOT placed in the DLQ topic (%s)."
+                + " Topic=%s, type=%s, key=%s, event_id=%s.",
+                self._dlq_topic if self._enable_dlq else "DLQ is disabled",
+                event_info.topic,
+                event_info.type_,
+                event_info.key,
+                event_info.event_id,
+            )
+            raise
+        else:
+            # Only save consumed event offsets if it was successful or sent to DLQ
+            await self._consumer.commit()
 
     async def run(self, forever: bool = True) -> None:
         """Start consuming events and passing them down to the translator.

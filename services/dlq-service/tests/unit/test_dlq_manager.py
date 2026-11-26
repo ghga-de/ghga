@@ -15,19 +15,30 @@
 
 """Unit tests for the DLQ Manager"""
 
+import base64
+import json
 from contextlib import nullcontext
+from datetime import UTC, datetime
 from typing import cast
 from unittest.mock import AsyncMock, Mock
-from uuid import UUID
+from uuid import UUID, uuid1
 
+import bson
 import pytest
 
-from dlqs.core.dlq_manager import stored_event_from_raw_event
+from dlqs.adapters.inbound.event_sub import DLQSubTranslator
+from dlqs.core import dlq_manager as dlq_manager_module
+from dlqs.core.dlq_manager import (
+    UNKNOWN,
+    degraded_copy,
+    is_degraded_copy,
+    stored_event_from_raw_event,
+)
 from dlqs.inject import prepare_core
 from dlqs.models import EventCore, PublishableEventData, StoredDLQEvent
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
 from dlqs.ports.outbound.dao import ResourceNotFoundError
-from hexkit.protocols.dao import Dao
+from hexkit.protocols.dao import Dao, DaoError, DbTimeoutError
 from hexkit.providers.akafka.provider.eventsub import HeaderNames
 from hexkit.providers.testing.dao import new_mock_dao_class
 from tests.fixtures import utils
@@ -440,3 +451,357 @@ async def test_get_service_topic_summary():
         },
         utils.UFS: {utils.USER_EVENTS: 4},
     }
+
+
+@pytest.mark.parametrize(
+    "header", [HeaderNames.ORIGINAL_TOPIC, HeaderNames.SERVICE_NAME]
+)
+@pytest.mark.parametrize(
+    "value",
+    [None, "", "a/b", "J\u00fcrgen", "x" * 250, ".", ".."],
+    ids=["missing", "empty", "slash", "non_ascii", "too_long", "dot", "dot_dot"],
+)
+def test_stored_event_without_topic_or_service(header: str, value: str | None):
+    """A missing or unusable original topic or service name is stored as 'unknown',
+    since the API cannot address it in a path segment.
+    """
+    dlq_event = utils.graph_event()
+    if value is None:
+        del dlq_event.headers[header]
+    else:
+        dlq_event.headers[header] = value
+    stored_dlq_event = stored_event_from_raw_event(dlq_event)
+    stored_value = (
+        stored_dlq_event.topic
+        if header == HeaderNames.ORIGINAL_TOPIC
+        else stored_dlq_event.dlq_info.service
+    )
+    assert stored_value == UNKNOWN
+
+
+@pytest.mark.parametrize(
+    "original_event_id",
+    ["not-a-uuid", str(uuid1()), ""],
+    ids=["garbage", "uuid1", "empty"],
+)
+def test_stored_event_with_invalid_original_event_id(original_event_id: str):
+    """An original event ID that is not a UUID4 is stored as None."""
+    dlq_event = utils.graph_event()
+    dlq_event.headers[HeaderNames.ORIGINAL_EVENT_ID] = original_event_id
+    stored_dlq_event = stored_event_from_raw_event(dlq_event)
+    assert stored_dlq_event.dlq_info.original_event_id is None
+
+
+@pytest.mark.asyncio
+async def test_store_event_duplicate_is_success():
+    """Storing a redelivered DLQ event succeeds without a second copy."""
+    dlq_event = utils.graph_event()
+    dao = InMemDLQEventDao()
+
+    async with prepare_core(
+        config=DEFAULT_CONFIG,
+        dao_override=dao,
+        publisher_override=AsyncMock(),
+    ) as dlq_manager:
+        await dlq_manager.store_event(event=dlq_event)
+        await dlq_manager.store_event(event=dlq_event)
+
+    assert len(dao.resources) == 1
+
+
+@pytest.mark.asyncio
+async def test_store_event_other_db_error():
+    """A database error other than a duplicate still raises."""
+    mock_dao = AsyncMock()
+    mock_dao.insert.side_effect = RuntimeError("database down")
+
+    async with prepare_core(
+        config=DEFAULT_CONFIG,
+        dao_override=mock_dao,
+        publisher_override=AsyncMock(),
+    ) as dlq_manager:
+        with pytest.raises(dlq_manager.DLQInsertionError):
+            await dlq_manager.store_event(event=utils.graph_event())
+
+
+@pytest.mark.asyncio
+async def test_translator_derives_uuid4_from_other_event_id():
+    """An event ID of another UUID version is replaced by a UUID4 derived from it,
+    so the event is stored once and a redelivery is still a duplicate.
+    """
+    event_id = uuid1()
+    derived_id = UUID(int=event_id.int, version=4)
+    dao = InMemDLQEventDao()
+
+    async with prepare_core(
+        config=DEFAULT_CONFIG,
+        dao_override=dao,
+        publisher_override=AsyncMock(),
+    ) as dlq_manager:
+        translator = DLQSubTranslator(dlq_manager=dlq_manager)
+        dlq_event = utils.graph_event()
+        for _ in range(2):
+            await translator.consume(
+                payload=dlq_event.payload,
+                type_=dlq_event.type_,
+                topic=DEFAULT_CONFIG.kafka_dlq_topic,
+                key=dlq_event.key,
+                event_id=event_id,
+                timestamp=datetime.now(UTC),
+                headers=dlq_event.headers,
+            )
+
+    assert derived_id.version == 4
+    assert list(dao.resources) == [derived_id]
+
+
+class EncodingDao(InMemDLQEventDao):  # type: ignore[valid-type,misc]
+    """An in-memory DAO that encodes each document as BSON, as MongoDB would."""
+
+    async def insert(self, dto):
+        """Insert the document if it can be encoded."""
+        bson.encode(dto.model_dump(mode="json"))
+        await super().insert(dto)
+
+
+class FailingDao(InMemDLQEventDao):  # type: ignore[valid-type,misc]
+    """An in-memory DAO whose first inserts fail with the given errors."""
+
+    def __init__(self, *errors: Exception):
+        super().__init__()
+        self.errors = list(errors)
+
+    async def insert(self, dto):
+        """Raise the next error, or insert the document if none is left."""
+        if self.errors:
+            raise self.errors.pop(0)
+        await super().insert(dto)
+
+
+def assert_degraded(stored: StoredDLQEvent, original: dict, *, error_class: str):
+    """Assert that the stored event is a degraded copy of the original payload."""
+    assert is_degraded_copy(stored)
+    payload = stored.payload
+    assert payload["payload_truncated"] is False
+    assert payload["store_error"].startswith(error_class + ":")
+    assert json.loads(base64.b64decode(payload["payload_json_b64"])) == original
+
+
+@pytest.mark.parametrize(
+    "payload, error_class",
+    [
+        ({"a\x00b": 1}, "InvalidDocument"),
+        ({"a": "\ud800"}, "UnicodeEncodeError"),
+        ({"n": 10**20}, "OverflowError"),
+    ],
+    ids=["nul_in_key", "lone_surrogate", "big_integer"],
+)
+@pytest.mark.asyncio
+async def test_store_event_unencodable_payload(payload: dict, error_class: str):
+    """A payload that BSON cannot encode is stored as a degraded copy."""
+    dlq_event = utils.graph_event()
+    dlq_event.payload = payload
+    dao = EncodingDao()
+
+    async with prepare_core(
+        config=DEFAULT_CONFIG,
+        dao_override=dao,
+        publisher_override=AsyncMock(),
+    ) as dlq_manager:
+        await dlq_manager.store_event(event=dlq_event)
+        await dlq_manager.store_event(event=dlq_event)  # a redelivery
+
+    assert len(dao.resources) == 1
+    assert_degraded(dao.latest, payload, error_class=error_class)
+
+
+@pytest.mark.asyncio
+async def test_store_event_rejected_by_server():
+    """A payload the server rejects, like a too deeply nested one, is stored as a
+    degraded copy, since such a DaoError can be permanent.
+    """
+    dlq_event = utils.graph_event()
+    dao = FailingDao(DaoError("document is nested too deeply"))
+
+    async with prepare_core(
+        config=DEFAULT_CONFIG,
+        dao_override=dao,
+        publisher_override=AsyncMock(),
+    ) as dlq_manager:
+        await dlq_manager.store_event(event=dlq_event)
+
+    assert_degraded(dao.latest, dlq_event.payload, error_class="DaoError")
+
+
+@pytest.mark.asyncio
+async def test_store_event_degraded_payload_truncated(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The degraded copy cuts a payload that would not fit into a document."""
+    monkeypatch.setattr(dlq_manager_module, "_DEGRADED_PAYLOAD_MAX_BYTES", 10)
+    dlq_event = utils.graph_event()
+    dao = FailingDao(DaoError("document too large"))
+
+    async with prepare_core(
+        config=DEFAULT_CONFIG,
+        dao_override=dao,
+        publisher_override=AsyncMock(),
+    ) as dlq_manager:
+        await dlq_manager.store_event(event=dlq_event)
+
+    payload = dao.latest.payload
+    assert payload["payload_truncated"] is True
+    raw = json.dumps(dlq_event.payload).encode()
+    assert base64.b64decode(payload["payload_json_b64"]) == raw[:10]
+
+
+@pytest.mark.parametrize(
+    "errors",
+    [
+        (DbTimeoutError("timed out"),),
+        (DaoError("connection lost"), DaoError("connection lost")),
+    ],
+    ids=["timeout", "degraded_copy_fails_too"],
+)
+@pytest.mark.asyncio
+async def test_store_event_transient_error_raises(errors: tuple[Exception, ...]):
+    """A timeout raises at once, and another error raises when the degraded copy
+    fails as well, so the event is redelivered rather than lost.
+    """
+    dao = FailingDao(*errors)
+
+    async with prepare_core(
+        config=DEFAULT_CONFIG,
+        dao_override=dao,
+        publisher_override=AsyncMock(),
+    ) as dlq_manager:
+        with pytest.raises(dlq_manager.DLQInsertionError):
+            await dlq_manager.store_event(event=utils.graph_event())
+
+    assert not dao.resources
+
+
+def wrapper_event() -> StoredDLQEvent:
+    """A stored event whose payload is a subscriber's wrapper."""
+    stored = stored_event_from_raw_event(utils.graph_event())
+    return stored.model_copy(
+        update={"payload": {"raw_value_b64": "/w==", "decode_error": "too large"}}
+    )
+
+
+def malformed_event() -> StoredDLQEvent:
+    """A stored event of a record the subscriber could not decode."""
+    stored = stored_event_from_raw_event(utils.graph_event())
+    dlq_info = stored.dlq_info.model_copy(update={"exc_class": "MalformedRecordError"})
+    return stored.model_copy(update={"dlq_info": dlq_info})
+
+
+def degraded_event() -> StoredDLQEvent:
+    """A stored event that is a degraded copy."""
+    stored = stored_event_from_raw_event(utils.graph_event())
+    return degraded_copy(stored, error=DaoError("too deep"))
+
+
+def truncated_degraded_event() -> StoredDLQEvent:
+    """A stored event that is a degraded copy with its payload cut."""
+    stored = degraded_event()
+    payload = {**stored.payload, "payload_truncated": True}
+    return stored.model_copy(update={"payload": payload})
+
+
+def unknown_service_event() -> StoredDLQEvent:
+    """A stored event without a usable service name."""
+    dlq_event = utils.graph_event()
+    del dlq_event.headers[HeaderNames.SERVICE_NAME]
+    return stored_event_from_raw_event(dlq_event)
+
+
+def unknown_topic_event() -> StoredDLQEvent:
+    """A stored event without a usable original topic."""
+    dlq_event = utils.graph_event()
+    del dlq_event.headers[HeaderNames.ORIGINAL_TOPIC]
+    return stored_event_from_raw_event(dlq_event)
+
+
+@pytest.mark.parametrize(
+    "make_event, with_override, allowed",
+    [
+        (malformed_event, False, False),
+        (malformed_event, True, True),
+        (degraded_event, False, True),
+        (degraded_event, True, True),
+        (truncated_degraded_event, False, False),
+        (truncated_degraded_event, True, True),
+        (wrapper_event, False, False),
+        (wrapper_event, True, True),
+        (unknown_topic_event, False, False),
+        (unknown_topic_event, True, True),
+        (unknown_service_event, False, False),
+        (unknown_service_event, True, False),
+    ],
+    ids=[
+        "malformed",
+        "malformed_override",
+        "degraded",
+        "degraded_override",
+        "degraded_truncated",
+        "degraded_truncated_override",
+        "wrapper",
+        "wrapper_override",
+        "unknown_topic",
+        "unknown_topic_override",
+        "unknown_service",
+        "unknown_service_override",
+    ],
+)
+@pytest.mark.parametrize("dry_run", [True, False], ids=["dry_run", "real"])
+@pytest.mark.asyncio
+async def test_process_event_that_cannot_be_requeued_as_is(
+    make_event, with_override: bool, allowed: bool, dry_run: bool
+):
+    """An event whose payload is not the original needs an override, one without a
+    usable topic needs one that names it, and one of an unknown service can only be
+    discarded. Nothing is published or deleted otherwise, in a dry run neither.
+    A degraded copy that holds its whole payload is requeued with that payload.
+    """
+    stored = make_event()
+    dao = InMemDLQEventDao()
+    await dao.insert(stored)
+    mock_publisher = AsyncMock()
+    override = (
+        EventCore(
+            payload={"source_id": "a", "dest_id": "b"},
+            type_=stored.type_,
+            topic=utils.GRAPH_UPDATES,
+            key=stored.key,
+        )
+        if with_override
+        else None
+    )
+
+    async with prepare_core(
+        config=DEFAULT_CONFIG,
+        dao_override=dao,
+        publisher_override=mock_publisher,
+    ) as dlq_manager:
+        process = dlq_manager.process_event(
+            service=stored.dlq_info.service,
+            topic=stored.topic,
+            dlq_id=stored.dlq_id,
+            override=override,
+            dry_run=dry_run,
+        )
+        if allowed:
+            await process
+        else:
+            with pytest.raises(dlq_manager.DLQValidationError):
+                await process
+
+    if not allowed or dry_run:
+        mock_publisher.publish.assert_not_called()
+        assert await dao.get_by_id(stored.dlq_id)
+    else:
+        mock_publisher.publish.assert_called_once()
+        if make_event is degraded_event and not with_override:
+            published = mock_publisher.publish.call_args.kwargs
+            assert published["payload"] == utils.graph_event().payload

@@ -32,6 +32,7 @@ from fastapi import (
     Response,
     status,
 )
+from fastapi.responses import JSONResponse
 from pydantic import UUID4, SecretStr
 
 from auth_service.claims_repository.core.utils import get_active_roles
@@ -55,7 +56,8 @@ from ..core.auth import (
     internal_token_from_session,
     log_auth_info,
 )
-from ..core.session_store import SessionState
+from ..core.session_check import check_session
+from ..core.session_store import AsyncUserRoleFetcher, SessionState
 from ..core.verify_totp import verify_totp
 from ..deps import (
     SESSION_COOKIE,
@@ -113,7 +115,62 @@ def add_allowed_routes():
         add_allowed_route(route, write=True)
 
 
+@router.api_route(
+    "/health",
+    methods=["GET", "HEAD"],
+    summary="health",
+    tags=["health"],
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def health() -> None:
+    """Used to check that this service is alive, without Basic auth.
+
+    Meant for the kubelet probe. ExtAuth checks carry the original request path, so
+    none arrives as a bare `/health`; answering 204 rather than 200 still keeps one
+    that did from reaching a backend without Basic auth.
+    """
+
+
+# after the health route, so that an allowed path like /* cannot shadow it
 add_allowed_routes()
+
+
+def _role_fetcher(
+    *, iva_dao: IvaDaoDependency, claim_dao: ClaimDaoDependency
+) -> AsyncUserRoleFetcher:
+    """Get a function that fetches the active roles of a user.
+
+    This includes the check whether the corresponding IVAs have been verified.
+    """
+
+    async def get_roles(user: User) -> list[str]:
+        """Get the active roles of the given user."""
+        return await get_active_roles(user.id, iva_dao=iva_dao, claim_dao=claim_dao)
+
+    return get_roles
+
+
+def _session_ended_response(error: HTTPException) -> JSONResponse:
+    """Get the response for a session that the check has ended.
+
+    The session has been deleted, so the client is told to drop the cookie.
+    """
+    response = JSONResponse(
+        status_code=error.status_code, content={"detail": error.detail}
+    )
+    _delete_session_cookie(response)
+    return response
+
+
+def _delete_session_cookie(response: Response) -> None:
+    """Tell the client to delete the session cookie."""
+    response.delete_cookie(
+        key=SESSION_COOKIE,
+        # must use the same params as in set_cookie
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
 
 
 @router.post(
@@ -144,11 +201,25 @@ async def login(  # noqa: C901, PLR0913
     """
     session_id = request.cookies.get(SESSION_COOKIE)
     session = await session_store.get_session(session_id) if session_id else None
+    checked = False
     if session:
         # We do not check the CSRF token here so that we can login
         # from a different browser tab which does not know the token.
         # This is ok since it is a request that does not modify state.
         session_created = False
+        # a page load must not show a session that the next API call would end
+        if session.user_id and session_store.is_check_due(session):
+            try:
+                await check_session(
+                    session,
+                    session_store=session_store,
+                    user_dao=user_dao,
+                    token_dao=token_dao,
+                    get_roles=_role_fetcher(iva_dao=iva_dao, claim_dao=claim_dao),
+                )
+            except HTTPException as error:
+                return _session_ended_response(error)
+            checked = True
     else:
         access_token = get_bearer_token(authorization, x_authorization)
         try:
@@ -165,26 +236,36 @@ async def login(  # noqa: C901, PLR0913
         try:
             user = await user_dao.get_by_id(session.user_id)
         except ResourceNotFoundError:
-            user = None  # user has been deleted
+            # a session ends with its user, and the client counts as logged out
+            await session_store.delete_session(session.session_id)
+            denied = JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": "User account has been deleted"},
+            )
+            _delete_session_cookie(denied)
+            return denied
     else:
         try:
             user = await user_dao.find_one(filter_={"ext_id": session.ext_id})
         except NoHitsFoundError:
             user = None  # user is not yet registered
 
+    # Every response of this endpoint other than a 200 counts as denied for the
+    # ExtAuth protocol. We rely on the API gateway to pass all headers of a denied
+    # response on to the client, so that the session cookie can be set and deleted.
+    # With Istio, this means that headersToDownstreamOnDeny must stay unset or
+    # must contain Set-Cookie and X-Session.
+
     if user and user.status is not UserStatus.ACTIVE:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User account is disabled",
+        # The user is authenticated, but not allowed to use the session.
+        await session_store.delete_session(session.session_id)
+        denied = JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "User account is disabled"},
         )
-
-    async def _get_roles(user: User) -> list[str]:
-        """Get the active roles of the given user.
-
-        This includes the check whether the corresponding IVAs have been verified.
-        """
-        # if the user exists, the account is active at this point
-        return await get_active_roles(user.id, iva_dao=iva_dao, claim_dao=claim_dao)
+        if session_id:  # the cookie may also point to an expired session
+            _delete_session_cookie(denied)
+        return denied
 
     async def _has_totp_token(user: User) -> bool:
         """Check whether the given user has a TOTP token."""
@@ -197,8 +278,9 @@ async def login(  # noqa: C901, PLR0913
     await session_store.save_session(
         session,
         user=user,
-        get_roles=_get_roles,
+        get_roles=_role_fetcher(iva_dao=iva_dao, claim_dao=claim_dao),
         has_totp_token=_has_totp_token,
+        checked=checked,
     )
 
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -234,13 +316,7 @@ async def logout(
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
     if session:
         await session_store.delete_session(session.session_id)
-        response.delete_cookie(
-            key=SESSION_COOKIE,
-            # must use the same params as in set_cookie
-            secure=True,
-            httponly=True,
-            samesite="lax",
-        )
+        _delete_session_cookie(response)
     return response
 
 
@@ -374,6 +450,8 @@ async def rpc_verify_totp(  # noqa: PLR0913
     totp_handler: TOTPHandlerDependency,
     user_registry: UserRegistryDependency,
     token_dao: UserTokenDaoDependency,
+    claim_dao: ClaimDaoDependency,
+    iva_dao: IvaDaoDependency,
     x_authorization: Annotated[
         str | None, Header(title="the TOTP code to verify")
     ] = None,
@@ -406,9 +484,15 @@ async def rpc_verify_totp(  # noqa: PLR0913
         totp_handler=totp_handler,
         user_registry=user_registry,
         token_dao=token_dao,
+        get_roles=_role_fetcher(iva_dao=iva_dao, claim_dao=claim_dao),
     )
 
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    # the roles have been fetched again, so the client needs the new session
+    response.headers["X-Session"] = session_to_header(
+        session, timeouts=session_store.timeouts
+    )
+    return response
 
 
 @router.api_route(
@@ -418,21 +502,39 @@ async def rpc_verify_totp(  # noqa: PLR0913
     status_code=status.HTTP_200_OK,
 )
 @TRACER.start_as_current_span("router.ext_auth")
-async def ext_auth(
+async def ext_auth(  # noqa: PLR0913
     request: Request,
     session_store: SessionStoreDependency,
     session: SessionDependency,
+    user_dao: UserDaoDependency,
+    token_dao: UserTokenDaoDependency,
+    claim_dao: ClaimDaoDependency,
+    iva_dao: IvaDaoDependency,
 ) -> Response:
     """Implements the ExtAuth protocol to authenticate users via the API gateway.
 
     If a user session exists and is two-factor-authenticated, then an internal
     authentication token will be added to the response.
+
+    Before a request to the API, the session is checked again against the user
+    account once the configured interval has passed since the last check.
     """
     if session:
-        await session_store.save_session(session)
-        if session.state is SessionState.AUTHENTICATED and request.url.path.startswith(
-            auth_paths
-        ):
+        is_api_request = request.url.path.startswith(auth_paths)
+        checked = is_api_request and session_store.is_check_due(session)
+        if checked:
+            try:
+                await check_session(
+                    session,
+                    session_store=session_store,
+                    user_dao=user_dao,
+                    token_dao=token_dao,
+                    get_roles=_role_fetcher(iva_dao=iva_dao, claim_dao=claim_dao),
+                )
+            except HTTPException as error:
+                return _session_ended_response(error)
+        await session_store.save_session(session, checked=checked)
+        if session.state is SessionState.AUTHENTICATED and is_api_request:
             log_auth_info(request, session)
             internal_token = internal_token_from_session(session)
             return pass_auth_response(request, f"Bearer {internal_token}")

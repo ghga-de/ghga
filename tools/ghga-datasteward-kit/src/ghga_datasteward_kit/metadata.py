@@ -19,9 +19,10 @@ import asyncio
 import json
 from copy import deepcopy
 from pathlib import Path
+from typing import Self
 
 import yaml
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from ghga_datasteward_kit.utils import load_config_yaml
 from metldata.accession_registry.accession_registry import AccessionRegistry
@@ -61,6 +62,27 @@ class MetadataConfig(
         default=...,
         description="Configuration for the metadata transformation workflow.",
     )
+
+    @model_validator(mode="after")
+    def share_study_class_name(self) -> Self:
+        """Give the add_accessions step the study class the accession registry uses,
+        so that the transformation finds the study PID where submit stored it.
+
+        Raises:
+            ValueError: if the add_accessions step sets a different study class.
+        """
+        add_accessions = self.workflow_config.add_accessions
+        if (
+            "study_class_name" in add_accessions.model_fields_set
+            and add_accessions.study_class_name != self.study_class_name
+        ):
+            raise ValueError(
+                "The add_accessions step sets the study class"
+                + f" '{add_accessions.study_class_name}', but the config sets"
+                + f" '{self.study_class_name}'. Set it only at the top level."
+            )
+        add_accessions.study_class_name = self.study_class_name
+        return self
 
 
 def submit_metadata(
@@ -120,6 +142,14 @@ def submit_metadata_from_path(
         metadata=metadata,
         config=config,
     )
+
+
+def migrate_accession_store_from_path(*, config_path: Path) -> None:
+    """Read the config from the specified path and convert its accession store from
+    a flat list of accessions into the JSON format.
+    """
+    config = load_config_yaml(path=config_path, config_cls=MetadataConfig)
+    AccessionStore(config=config).migrate_legacy_store()
 
 
 def save_artifact_models(
@@ -227,42 +257,3 @@ def transform_metadata_from_path(*, config_path: Path) -> None:
     config = load_config_yaml(path=config_path, config_cls=MetadataConfig)
 
     transform_metadata(config=config)
-
-
-def compare_aliases(*, metadata_path: Path, file_overview_tsv: Path):
-    """Compare the file aliases contained in the transpiled metadata JSON file with
-    those in the file upload TSV file.
-
-    Any aliases from the file upload TSV file which are absent in the metadata
-    JSON file will be reported.
-    """
-    with file_overview_tsv.open() as tsv_file:
-        file_aliases = [
-            line.split("\t")[1].strip() for line in tsv_file.readlines() if line != ""
-        ]
-
-    with metadata_path.open("rb") as metadata_file:
-        metadata = json.load(metadata_file)
-
-    fields_with_files = [
-        "analysis_method_supporting_files",
-        "individual_supporting_files",
-        "experiment_method_supporting_files",
-        "research_data_files",
-        "process_data_files",
-    ]
-
-    accounted_for = []
-    for field in fields_with_files:
-        accounted_for.extend([entry["alias"] for entry in metadata[field]])
-
-    absent: list[str] = [alias for alias in file_aliases if alias not in accounted_for]
-
-    if absent:
-        print(f"The following file aliases are missing from {metadata_path.name}:")
-        for absent_file in absent:
-            print(f"- {absent_file}")
-    else:
-        print(
-            f"Success: All files in {file_overview_tsv.name} are accounted for in {metadata_path.name}"
-        )

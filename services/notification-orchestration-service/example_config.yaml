@@ -1,9 +1,11 @@
 access_request_topic: access_request_events
 auth_topic: auth
 central_data_stewardship_email: test@test.abc
-db_name: nos
+db_name: notification-orchestration
 db_version_collection: nosDbVersions
 email_notification_type: email_notification
+enable_opentelemetry: false
+enable_otel_metrics: false
 generate_correlation_id: true
 helpdesk_email: test@test.def
 iva_send_code_type: iva_send_code
@@ -30,6 +32,7 @@ migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 notification_topic: notification_events
+otel_trace_sampling_rate: 1.0
 portal_url: https://data.ghga.de/
 second_factor_recreated_type: second_factor_recreated
 service_instance_id: '1'

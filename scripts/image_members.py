@@ -16,6 +16,7 @@ its distribution, so `package` doubles as the image entrypoint (the shared
 Dockerfile's `test -e` guard enforces this at build time).
 """
 
+import argparse
 import json
 import pathlib
 import tomllib
@@ -71,5 +72,23 @@ def image_members() -> list[dict]:
     return [*_python_members(), *_frontend_members()]
 
 
+def main(argv: list[str] | None = None) -> None:
+    """Print the members as JSON, or one field per line for the shell recipes."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--kind", choices=("python", "frontend"), help="only members of this kind"
+    )
+    parser.add_argument(
+        "--field", help="print this field, one member per line, instead of JSON"
+    )
+    args = parser.parse_args(argv)
+    members = [m for m in image_members() if args.kind in (None, m["kind"])]
+    if args.field:
+        for member in members:
+            print(member[args.field])
+    else:
+        print(json.dumps(members))
+
+
 if __name__ == "__main__":
-    print(json.dumps(image_members()))
+    main()

@@ -30,7 +30,12 @@
           }}
         </button>
         @if (fileName()) {
-          <span class="text-gray-700">{{ fileName() }}</span>
+          <span class="text-gray-700">
+            {{ fileName() }}
+            @if (fileSize() !== undefined) {
+              ({{ fileSize() | parseBytes }})
+            }
+          </span>
         }
       </div>
 

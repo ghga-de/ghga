@@ -16,7 +16,9 @@
 
 """A repository for access requests."""
 
+import asyncio
 import logging
+from collections.abc import Mapping
 from datetime import timedelta
 from operator import attrgetter
 from typing import Any, cast
@@ -32,15 +34,20 @@ from ars.core.models import (
     AccessRequestPatchData,
     AccessRequestStatus,
     Dataset,
+    VerificationSmsData,
 )
+from ars.core.phone import mask_phone_number
 from ars.core.roles import DATA_STEWARD_ROLE
 from ars.ports.inbound.repository import AccessRequestRepositoryPort
 from ars.ports.outbound.access_grants import AccessGrantsPort
 from ars.ports.outbound.daos import (
     AccessRequestDaoPort,
     DatasetDaoPort,
+    PreconditionFailedError,
     ResourceNotFoundError,
+    race_condition_retries,
 )
+from ars.ports.outbound.sms import SmsNotifierPort
 from ghga_service_commons.auth.ghga import AuthContext, has_role
 from hexkit.utils import now_utc_ms_prec
 
@@ -78,6 +85,13 @@ class AccessRequestConfig(BaseSettings):
 class AccessRequestRepository(AccessRequestRepositoryPort):
     """A repository for access requests."""
 
+    # how often and in which interval (in seconds) to try revoking a grant whose
+    # request could not be stored as allowed
+    _revoke_tries = 3
+    _revoke_interval = 1.0
+    # how long to wait (in seconds) for reading back a request that may be stored
+    _read_back_timeout = 10.0
+
     def __init__(
         self,
         *,
@@ -85,8 +99,9 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         access_request_dao: AccessRequestDaoPort,
         dataset_dao: DatasetDaoPort,
         access_grants: AccessGrantsPort,
+        sms_notifier: SmsNotifierPort,
     ):
-        """Initialize with specific configuration and outbound adapter."""
+        """Initialize with specific configuration and outbound adapters."""
         self._max_lead_time = timedelta(days=config.access_upfront_max_days)
         self._min_duration = timedelta(days=config.access_grant_min_days)
         self._max_duration = timedelta(days=config.access_grant_max_days)
@@ -96,6 +111,9 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         self._request_dao = access_request_dao
         self._dataset_dao = dataset_dao
         self._access_grants = access_grants
+        self._sms_notifier = sms_notifier
+        # keeps the tasks discarding unused grants alive until they are done
+        self._discard_tasks: set[asyncio.Task[None]] = set()
 
     async def create(
         self, creation_data: AccessRequestCreationData, *, auth_context: AuthContext
@@ -169,7 +187,8 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
     ) -> AccessRequest:
         """Get the an existing access requests with the given ID.
 
-        Only data stewards are able to get requests created by other users.
+        Only data stewards are able to get requests created by other users,
+        and only they see the internal fields of a request.
 
         Raises:
         - `AccessRequestNotFoundError` if the specified request was not found
@@ -180,12 +199,10 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             log.error(authorization_error)
             raise authorization_error
 
+        is_data_steward = has_role(auth_context, DATA_STEWARD_ROLE)
         try:
             request = await self._request_dao.get_by_id(access_request_id)
-            if (
-                not has_role(auth_context, DATA_STEWARD_ROLE)
-                and str(request.user_id) != auth_context.id
-            ):
+            if not is_data_steward and str(request.user_id) != auth_context.id:
                 # if the user does not have access, report this as not found
                 raise ResourceNotFoundError(id_=access_request_id)
         except ResourceNotFoundError as error:
@@ -193,7 +210,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             log.error(not_found_error, extra={"access_request_id": access_request_id})
             raise not_found_error from error
 
-        return request
+        return request if is_data_steward else self._hide_internals(request)
 
     async def find_all(
         self,
@@ -242,7 +259,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         return requests
 
-    async def update(  # noqa: C901, PLR0912, PLR0915
+    async def update(
         self,
         access_request_id: UUID4,
         *,
@@ -252,6 +269,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         """Update the status or other fields of the access request.
 
         If the status is set to allowed, an IVA ID must be provided or already exist.
+        The access period is only checked when it is changed or the request is allowed.
 
         Only data stewards may use this method.
 
@@ -261,7 +279,30 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         - `AccessRequestClosed` if the access request was already processed
         - `AccessRequestMissingIva` if an IVA is needed but not provided
         - `AccessRequestInvalidDuration` if the end date isn't later than the start date
-        - `AccessRequestServerError` if the access grant could not be registered
+          or the access period has ended
+        - `AccessRequestServerError` if the access grant could not be registered,
+          or the request kept changing concurrently
+        """
+        async for attempt in race_condition_retries(
+            description=f"update access request {access_request_id}",
+            error_on_failure=self._concurrent_change_error,
+            logger=log,
+        ):
+            with attempt:
+                await self._update_once(
+                    access_request_id, patch_data=patch_data, auth_context=auth_context
+                )
+
+    async def _update_once(  # noqa: C901, PLR0912, PLR0915
+        self,
+        access_request_id: UUID4,
+        *,
+        patch_data: AccessRequestPatchData,
+        auth_context: AuthContext,
+    ) -> None:
+        """Read the access request once and update it as described in `update`.
+
+        Raises a `PreconditionFailedError` if the request has changed concurrently.
         """
         try:
             request = await self._request_dao.get_by_id(access_request_id)
@@ -288,32 +329,48 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             log.error(missing_iva_error)
             raise missing_iva_error
 
+        now = now_utc_ms_prec()
         access_starts = patch_data.access_starts or request.access_starts
         # force start to be not earlier than the current date
-        access_starts = max(now_utc_ms_prec(), access_starts)
+        access_starts = max(now, access_starts)
         access_ends = patch_data.access_ends or request.access_ends
-        if access_starts >= access_ends:
-            invalid_duration_error = self.AccessRequestInvalidDuration(
-                "Access end date must be later than access start date"
-            )
-            raise invalid_duration_error
-        # even the data steward may not extend the access grant ad infinitum
-        if access_ends > access_starts + self._max_extend_duration:
-            invalid_duration_error = self.AccessRequestInvalidDuration(
-                "Access duration is too long"
-            )
-            log.error(invalid_duration_error)
-            raise invalid_duration_error
 
-        update: dict[str, Any] = {
-            "iva_id": iva_id,
-            "access_starts": access_starts,
-            "access_ends": access_ends,
-        }
+        update: dict[str, Any] = {"iva_id": iva_id}
+
+        # check the period only when it changes or access is granted,
+        # so that a request whose period has passed can still be denied
+        period_changed = (
+            patch_data.access_starts is not None or patch_data.access_ends is not None
+        )
+        if period_changed or status == AccessRequestStatus.ALLOWED:
+            if access_starts >= access_ends:
+                # an end date that passed while the request was pending is not
+                # the steward's mistake, so name the cause instead
+                period_ended = (
+                    status == AccessRequestStatus.ALLOWED
+                    and patch_data.access_ends is None
+                    and access_ends <= now
+                )
+                invalid_duration_error = self.AccessRequestInvalidDuration(
+                    "The access period has ended; set a new end date before allowing"
+                    if period_ended
+                    else "Access end date must be later than access start date"
+                )
+                log.error(invalid_duration_error)
+                raise invalid_duration_error
+            # even the data steward may not extend the access grant ad infinitum
+            if access_ends > access_starts + self._max_extend_duration:
+                invalid_duration_error = self.AccessRequestInvalidDuration(
+                    "Access duration is too long"
+                )
+                log.error(invalid_duration_error)
+                raise invalid_duration_error
+            update["access_starts"] = access_starts
+            update["access_ends"] = access_ends
 
         if status != AccessRequestStatus.PENDING:
             update["status"] = status
-            update["status_changed"] = now_utc_ms_prec()
+            update["status_changed"] = now
             update["changed_by"] = user_id
 
         if patch_data.ticket_id is not None:
@@ -323,35 +380,271 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         if patch_data.note_to_requester is not None:
             update["note_to_requester"] = patch_data.note_to_requester or None
         modified_request = request.model_copy(update=update)
-        await self._request_dao.update(modified_request)
 
-        if status == AccessRequestStatus.ALLOWED:
-            # Try to register as download access grant
+        if status != AccessRequestStatus.ALLOWED:
+            await self._write_back(request, modified_request)
+            return
+
+        # Register the grant before storing the request, since storing it publishes
+        # the allowed status, which the requester is notified about by email.
+        try:
+            grant_id = await self._access_grants.grant_download_access(
+                user_id=request.user_id,
+                iva_id=cast(UUID4, iva_id),  # has already been checked above
+                dataset_id=request.dataset_id,
+                valid_from=access_starts,
+                valid_until=access_ends,
+            )
+            if not grant_id:
+                raise self._access_grants.AccessGrantsError(
+                    "Access grant could not be created"
+                )
+        except self._access_grants.AccessGrantsError as error:
+            server_error = self.AccessRequestServerError(
+                f"Could not register the download access grant: {error}"
+            )
+            log.error(server_error)
+            raise server_error from error
+
+        try:
+            await self._write_back(request, modified_request)
+        except (Exception, asyncio.CancelledError) as error:
+            # a grant without an allowed request would be duplicated on a retry,
+            # or outlive a request that has been changed in the meantime;
+            # shielded so that it also completes when the request is cancelled
+            maybe_stored = not isinstance(
+                error, PreconditionFailedError | ResourceNotFoundError
+            )
+            task = asyncio.create_task(
+                self._discard_grant(
+                    grant_id, modified_request, check_stored=maybe_stored
+                )
+            )
+            self._discard_tasks.add(task)
+            task.add_done_callback(self._discard_tasks.discard)
+            await asyncio.shield(task)
+            raise
+
+    async def _discard_grant(
+        self, grant_id: UUID4, allowed_request: AccessRequest, *, check_stored: bool
+    ) -> None:
+        """Revoke a grant registered for a request that may not have been stored.
+
+        With `check_stored`, the grant is kept if the request has been stored as
+        allowed nevertheless, e.g. when only publishing the change failed.
+        A write still in flight can be stored only after it has been checked; the
+        request is then allowed without a grant, which denies access but never gives
+        unapproved access. ARS cannot register that grant again: the user has to file
+        a new request, which a data steward allows.
+        """
+        try:
+            if check_stored and await self._is_stored(allowed_request):
+                return
+            await self._revoke_unused_grant(grant_id)
+        except asyncio.CancelledError:
+            log.critical(
+                "Revoking the unused access grant %s was cancelled",
+                grant_id,
+                extra={"grant_id": grant_id},
+            )
+            raise
+
+    async def _is_stored(self, allowed_request: AccessRequest) -> bool:
+        """Check whether the request has been stored as allowed by this change.
+
+        Returns False if that is unknown, so that the grant is revoked when in doubt.
+        """
+        try:
+            async with asyncio.timeout(self._read_back_timeout):
+                stored = await self._request_dao.get_by_id(allowed_request.id)
+        except Exception as error:
+            log.warning(
+                "Could not check whether access request %s was stored: %s."
+                + " Its grant is revoked, so if it was stored as allowed,"
+                + " the user has no access until a new request is allowed.",
+                allowed_request.id,
+                error,
+            )
+            return False
+        # the status change date identifies this change, since it is set to the
+        # current time and stored with the same precision
+        return (
+            stored.status == AccessRequestStatus.ALLOWED
+            and stored.status_changed == allowed_request.status_changed
+        )
+
+    async def wait_for_discarded_grants(self) -> None:
+        """Wait until all unused grants have been revoked, e.g. before shutdown."""
+        await asyncio.gather(*self._discard_tasks, return_exceptions=True)
+
+    async def _revoke_unused_grant(self, grant_id: UUID4) -> None:
+        """Revoke a grant whose access request could not be stored as allowed.
+
+        The revocation is retried, since a grant left behind gives access without
+        an allowed request. If it still fails, it is logged as critical with the
+        grant ID, so that the grant can be revoked by hand.
+        """
+        for attempt in range(1, self._revoke_tries + 1):
             try:
-                grant_id = await self._access_grants.grant_download_access(
-                    user_id=request.user_id,
-                    iva_id=cast(UUID4, iva_id),  # has already been checked above
-                    dataset_id=request.dataset_id,
-                    valid_from=access_starts,
-                    valid_until=access_ends,
-                )
-                if not grant_id:
-                    raise self._access_grants.AccessGrantsError(
-                        "Access grant could not be created"
+                await self._access_grants.revoke_download_access_grant(grant_id)
+            except self._access_grants.AccessGrantNotFoundError:
+                if attempt == 1:
+                    # later, it can mean that the previous attempt succeeded
+                    log.warning("The access grant %s to revoke was not found", grant_id)
+                return
+            except Exception as error:
+                if attempt >= self._revoke_tries:
+                    log.critical(
+                        "Could not revoke the unused access grant %s: %s",
+                        grant_id,
+                        error,
+                        extra={"grant_id": grant_id},
                     )
-            except self._access_grants.AccessGrantsError as error:
-                # roll back the status update
-                await self._request_dao.update(request)
-                server_error = self.AccessRequestServerError(
-                    f"Could not register the download access grant: {error}"
+                    return
+                log.warning(
+                    "Could not revoke the access grant %s, trying again: %s",
+                    grant_id,
+                    error,
                 )
-                log.error(server_error)
-                raise server_error from error
+                await asyncio.sleep(self._revoke_interval)
+            else:
+                return
+
+    async def send_verification_sms(
+        self,
+        access_request_id: UUID4,
+        *,
+        sms_data: VerificationSmsData,
+        auth_context: AuthContext,
+    ) -> str:
+        """Send an SMS with a verification code for the given access request.
+
+        The data steward sends the code from the data portal to a person authorized
+        to act for the DAC. That person confirms the approval by entering the code
+        in the helpdesk ticket, where the data steward compares it with the code
+        recorded in the internal note of the access request.
+
+        Only data stewards may use this method, and only for pending requests.
+
+        Returns the new internal note.
+
+        Raises:
+        - `AccessRequestNotFoundError` if the specified request was not found
+        - `AccessRequestAuthorizationError` if the user is not authorized
+        - `AccessRequestClosed` if the access request was already processed
+        """
+        if not (auth_context.id and has_role(auth_context, DATA_STEWARD_ROLE)):
+            authorization_error = self.AccessRequestAuthorizationError()
+            log.error(authorization_error)
+            raise authorization_error
+
+        # the note is the only record of the code outside the helpdesk ticket;
+        # it also serves as a simple audit trail until ARS writes audit records,
+        # which will then record the sending, but not the code
+        line = (
+            f"{now_utc_ms_prec().date().isoformat()}:"
+            f" Verification code {sms_data.code} sent"
+            f" to {mask_phone_number(sms_data.phone)} by {auth_context.name}."
+        )
+
+        # Record before sending: a line for an SMS that never went out does no harm,
+        # while a code that was sent but recorded nowhere cannot be verified.
+        note = line
+        async for attempt in race_condition_retries(
+            description=f"record a verification SMS for request {access_request_id}",
+            error_on_failure=self._concurrent_change_error,
+            logger=log,
+        ):
+            with attempt:
+                try:
+                    request = await self._request_dao.get_by_id(access_request_id)
+                except ResourceNotFoundError as error:
+                    not_found_error = self.AccessRequestNotFoundError()
+                    log.error(
+                        not_found_error,
+                        extra={"access_request_id": access_request_id},
+                    )
+                    raise not_found_error from error
+
+                if request.status != AccessRequestStatus.PENDING:
+                    invalid_state_error = self.AccessRequestClosed()
+                    log.error(invalid_state_error)
+                    raise invalid_state_error
+
+                note = (
+                    f"{request.internal_note}\n{line}"
+                    if request.internal_note
+                    else line
+                )
+                await self._write_back(
+                    request, request.model_copy(update={"internal_note": note})
+                )
+
+        await self._sms_notifier.send_sms(
+            phone=sms_data.phone, text=sms_data.text, key=str(access_request_id)
+        )
+        log.info(
+            "Verification SMS sent",
+            extra={
+                "access_request_id": access_request_id,
+                "steward_id": auth_context.id,
+            },
+        )
+        return note
+
+    async def _write_back(self, read: AccessRequest, changed: AccessRequest) -> None:
+        """Store the changed request only if the stored one is still as it was read.
+
+        A request is written back as a whole, so without this condition a concurrent
+        change, such as a status change, could be overwritten.
+
+        Raises a `PreconditionFailedError` if the stored request has changed.
+        """
+        await self._request_dao.update(
+            changed, precondition=read.model_dump(exclude={"id"})
+        )
+
+    def _concurrent_change_error(self) -> Exception:
+        """Create the error raised when a request keeps changing concurrently."""
+        return self.AccessRequestServerError(
+            "The access request is being changed concurrently"
+        )
+
+    async def _change_if_pending(
+        self, request: AccessRequest, changes: Mapping[str, Any], warning: str
+    ) -> None:
+        """Apply the changes to the request if it is pending.
+
+        Otherwise, log the warning if the request allows access. The request is read
+        again if it has changed concurrently.
+        """
+        read_again = False
+        async for attempt in race_condition_retries(
+            description=f"update access request {request.id}",
+            error_on_failure=self._concurrent_change_error,
+            logger=log,
+        ):
+            with attempt:
+                if read_again:
+                    request = await self._request_dao.get_by_id(request.id)
+                read_again = True
+                if request.status != AccessRequestStatus.PENDING:
+                    self._warn_if_allowed(request, warning)
+                    return
+                await self._write_back(request, request.model_copy(update=changes))
 
     @staticmethod
     def _hide_internals(request: AccessRequest) -> AccessRequest:
         """Blank out internal information in the request"""
         return request.model_copy(update={"changed_by": None, "internal_note": None})
+
+    def _warn_if_allowed(self, request: AccessRequest, message: str) -> None:
+        """Log the message if the request allows access now or in the future."""
+        if (
+            request.status == AccessRequestStatus.ALLOWED
+            and request.access_ends > now_utc_ms_prec()
+        ):
+            log.warning(message, request.id, request.dataset_id)
 
     async def register_dataset(self, dataset: Dataset) -> None:
         """Register a dataset in the repository.
@@ -361,27 +654,20 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         await self._dataset_dao.upsert(dataset)
         dataset_id = dataset.id
 
+        warning = (
+            "A valid access request with ID %s already exists"
+            " for the updated dataset with ID %s."
+        )
+        update = {
+            "dataset_title": dataset.title,
+            "dataset_description": dataset.description,
+            "dac_alias": dataset.dac_alias,
+            "dac_email": dataset.dac_email,
+        }
         async for request in self._request_dao.find_all(
             filter_={"dataset_id": dataset_id}
         ):
-            if request.status == AccessRequestStatus.PENDING:
-                update = {
-                    "dataset_title": dataset.title,
-                    "dataset_description": dataset.description,
-                    "dac_alias": dataset.dac_alias,
-                    "dac_email": dataset.dac_email,
-                }
-                updated_request = request.model_copy(update=update)
-                await self._request_dao.update(updated_request)
-            elif (
-                request.status == AccessRequestStatus.ALLOWED
-                and request.access_ends > now_utc_ms_prec()
-            ):
-                log.warning(
-                    "A valid access request with ID %s already exists for the updated dataset with ID %s.",
-                    request.id,
-                    dataset_id,
-                )
+            await self._change_if_pending(request, update, warning)
 
     async def delete_dataset(self, dataset_id: str) -> None:
         """Remove the dataset with the given ID.
@@ -396,27 +682,20 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             log.error(dataset_not_found_error, extra={"dataset_id": dataset_id})
             raise dataset_not_found_error from error
 
+        warning = (
+            "A valid access request with ID %s still exists"
+            " for the deleted dataset with ID %s."
+        )
         async for request in self._request_dao.find_all(
             filter_={"dataset_id": dataset_id}
         ):
-            if request.status == AccessRequestStatus.PENDING:
-                update = {
-                    "status": AccessRequestStatus.DENIED,
-                    "status_changed": now_utc_ms_prec(),
-                    "note_to_requester": "This dataset has been deleted",
-                    "changed_by": None,
-                }
-                updated_request = request.model_copy(update=update)
-                await self._request_dao.update(updated_request)
-            elif (
-                request.status == AccessRequestStatus.ALLOWED
-                and request.access_ends > now_utc_ms_prec()
-            ):
-                log.warning(
-                    "A valid access request with ID %s still exists for the deleted dataset with ID %s.",
-                    request.id,
-                    dataset_id,
-                )
+            update = {
+                "status": AccessRequestStatus.DENIED,
+                "status_changed": now_utc_ms_prec(),
+                "note_to_requester": "This dataset has been deleted",
+                "changed_by": None,
+            }
+            await self._change_if_pending(request, update, warning)
 
     async def get_dataset(self, dataset_id: str) -> Dataset:
         """Get the dataset with the given ID.

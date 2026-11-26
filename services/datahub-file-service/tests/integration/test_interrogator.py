@@ -16,13 +16,11 @@
 """Integration tests for the Interrogator class"""
 
 import asyncio
-import json
 import time
 from typing import cast
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
-import httpx2
 import pytest
 from pydantic import SecretBytes
 
@@ -31,7 +29,7 @@ from dhfs.core.interrogator import Interrogator
 from dhfs.core.models import FileUpload
 from dhfs.ports.outbound.interrogator import InterrogatorPort
 from dhfs.ports.outbound.s3 import S3ClientPort
-from tests.fixtures.central_api import capture, fail_to_connect, respond
+from ghga_service_commons.http.mock_api import fail_to_connect, respond
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import (
     EncryptedObject,
@@ -90,13 +88,10 @@ async def test_interrogate_new_files(joint_fixture: JointFixture, caplog):
         200, json=serialized_file_uploads
     )
 
-    # Mock the endpoint we upload the file interrogation report to, tracking reports
-    received_reports: list[dict] = []
-    joint_fixture.central_api.on_submit_report = capture(received_reports)
-
     # Process all files
     with caplog.at_level("INFO"):
-        await joint_fixture.interrogator.interrogate_new_files()
+        concluded_a_file = await joint_fixture.interrogator.interrogate_new_files()
+    assert concluded_a_file
 
     # Check the interrogation bucket
     s3_client: S3Client = joint_fixture.interrogator._s3_client  # type: ignore
@@ -106,6 +101,7 @@ async def test_interrogate_new_files(joint_fixture: JointFixture, caplog):
     assert interrogation_files.isdisjoint(f.id for f in file_uploads)
 
     # Verify that we received reports for all files
+    received_reports = joint_fixture.central_api.submitted_reports
     assert len(received_reports) == 2, (
         f"Expected 2 reports, got {len(received_reports)}"
     )
@@ -129,6 +125,17 @@ async def test_interrogate_new_files(joint_fixture: JointFixture, caplog):
         assert len(report["encrypted_parts_md5"]) > 0
         assert isinstance(report["encrypted_parts_sha256"], list)
         assert len(report["encrypted_parts_sha256"]) > 0
+        assert report["wall_time_seconds"] >= 0
+        assert set(report["stage_seconds"]) == {
+            "download",
+            "decrypt",
+            "reencrypt",
+            "verify",
+            "digest",
+            "fold",
+            "upload",
+        }
+        assert all(seconds >= 0 for seconds in report["stage_seconds"].values())
 
     # Verify the per-file phase-timing log was emitted for each file
     phase_timing_logs = [
@@ -173,28 +180,13 @@ async def test_report_failure(joint_fixture: JointFixture):
     file_id = uuid4()
     failure_reason = "Test failure: File decryption failed"
 
-    # Track the payload received by the handler
-    received_payload = None
-
-    def capture_payload(request: httpx2.Request) -> httpx2.Response:
-        """Handler to capture the payload sent to the API"""
-        nonlocal received_payload
-        received_payload = request.content.decode("utf-8")
-        return httpx2.Response(status_code=201, json={})
-
-    # Mock the interrogation report submission endpoint with the handler
-    joint_fixture.central_api.on_submit_report = capture_payload
-
     # Call report_failure
-    await joint_fixture.interrogator.report_failure(
+    assert await joint_fixture.interrogator.report_failure(
         file_id=file_id, reason=failure_reason
     )
 
-    # Verify the payload was received
-    assert received_payload is not None, "No payload was received"
-
-    # Parse the JSON payload
-    payload = json.loads(received_payload)
+    # Verify the one report was submitted
+    [payload] = joint_fixture.central_api.submitted_reports
 
     # Verify the payload structure and content
     assert payload["file_id"] == str(file_id)
@@ -258,8 +250,9 @@ async def test_api_down_during_report_submission(
     # Monkeypatch the uuid4 function so it produces the above ID
     monkeypatch.setattr("dhfs.core.interrogator.uuid4", lambda: interrogation_object_id)
 
-    # Processing should complete without raising despite the failed submission
-    await joint_fixture.interrogator.interrogate_new_files()
+    # Processing should complete without raising despite the failed submission, and
+    #  the file isn't concluded, because it stays waiting
+    assert not await joint_fixture.interrogator.interrogate_new_files()
 
     # Verify the re-encrypted file is still in the interrogation bucket
     s3_client: S3Client = joint_fixture.interrogator._s3_client  # type: ignore
@@ -303,8 +296,9 @@ async def test_file_not_in_inbox(joint_fixture: JointFixture, caplog):
     )
     with caplog.at_level("WARNING"):
         caplog.clear()
-        await joint_fixture.interrogator.interrogate_new_files()
+        concluded_a_file = await joint_fixture.interrogator.interrogate_new_files()
     assert err_msg in caplog.text
+    assert not concluded_a_file
 
 
 async def test_file_decryption_error(joint_fixture: JointFixture):
@@ -366,21 +360,18 @@ async def test_file_decryption_error(joint_fixture: JointFixture):
         200, json=[file_upload.model_dump(mode="json")]
     )
 
-    # Mock the report submission endpoint, tracking the failure reports received
-    received_reports: list[dict] = []
-    joint_fixture.central_api.on_submit_report = capture(received_reports)
-
     # Process files - should handle the decryption error gracefully
-    await joint_fixture.interrogator.interrogate_new_files()
+    assert await joint_fixture.interrogator.interrogate_new_files()
 
     # Verify that a failure report was submitted
-    assert len(received_reports) == 1, "Expected one failure report"
-    report = received_reports[0]
+    [report] = joint_fixture.central_api.submitted_reports
     assert report["passed"] is False, "Report should indicate failure"
     assert report["file_id"] == str(file_upload.id)
 
     # The important thing is that passed=False and a report was submitted
     assert report["reason"] is not None, "Reason field should exist"
+    assert report["wall_time_seconds"] is None
+    assert report["stage_seconds"] is None
 
     # Verify that the interrogation bucket is empty (upload was aborted/cleaned up)
     s3_client: S3Client = joint_fixture.interrogator._s3_client  # type: ignore
@@ -435,12 +426,6 @@ async def test_etag_doesnt_match_local_md5(
         200, json=[file_upload.model_dump(mode="json")]
     )
 
-    # Guard: if any report is submitted, the test should fail immediately
-    def report_should_not_be_called(request: httpx2.Request) -> httpx2.Response:
-        raise RuntimeError("No interrogation report should have been submitted!")
-
-    joint_fixture.central_api.on_submit_report = report_should_not_be_called
-
     # Patch complete_upload to return a wrong ETag, simulating an S3 integrity mismatch
     s3_client: S3Client = joint_fixture.interrogator._s3_client  # type: ignore
     original_complete = s3_client.complete_upload
@@ -468,8 +453,9 @@ async def test_etag_doesnt_match_local_md5(
     assert "Removed object from the" in caplog.text
     assert "bucket - cleanup complete." in caplog.text
 
-    # Verify the inconclusive-retry warning was logged (no report sent, retry later)
+    # Verify the inconclusive-retry warning was logged, and no report was sent
     assert "Unable to conclusively process file - will retry later." in caplog.text
+    assert not joint_fixture.central_api.submitted_reports
     assert "Encrypted content checksum did not match the expected value." in caplog.text
 
     # Verify the interrogation bucket is empty after cleanup
@@ -492,6 +478,12 @@ async def test_central_api_error_on_fetch_new_files(
         await joint_fixture.interrogator.interrogate_new_files()
 
     assert "The GHGA Central API returned an error response" in caplog.text
+
+
+async def test_empty_response_is_inconclusive(joint_fixture: JointFixture):
+    """A round in which the Central API returns no files is inconclusive."""
+    joint_fixture.central_api.on_fetch_new_uploads = respond(200, json=[])
+    assert not await joint_fixture.interrogator.interrogate_new_files()
 
 
 async def test_central_api_bad_format_on_fetch_new_files(
@@ -524,7 +516,7 @@ async def test_central_api_error_on_report_success(
     joint_fixture.central_api.on_submit_report = respond(status_code)
 
     with caplog.at_level("ERROR"):
-        await joint_fixture.interrogator.report_success(
+        assert not await joint_fixture.interrogator.report_success(
             file_id=uuid4(),
             bucket_id=config.interrogation_bucket_id,
             object_id=uuid4(),
@@ -552,7 +544,7 @@ async def test_central_api_error_on_report_failure(
     joint_fixture.central_api.on_submit_report = respond(status_code)
 
     with caplog.at_level("ERROR"):
-        await joint_fixture.interrogator.report_failure(
+        assert not await joint_fixture.interrogator.report_failure(
             file_id=uuid4(), reason="test failure"
         )
 
@@ -572,7 +564,7 @@ async def test_connection_failed_on_report_failure(
     joint_fixture.central_api.on_submit_report = fail_to_connect()
 
     with caplog.at_level("ERROR"):
-        await joint_fixture.interrogator.report_failure(
+        assert not await joint_fixture.interrogator.report_failure(
             file_id=uuid4(), reason="test failure"
         )
 
@@ -620,6 +612,38 @@ async def _stage_batch(
     )
     joint_fixture.central_api.on_submit_report = respond(201, json={})
     return file_uploads
+
+
+@pytest.mark.parametrize(
+    "statuses, concluded_a_file",
+    [((201, 409), True), ((409, 201), True), ((409, 409), False)],
+    ids=["first_accepted", "second_accepted", "all_rejected"],
+)
+@pytest.mark.parametrize("report", ["success", "failure"])
+async def test_round_concludes_with_an_accepted_report(
+    joint_fixture: JointFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    statuses: tuple[int, int],
+    concluded_a_file: bool,
+    report: str,
+):
+    """A round concludes a file only if the Central API accepts its report, because
+    a file whose report was rejected stays waiting.
+    """
+    await _stage_batch(joint_fixture, count=2)
+    responses = iter([respond(status) for status in statuses])
+    joint_fixture.central_api.on_submit_report = lambda request: next(responses)(
+        request
+    )
+    if report == "failure":
+        monkeypatch.setattr(
+            joint_fixture.interrogator,
+            "interrogate_file",
+            AsyncMock(side_effect=InterrogatorPort.DecryptionError()),
+        )
+
+    assert await joint_fixture.interrogator.interrogate_new_files() is concluded_a_file
+    assert len(joint_fixture.central_api.submitted_reports) == 2
 
 
 async def test_files_are_processed_one_at_a_time(joint_fixture: JointFixture):
@@ -694,9 +718,6 @@ async def test_parts_completing_out_of_order(joint_fixture: JointFixture):
     expected_part_count = len(list(file_upload.calc_encrypted_part_ranges()))
     assert expected_part_count > 1, "test needs a multipart file to be meaningful"
 
-    received_reports: list[dict] = []
-    joint_fixture.central_api.on_submit_report = capture(received_reports)
-
     # Delay earlier parts the most, so downloads finish in reverse order
     interrogator = cast(Interrogator, joint_fixture.interrogator)
     original_download = interrogator._download_part
@@ -708,8 +729,7 @@ async def test_parts_completing_out_of_order(joint_fixture: JointFixture):
     with patch.object(interrogator, "_download_part", staggered_download):
         await interrogator.interrogate_file(file_upload)
 
-    assert len(received_reports) == 1
-    report = received_reports[0]
+    [report] = joint_fixture.central_api.submitted_reports
     assert report["passed"] is True
     assert len(report["encrypted_parts_md5"]) == expected_part_count
     assert len(report["encrypted_parts_sha256"]) == expected_part_count
@@ -854,14 +874,6 @@ async def test_uncategorized_error_is_retried_not_reported(
     """
     file_uploads = await _stage_batch(joint_fixture, count=2)
 
-    received_reports = []
-
-    def capture_report(request: httpx2.Request) -> httpx2.Response:
-        received_reports.append(json.loads(request.content))
-        return httpx2.Response(status_code=201, json={})
-
-    joint_fixture.central_api.on_submit_report = capture_report
-
     interrogator = cast(Interrogator, joint_fixture.interrogator)
     boom = TypeError("something the pipeline does not model")
     doomed_file_id = file_uploads[0].id
@@ -883,6 +895,7 @@ async def test_uncategorized_error_is_retried_not_reported(
     assert str(boom) in caplog.text
 
     # The second file was processed normally and reported as a success
+    received_reports = joint_fixture.central_api.submitted_reports
     assert [report["file_id"] for report in received_reports] == [
         str(file_uploads[1].id)
     ]

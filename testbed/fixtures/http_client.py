@@ -49,7 +49,7 @@ class HttpClient(Client):
 
 
 @fixture(name="http", scope="session")
-def http_fixture(config: Config) -> Generator[HttpClient, None, None]:
+def http_fixture(config: Config) -> Generator[HttpClient]:
     """Pytest fixture for tests using an HTTP client."""
     auth_basic = config.auth_basic
     if auth_basic:

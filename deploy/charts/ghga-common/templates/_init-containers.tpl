@@ -28,6 +28,18 @@
   {{- if and (not $container.env) $envVars }}
   env: {{- include "common.tplvalues.render" (dict "value" $envVars "context" $) | nindent 4 }}
   {{- end }}
+  {{- /* the same envFrom as the main container: migrate-db reads the full service config */}}
+  {{- if or $.Values.envVarsConfigMap $.Values.envVarsSecret }}
+  envFrom:
+    {{- if $.Values.envVarsConfigMap }}
+    - configMapRef:
+        name: {{ include "common.tplvalues.render" (dict "value" $.Values.envVarsConfigMap "context" $) }}
+    {{- end }}
+    {{- if $.Values.envVarsSecret }}
+    - secretRef:
+        name: {{ include "common.tplvalues.render" (dict "value" $.Values.envVarsSecret "context" $) }}
+    {{- end }}
+  {{- end }}
   {{- if $.Values.containerSecurityContext.enabled }}
   securityContext: {{- omit $.Values.containerSecurityContext "enabled" | toYaml | nindent 4 }}
   {{- end }}

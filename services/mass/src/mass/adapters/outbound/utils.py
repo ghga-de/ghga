@@ -22,12 +22,6 @@ from typing import Any
 from hexkit.custom_types import JsonObject
 from mass.core import models
 
-SORT_ORDER_CONVERSION: JsonObject = {
-    "ascending": 1,
-    "descending": -1,
-    "relevance": {"$meta": "textScore"},
-}
-
 
 def name_from_key(key: str) -> str:
     """Auto generate a suitable name from a key"""
@@ -47,8 +41,8 @@ def pipeline_match_filters_stage(*, filters: list[models.Filter]) -> JsonObject:
         filter_values[item.key].append(item.value)
     segment = []
     for key, values in filter_values.items():
-        if key != "id_":
-            key = "content." + key
+        # the ID is stored as _id, everything else lives under content
+        key = "_id" if key == "id_" else f"content.{key}"
         segment.append(
             {
                 "$or": [
@@ -81,10 +75,8 @@ def pipeline_facet_sort_and_paginate(
     """Uses a list of facetable fields to build the subquery for faceting"""
     segment: dict[str, list[JsonObject]] = {}
 
-    for facet in facet_fields:
-        name = facet.name
-        if not name:
-            name = name_from_key(facet.key)
+    # key each facet by position, since a name could clash with total_count or items
+    for index, facet in enumerate(facet_fields):
         pipeline: list[JsonObject] = [
             {
                 "$unwind": {
@@ -119,38 +111,44 @@ def pipeline_facet_sort_and_paginate(
                 {"$sort": {"value": 1}},
             )
         )
-        segment[name] = pipeline
+        segment[f"facet_{index}"] = pipeline
 
-    # this is the total number of hits, but pagination can mean only a few are returned
-    segment["count"] = [{"$count": "total"}]
+    # this is the total number of results, but pagination can mean only a few are returned
+    segment["total_count"] = [{"$count": "total"}]
+
+    # a limit of zero asks for the facets and the total count only, and since
+    # MongoDB has no $limit of zero, the items are left to default to an empty list
+    if limit == 0:
+        return {"$facet": segment}
 
     # rename the ID field to id_ to match our model
-    segment["hits"] = [{"$addFields": {"id_": "$_id"}}, {"$unset": "_id"}]
+    items: list[JsonObject] = [{"$addFields": {"id_": "$_id"}}, {"$unset": "_id"}]
 
     # apply sorting parameters (maybe some of them are unselected fields)
     if sort:
-        segment["hits"].append({"$sort": sort})
+        items.append({"$sort": sort})
 
     # pick only the selected fields
     if project:
-        segment["hits"].append({"$project": project})
+        items.append({"$project": project})
 
     # apply skip and limit for pagination
     if skip > 0:
-        segment["hits"].append({"$skip": skip})
+        items.append({"$skip": skip})
     if limit:
-        segment["hits"].append({"$limit": limit})
+        items.append({"$limit": limit})
+    segment["items"] = items
 
     return {"$facet": segment}
 
 
 def pipeline_project(*, facet_fields: list[models.FieldLabel]) -> JsonObject:
     """Reshape the query so the facets are contained in a top level object"""
-    segment: dict[str, Any] = {"hits": 1, "facets": []}
-    segment["count"] = {"$arrayElemAt": ["$count.total", 0]}
+    segment: dict[str, Any] = {"items": 1, "facets": []}
+    segment["total_count"] = {"$arrayElemAt": ["$total_count.total", 0]}
 
     # add a segment for each facet to summarize the options
-    for facet in facet_fields:
+    for index, facet in enumerate(facet_fields):
         key = facet.key
         name = facet.name
         if not name:
@@ -159,7 +157,7 @@ def pipeline_project(*, facet_fields: list[models.FieldLabel]) -> JsonObject:
             {
                 "key": key,
                 "name": name,
-                "options": f"${name}",
+                "options": f"$facet_{index}",
             }
         )
     return {"$project": segment}
@@ -171,7 +169,7 @@ def build_pipeline(  # noqa: PLR0913
     selected_fields: list[models.FieldLabel],
     query: str,
     filters: list[models.Filter],
-    sorting_parameters: list[models.SortingParameter],
+    sort: list[str],
     skip: int = 0,
     limit: int | None = None,
 ) -> list[JsonObject]:
@@ -205,13 +203,17 @@ def build_pipeline(  # noqa: PLR0913
         else None
     )
 
-    # turn the sorting parameters into a formatted pipeline $sort
-    sort: dict[str, Any] = {
-        param.field
-        if param.field == "id_"
-        else f"content.{param.field}": SORT_ORDER_CONVERSION[param.order.value]
-        for param in sorting_parameters
-    }
+    # turn the sort specification into a formatted pipeline $sort
+    mongodb_sort: dict[str, Any] = {}
+    for spec in sort:
+        field = spec.removeprefix("-")
+        if field == models.RELEVANCE:
+            # MongoDB ignores the field name when sorting by text score
+            mongodb_sort["score"] = {"$meta": "textScore"}
+        else:
+            # the ID has been renamed to id_, everything else lives under content
+            key = field if field == "id_" else f"content.{field}"
+            mongodb_sort[key] = 1 if field == spec else -1
 
     # define facets from preliminary results and reshape data
     pipeline.append(
@@ -220,7 +222,7 @@ def build_pipeline(  # noqa: PLR0913
             skip=skip,
             limit=limit,
             project=project,
-            sort=sort,
+            sort=mongodb_sort,
         )
     )
 

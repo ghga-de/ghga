@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-01
-amended: 2026-10-07
+amended: 2026-10-19
 tags: [deploy, release]
 related: [ADR-0027, ADR-0037, ADR-0038, ADR-0046]
 ---
@@ -56,6 +56,10 @@ Every member chart already starts its service by that script (`command: [<packag
 - **Scope.**
   Only the generated member charts are published, to `oci://ghcr.io/ghga-de/ghga/charts`.
   `aai`, `ghga-common` and `ghga-demo` are not; `ghga-common` is bundled into each chart.
+
+  **Amended 2026-10-19:** the dev images and dev charts on GHCR are public, so a cluster or a developer pulls them without credentials.
+  GHCR makes a new package private, which nothing here had chosen.
+  They hold no code the public repo does not, and the release images on Docker Hub are already public on the same Docker Hardened Images bases.
 - **No promise.**
   Like `:dev`, dev charts are integration state, not releases.
   They are not signed, and they are published regardless of `ci.yaml` on the merge commit.

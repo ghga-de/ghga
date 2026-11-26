@@ -15,12 +15,16 @@
 
 """Unit tests for the S3Client"""
 
+import logging
+from datetime import timedelta
+
 import pytest
 import pytest_asyncio
 
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.providers.testing.objstorage import InMemObjectStorage
+from hexkit.utils import now_utc_ms_prec
 from tests_ucs.fixtures import ConfigFixture
 from tests_ucs.fixtures.in_mem_obj_storage import InMemS3ObjectStorages
 from tests_ucs.fixtures.utils import TEST_BUCKET, TEST_STORAGE_ALIAS, make_file_upload
@@ -469,3 +473,60 @@ async def test_generic_storage_error_raises_s3_operation_error(
     # Call the method and verify that it was translated as the generic S3OperationError
     with pytest.raises(S3ClientPort.S3OperationError):
         await getattr(s3_client, method_name)(**kwargs)
+
+
+async def test_delete_orphaned_objects_keeps_young_objects(
+    s3_client: S3ClientPort, object_storages: ObjectStorages
+):
+    """Test that only objects last modified before the cutoff are deleted, and that
+    objects without a last-modified time are kept.
+    """
+    bucket_id, storage = object_storages.for_alias(TEST_STORAGE_ALIAS)
+    cutoff = now_utc_ms_prec() - timedelta(hours=6)
+    last_modified_by_object_id = {
+        "old-object": cutoff - timedelta(hours=1),
+        "young-object": cutoff + timedelta(hours=1),
+        "object-without-timestamp": None,
+    }
+    for object_id in last_modified_by_object_id:
+        upload_id = await storage.init_multipart_upload(
+            bucket_id=bucket_id, object_id=object_id
+        )
+        await storage.complete_multipart_upload(
+            upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
+        )
+
+    async def get_object_metadata(*, bucket_id: str, object_id: str) -> dict:
+        last_modified = last_modified_by_object_id[object_id]
+        return {} if last_modified is None else {"LastModified": last_modified}
+
+    storage.get_object_metadata = get_object_metadata
+
+    await s3_client.delete_orphaned_objects(
+        storage_alias=TEST_STORAGE_ALIAS,
+        object_ids=set(last_modified_by_object_id),
+        cutoff=cutoff,
+    )
+
+    remaining = await s3_client.list_object_ids(storage_alias=TEST_STORAGE_ALIAS)
+    assert remaining == {"young-object", "object-without-timestamp"}
+
+
+async def test_delete_orphaned_objects_skips_missing_objects(
+    s3_client: S3ClientPort, caplog: pytest.LogCaptureFixture
+):
+    """Test that an orphaned object that disappeared after listing is skipped
+    without an error and counted as already gone.
+    """
+    caplog.clear()
+    with caplog.at_level(logging.INFO, logger="ucs.adapters.outbound.s3"):
+        await s3_client.delete_orphaned_objects(
+            storage_alias=TEST_STORAGE_ALIAS,
+            object_ids={"vanished-object"},
+            cutoff=now_utc_ms_prec(),
+        )
+
+    assert [r for r in caplog.records if r.levelno == logging.ERROR] == []
+    summary = caplog.records[-1]
+    assert summary.getMessage().startswith("Cleaned up 0 orphaned object(s)")
+    assert summary.already_gone_count == 1  # type: ignore[attr-defined]

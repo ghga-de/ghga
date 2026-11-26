@@ -12,7 +12,7 @@ metadata:
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
   annotations:
-    configmap-hash: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
+    configmap-hash: {{ (include (print $.Template.BasePath "/configmap.yml") . | fromYaml).data | toYaml | sha256sum }}
     {{- if .Values.commonAnnotations }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
     {{- end }}
@@ -29,7 +29,7 @@ spec:
   template:
     metadata:
       annotations:
-        configmap-hash: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
+        configmap-hash: {{ (include (print $.Template.BasePath "/configmap.yml") . | fromYaml).data | toYaml | sha256sum }}
         {{- if .Values.podAnnotations }}
         {{- .Values.podAnnotations | toYaml | nindent 8 }}
         {{- end }}
@@ -38,13 +38,6 @@ spec:
              CronJobs need none: their pods are created anew and get the current image. */}}
         {{- with index (.Values.global.localImageIds | default dict) (include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global "chart" .Chart)) }}
         local-image-id: {{ . | quote }}
-        {{- end }}
-        {{- if .Values.vaultAgent.enabled }}
-        {{- if .Values.vaultAgent.singleTemplate }}
-        {{- include "ghga-common.vaultAgentAnnotationsSingleTemplate" . | nindent 8 }}
-        {{- else }}
-        {{- include "ghga-common.vaultAgentAnnotations" . | nindent 8 }}
-        {{- end }}
         {{- end }}
         {{- /* NB: no helm.sh/revision here — stamping the release revision into the
              pod template rolls EVERY deployment on EVERY upgrade, which combined
@@ -58,8 +51,9 @@ spec:
     spec:
       securityContext: {{- include "common.tplvalues.render" (dict "value" .Values.podSecurityContext "context" $) | nindent 8 }}
       serviceAccountName: {{ include "common.names.fullname" . }}
-      {{/* allows Vault Agent to send (term) signals to the application process (namespace) */}}
-      shareProcessNamespace: {{ ternary true .Values.shareProcessNamespace .Values.vaultAgent.enabled }}
+      {{- /* A Deployment may share it alone: a secrets sidecar that signals the app to
+           reload would kill a Job's or CronJob's run instead. */}}
+      shareProcessNamespace: {{ dig "shareProcessNamespace" .Values.shareProcessNamespace .Values.deployment }}
       {{- include "common.images.renderPullSecrets" (dict "images" (list .Values.image) "context" $) | nindent 6 }}
       {{- if or .Values.initContainers .Values.migrationInitContainer.enabled }}
       initContainers: {{ include "ghga-common.initContainers" . | nindent 8 }}

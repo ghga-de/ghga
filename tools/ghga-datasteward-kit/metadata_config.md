@@ -20,15 +20,15 @@
   The file name corresponds to the event key.
   The event type is stored together with the payload in the event file.
 
-- **`accession_store_path`** *(string, format: path)*: A file for storing the already registered accessions.
+- **`accession_store_path`** *(string, format: path)*: A JSON file holding the random blocks of the study PIDs minted so far, by year, so that none is minted twice, and the accessions minted before study PIDs.
 
-- **`prefix_mapping`** *(object)*: Specifies the ID prefix (values) per resource type (keys).
-  Can contain additional properties.
+- **`study_class_name`** *(string)*: Name of the metadata model class whose entity takes the study PID.
+  The model must anchor it on the 'studies' slot.
+  Default: `"Study"`.
 
-  - **Additional Properties** *(string)*
-
-- **`suffix_length`** *(integer)*: Length of the numeric ID suffix.
-  Default: `8`.
+- **`dataset_class_name`** *(string)*: Name of the metadata model class whose entities take dataset PIDs.
+  The model must anchor it.
+  Default: `"Dataset"`.
 
 - **`metadata_model_path`** *(string, format: path)*: The path to the metadata model defined in LinkML.
 
@@ -54,6 +54,11 @@
 
   - **`accession_slot_description`** *(string)*: The description of the slot to contain the accessions to.
     Default: `"The accession for an entity."`.
+
+  - **`study_class_name`** *(string)*: Name of the metadata model class whose entity takes the study PID.
+    The accessions of every class missing from the accession map are composed from that PID and the alias.
+    dskit sets it from its top-level 'study_class_name'.
+    Default: `"Study"`.
 
 - <a id="definitions/EmbeddingProfile"></a>**`EmbeddingProfile`** *(object)*: A model for describing a profile for embedding referenced classes into a class of interest of a metadata model.
   Please note, only the embedding for anchored classes that are referenced by this source class can be changed.

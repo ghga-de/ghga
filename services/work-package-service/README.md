@@ -98,6 +98,9 @@ The service requires the following configuration parameters:
   Minimum: `0`.
   Maximum: `1`.
   Default: `1.0`.
+- <a id="properties/enable_otel_metrics"></a>**`enable_otel_metrics`** *(boolean)*: Also export metrics via OTLP.
+  Requires `enable_opentelemetry` and a collector with a metrics pipeline.
+  Default: `false`.
 - <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture.
   Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE".
   Default: `"INFO"`.
@@ -160,7 +163,14 @@ The service requires the following configuration parameters:
   "mongodb://localhost:27017"
   ```
 
-- <a id="properties/db_name"></a>**`db_name`** *(string)*: Default: `"work-packages"`.
+- <a id="properties/db_name"></a>**`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
+
+  Examples:
+
+  ```json
+  "my-database"
+  ```
+
 - <a id="properties/mongo_timeout"></a>**`mongo_timeout`**: Timeout in seconds for API calls to MongoDB.
   The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution.
   When the timeout expires, PyMongo raises a timeout exception.

@@ -24,10 +24,16 @@ from typing import cast
 from pydantic import UUID4, SecretBytes
 
 from fis.config import Config
+from fis.constants import MAX_FILES_PER_REQUEST
 from fis.core import models
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
-from fis.ports.outbound.dao import FileDao, InterrogationReportDao
+from fis.ports.outbound.dao import (
+    FileDao,
+    InterrogationReportDao,
+    UploadBoxPriorityDao,
+)
 from fis.ports.outbound.event_pub import EventPubTranslatorPort
+from fis.ports.outbound.interrogation_queue import InterrogationQueuePort
 from fis.ports.outbound.secrets import SecretsClientPort
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import (
@@ -41,24 +47,31 @@ from hexkit.utils import now_utc_ms_prec
 STATES = event_schemas.FileUploadState
 log = logging.getLogger(__name__)
 
+# DHFS sets these afresh on every submission, so they don't tell reports apart.
+_TIMING_FIELDS = {"interrogated_at", "wall_time_seconds", "stage_seconds"}
+
 
 class InterrogationHandler(InterrogationHandlerPort):
     """This is the core class that manages `FileUnderInterrogation` and
     `InterrogationReport` objects.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         config: Config,
         file_dao: FileDao,
         interrogation_report_dao: InterrogationReportDao,
+        upload_box_priority_dao: UploadBoxPriorityDao,
+        interrogation_queue: InterrogationQueuePort,
         event_publisher: EventPubTranslatorPort,
         secrets_client: SecretsClientPort,
     ):
         self._config = config
         self._file_dao = file_dao
         self._interrogation_report_dao = interrogation_report_dao
+        self._upload_box_priority_dao = upload_box_priority_dao
+        self._interrogation_queue = interrogation_queue
         self._publisher = event_publisher
         self._secrets_client = secrets_client
 
@@ -142,9 +155,9 @@ class InterrogationHandler(InterrogationHandlerPort):
             )
             return False
         else:
-            # See if the reports differ - the timestamps are immaterial here
-            report_subset = report.model_dump(exclude={"interrogated_at", "secret"})
-            stored_subset = stored_report.model_dump(exclude={"interrogated_at"})
+            # See if the reports differ - the timing differs on every resend
+            report_subset = report.model_dump(exclude=_TIMING_FIELDS | {"secret"})
+            stored_subset = stored_report.model_dump(exclude=_TIMING_FIELDS)
             # List different fields
             different_fields = {
                 k for k, v in report_subset.items() if stored_subset[k] != v
@@ -308,6 +321,10 @@ class InterrogationHandler(InterrogationHandlerPort):
           unknown (should not happen in normal operation), log a warning and ignore.
         - 'failed_interrogation': ignored, since FIS already recorded the failure while
           handling the interrogation report.
+
+        For a known file without a `box_id`, any event other than 'init' fills it in
+        first, even an outdated one. Files stored before FIS kept the `box_id` lack it
+        until UCS republishes its events.
         """
         if file.state == "init":
             return
@@ -337,6 +354,16 @@ class InterrogationHandler(InterrogationHandlerPort):
                 extra={"file_id": file.id},
             )
             return
+
+        # Fill in a missing box ID even from an old event, which a republish sends
+        if local_file.box_id is None and file.box_id is not None:
+            local_file = local_file.model_copy(update={"box_id": file.box_id})
+            await self._file_dao.update(local_file)
+            log.info(
+                "Filled in the missing box ID of file %s.",
+                file.id,
+                extra={"file_id": file.id, "box_id": file.box_id},
+            )
 
         # Ignore if outdated
         if local_file.state_updated >= file.state_updated:
@@ -409,17 +436,12 @@ class InterrogationHandler(InterrogationHandlerPort):
     async def get_files_not_yet_interrogated(
         self, *, storage_alias: str
     ) -> list[models.BaseFileInformation]:
-        """Return a list of not-yet-interrogated files for a Data Hub (storage_alias)"""
-        files = [
-            models.BaseFileInformation(**x.model_dump())
-            async for x in self._file_dao.find_all(
-                filter_={
-                    "storage_alias": storage_alias,
-                    "state": "inbox",
-                    "interrogated": False,
-                }
-            )
-        ]
+        """Return up to `MAX_FILES_PER_REQUEST` not-yet-interrogated files for a Data
+        Hub (storage_alias), highest priority first.
+        """
+        files = await self._interrogation_queue.get_waiting_files(
+            storage_alias=storage_alias, limit=MAX_FILES_PER_REQUEST
+        )
         log.info(
             "Fetched list of %i files for storage_alias %s.", len(files), storage_alias
         )
@@ -443,3 +465,47 @@ class InterrogationHandler(InterrogationHandlerPort):
             log.info("Local copy deleted for file ID %s.", file_id)
         except ResourceNotFoundError:
             log.info("Did not find file with ID %s; presumed already deleted.", file_id)
+
+    async def store_upload_box_priority(
+        self, *, priority: models.UploadBoxPriority
+    ) -> None:
+        """Store the upload box priority list.
+
+        Ignore the list if its version is not higher than the stored one's.
+        """
+        with suppress(ResourceNotFoundError):
+            stored_priority = await self._upload_box_priority_dao.get_by_id(priority.id)
+            if priority.version <= stored_priority.version:
+                log.info(
+                    "Ignored upload box priority version %i because it appears to be old.",
+                    priority.version,
+                )
+                return
+
+        await self._upload_box_priority_dao.upsert(priority)
+        log.info(
+            "Stored upload box priority version %i with %i boxes.",
+            priority.version,
+            len(priority.entries),
+        )
+
+    async def clear_upload_box_priority(self, *, priority_id: str) -> None:
+        """Empty the stored upload box priority list, keeping its version.
+
+        Keeping the version stops a replayed older event from restoring the list.
+        If no list is stored, do nothing.
+        """
+        try:
+            stored_priority = await self._upload_box_priority_dao.get_by_id(priority_id)
+        except ResourceNotFoundError:
+            log.info("Received a deleted upload box priority list, but none is stored.")
+            return
+
+        await self._upload_box_priority_dao.update(
+            stored_priority.model_copy(update={"entries": []})
+        )
+        log.warning(
+            "Received a deleted upload box priority list, which RS never deletes."
+            + " Emptied the stored list and kept version %i.",
+            stored_priority.version,
+        )

@@ -296,7 +296,7 @@ artifact_infos:
     },
   ]
 mongo_dsn: "mongodb://mongodb:27017"
-db_name: dev_db
+db_name: metadata-artifacts
 loader_token_hashes:
   ["09e5724dab34b50fe2db5ebae7ac5eac4ef2904d105f8f2b3d5a4cb2c7f43da4"]
 

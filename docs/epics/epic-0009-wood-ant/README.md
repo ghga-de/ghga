@@ -2,9 +2,17 @@
 
 **Epic Type:** Exploratory Epic
 
-## Principal Components of Exploration
+## Scope
 
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/cQFzCQ>
+### Outline
+
+The aim of this epic is to understand and satisfy the requirements for using Life Science AAI as an identity provider.
+
+### Not included
+
+- implementation in production services
+
+## Principal Components of Exploration
 
 ### Examine requirements for relying parties (RPs)
 
@@ -17,10 +25,13 @@ A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/cQFzCQ>
 - Install an OIDC RP software for testing
 - Register the test software to the LS AAI test environment
 - Move it to the LS AAI production environment
+- Communicate with the LS AAI service providers
+- Establish a service agreement (as far as already possible)
 
 ### Examine availability for end-users
 
 - Check whether all potential end-users of GHGA services can use LS Login, document possible limitations
+- Explore potential solutions, e.g. if home organizations are not covered by LS Login
 
 ### Demo implementations
 
@@ -30,7 +41,7 @@ A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/cQFzCQ>
 
 ## Material and Resources
 
-- [Life Science Login](https://lifescience-ri.eu/ls-login.html) website
+- [Life Science Login](https://www.lifescience-ri.eu/life-science-login/) website
 - [OpenID Connect](https://openid.net/connect/) website
 - [OAuth 2.0 Security Best Current Practice](https://oauth.net/2/oauth-best-practice/)
 

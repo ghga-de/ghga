@@ -30,6 +30,7 @@ from .conftest import (
     then,
     when,
 )
+from .conftest_5x import _filter_manager_by_title
 from .utils import UI_TIMEOUT
 
 scenarios("../features/502_data_portal_uploads.feature")
@@ -43,16 +44,6 @@ INGEST_INTERVAL, INGEST_TIMEOUT = 1, 30  # seconds
 def _box_title(storage_name: str) -> str:
     assert storage_name in STORAGE_LABELS, f"Unknown storage: {storage_name}"
     return UI_BOX_TITLE.format(storage=storage_name)
-
-
-def _filter_manager_by_title(fixtures: JointFixture, title: str):
-    """Open the manager filter (if collapsed) and filter the list by box title."""
-    page = fixtures.playwright.page
-    main = page.locator("main")
-    filter_toggle = page.get_by_role("button", name="Filter upload boxes")
-    if filter_toggle.is_visible():
-        filter_toggle.click()
-    main.get_by_label("Upload box title").first.fill(title)
 
 
 def _upload_grant_row(fixtures, box_title):
@@ -155,7 +146,7 @@ def grant_upload_access(user_name: str, storage_name: str, fixtures: JointFixtur
     _, name = fixtures.auth.split_title(user_name)
 
     # Search for the user, then pick them from the result table
-    search_field = main.get_by_label("Search by name, email or external ID")
+    search_field = main.get_by_label("Search by name, LS Login email or LS ID")
     expect(search_field).to_be_visible(timeout=UI_TIMEOUT)
     search_field.fill(name)
     user_row = main.get_by_role("button").filter(has_text=name)
@@ -179,6 +170,70 @@ def grant_upload_access(user_name: str, storage_name: str, fixtures: JointFixtur
         has=page.get_by_role("heading", level=2, name="Upload Grants")
     )
     expect(grants_card).to_contain_text(name, timeout=UI_TIMEOUT)
+
+
+def _prio_cell(fixtures: JointFixture, storage_name: str):
+    """Return the Prio cell of the box in the Upload Box Manager list."""
+    table = fixtures.playwright.page.locator("main table")
+    expect(table).to_be_visible(timeout=UI_TIMEOUT)
+    headers = table.get_by_role("columnheader").all_text_contents()
+    prio_index = [header.strip() for header in headers].index("Prio")
+    row = table.get_by_role("row").filter(has_text=_box_title(storage_name))
+    return row.get_by_role("cell").nth(prio_index)
+
+
+def _reorder_mode(fixtures: JointFixture):
+    """Return reorder mode of the Upload Box Manager."""
+    main = fixtures.playwright.page.locator("main")
+    return main.get_by_role("region", name="Priority order")
+
+
+@when("I open reorder mode in the Upload Box Manager")
+def open_reorder_mode(fixtures: JointFixture):
+    """Open reorder mode, which loads the boxes and their order again."""
+    main = fixtures.playwright.page.locator("main")
+    change_order = main.get_by_role("button", name="Change order")
+    expect(change_order).to_be_enabled(timeout=UI_TIMEOUT)
+    change_order.click()
+    expect(_reorder_mode(fixtures)).to_be_visible(timeout=UI_TIMEOUT)
+
+
+@when(parse('I move the "{storage_name}" upload box down in reorder mode'))
+def move_box_down(storage_name: str, fixtures: JointFixture):
+    """Move the box down with its button, which is enabled once the boxes and the
+    order have loaded again.
+    """
+    title = _box_title(storage_name)
+    move_down = _reorder_mode(fixtures).get_by_role("button", name=f"Move {title} down")
+    expect(move_down).to_be_enabled(timeout=UI_TIMEOUT)
+    move_down.click()
+
+
+@when("I save the order in reorder mode")
+def save_order(fixtures: JointFixture):
+    """Save the order shown in reorder mode, which closes only after RS stored it."""
+    main = fixtures.playwright.page.locator("main")
+    save_button = main.get_by_role("button", name="Save order")
+    expect(save_button).to_be_enabled(timeout=UI_TIMEOUT)
+    save_button.click()
+    expect(_reorder_mode(fixtures)).to_have_count(0, timeout=UI_TIMEOUT)
+
+
+@then(parse('the Prio column shows "{position}" for the "{storage_name}" upload box'))
+def check_prio(position: str, storage_name: str, fixtures: JointFixture):
+    """Check the position of the box in the Prio column."""
+    expect(_prio_cell(fixtures, storage_name)).to_have_text(
+        position, timeout=UI_TIMEOUT
+    )
+
+
+@then(parse('reorder mode says the boxes were last reordered by "{full_name}"'))
+def check_last_reordered_by(full_name: str, fixtures: JointFixture):
+    """Check that reorder mode names the steward who last saved an order."""
+    # A string, unlike a pattern, matches whatever whitespace the template leaves
+    expect(_reorder_mode(fixtures)).to_contain_text(
+        f"Last reordered by {full_name} on ", timeout=UI_TIMEOUT
+    )
 
 
 @when(parse('I create an upload token for "{storage_name}" storage'))

@@ -71,6 +71,9 @@ The service requires the following configuration parameters:
   Minimum: `0`.
   Maximum: `1`.
   Default: `1.0`.
+- <a id="properties/enable_otel_metrics"></a>**`enable_otel_metrics`** *(boolean)*: Also export metrics via OTLP.
+  Requires `enable_opentelemetry` and a collector with a metrics pipeline.
+  Default: `false`.
 - <a id="properties/server_private_key_path"></a>**`server_private_key_path`** *(string, format: path, required)*: Path to the Crypt4GH private key file.
 
   Examples:
@@ -83,7 +86,7 @@ The service requires the following configuration parameters:
   Only needed if the private key is encrypted.
   Default: `null`.
   - **Any of**
-    - <a id="properties/private_key_passphrase/anyOf/0"></a>*string*
+    - <a id="properties/private_key_passphrase/anyOf/0"></a>*string, format: password*
     - <a id="properties/private_key_passphrase/anyOf/1"></a>*null*
 - <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture.
   Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE".

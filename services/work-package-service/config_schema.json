@@ -16,6 +16,12 @@
       "title": "Otel Trace Sampling Rate",
       "type": "number"
     },
+    "enable_otel_metrics": {
+      "default": false,
+      "description": "Also export metrics via OTLP. Requires `enable_opentelemetry` and a collector with a metrics pipeline.",
+      "title": "Enable Otel Metrics",
+      "type": "boolean"
+    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -117,7 +123,10 @@
       "type": "string"
     },
     "db_name": {
-      "default": "work-packages",
+      "description": "Name of the database located on the MongoDB server.",
+      "examples": [
+        "my-database"
+      ],
       "title": "Db Name",
       "type": "string"
     },
@@ -571,6 +580,7 @@
     "service_instance_id",
     "work_package_signing_key",
     "mongo_dsn",
+    "db_name",
     "db_version_collection",
     "migration_wait_sec",
     "kafka_servers",

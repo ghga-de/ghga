@@ -6,6 +6,7 @@
 
 import {
   HttpClient,
+  HttpErrorResponse,
   HttpHeaders,
   HttpParams,
   HttpResponse,
@@ -13,6 +14,7 @@ import {
 import { computed, inject, Service, signal } from '@angular/core';
 import { RedirectCommand, Router } from '@angular/router';
 import { ConfigService } from '@app/shared/services/config';
+import { ConfirmationService } from '@app/shared/services/confirmation';
 import { Notifier } from '@app/shared/services/notification';
 import type { OidcMetadata, UserManagerSettings } from 'oidc-client-ts';
 import {
@@ -33,11 +35,39 @@ import {
 import {
   LoginState,
   RoleNames,
+  TotpVerification,
   UserBasicData,
   UserRole,
   UserSession,
 } from '../models/user';
 import { CsrfService } from './csrf';
+
+/**
+ * Check whether an error response has the given status and detail
+ *
+ * The detail is checked as well, so that, for instance, a 403 from the ingress
+ * is not taken for a disabled account.
+ * @param error - the error raised by the HTTP client
+ * @param status - the expected status code
+ * @param detail - the expected detail in the response body
+ * @returns true if both match
+ */
+function hasErrorDetail(error: unknown, status: number, detail: string): boolean {
+  return (
+    error instanceof HttpErrorResponse &&
+    error.status === status &&
+    error.error?.detail === detail
+  );
+}
+
+/**
+ * Check whether an error response says that the user account is disabled
+ * @param error - the error raised by the HTTP client
+ * @returns true if the user account is disabled
+ */
+function isAccountDisabled(error: unknown): boolean {
+  return hasErrorDetail(error, 403, 'User account is disabled');
+}
 
 /**
  * Authentication service
@@ -52,6 +82,7 @@ export class AuthService {
   #router = inject(Router);
   #csrf = inject(CsrfService);
   #notify = inject(Notifier);
+  #confirmation = inject(ConfirmationService);
   #userSignal = signal<UserSession | null | undefined>(undefined);
 
   #oidcUserManager: OidcUserManager;
@@ -367,14 +398,82 @@ export class AuthService {
           catchError(() => of(false)),
         ),
       ).then(async () => {
-        await this.#oidcUserManager.removeUser();
-        this.#userSignal.set(null);
-        this.#csrf.token = null;
-        sessionStorage.removeItem('afterLogin');
+        await this.#clearUser();
         this.#router.navigate(['/']);
         this.#notify.showSuccess('You have been logged out.');
       });
     }
+  }
+
+  /**
+   * Forget the user locally after the backend session has ended
+   */
+  async #clearUser(): Promise<void> {
+    await this.#oidcUserManager.removeUser();
+    this.#userSignal.set(null);
+    this.#csrf.token = null;
+    sessionStorage.removeItem('afterLogin');
+  }
+
+  /**
+   * Forget the user after the backend has ended the session during an API call
+   *
+   * The backend checks sessions again against the user account at intervals,
+   * and ends them when the account was disabled or deleted, or when the TOTP
+   * token was replaced. Several requests may fail at once, so only the first
+   * one is handled.
+   * @param accountDisabled - whether the session ended because the account is disabled
+   */
+  async sessionEnded(accountDisabled: boolean): Promise<void> {
+    if (!this.#userSignal()) return;
+    this.#userSignal.set(null);
+    await this.#clearUser();
+    await this.#router.navigate(['/']);
+    if (accountDisabled) {
+      this.showAccountDisabled();
+    } else {
+      this.#notify.showError('Your session has ended, please log in again.');
+    }
+  }
+
+  /**
+   * Check whether a request goes to an endpoint that handles its own session errors
+   *
+   * These are the endpoints of the login flow, which the auth service runs itself:
+   * login and TOTP verification tell the user when the session has ended,
+   * and logout forgets the user anyway. Other calls under /rpc/, such as those
+   * for IVAs, are checked like any other API call and are not exempt.
+   * @param url - the URL of the request
+   * @returns true if the request goes to such an endpoint
+   */
+  handlesSessionErrors(url: string): boolean {
+    return [
+      this.#loginUrl,
+      this.#logoutUrl,
+      this.#verifyTotpUrl,
+      this.#totpTokenUrl,
+    ].includes(url);
+  }
+
+  /**
+   * Tell the user that the account is disabled and whom to contact
+   *
+   * This is a dialog rather than a toast, since the user cannot log in again
+   * and would otherwise retry without knowing why it fails.
+   */
+  showAccountDisabled(): void {
+    const contactUrl = this.#config.contactUrl;
+    this.#confirmation.confirm({
+      title: 'Account disabled',
+      message:
+        'Your GHGA account has been disabled.' +
+        ' Please contact GHGA to have it reactivated.',
+      cancelText: 'Close',
+      confirmText: 'Contact GHGA',
+      callback: (confirmed) => {
+        if (confirmed) window.open(contactUrl, '_blank', 'noreferrer,noopener');
+      },
+    });
   }
 
   /**
@@ -428,6 +527,7 @@ export class AuthService {
   async #loadUserSession(accessToken: string | undefined = undefined): Promise<void> {
     console.debug('Loading user session...');
     const userSignal = this.#userSignal;
+    let accountDisabled = false;
     let headers = new HttpHeaders();
     if (accessToken) headers = headers.set('X-Authorization', `Bearer ${accessToken}`);
     this.#http
@@ -440,9 +540,10 @@ export class AuthService {
           if (!session) return undefined;
           return this.#parseUserFromSession(session);
         }),
-        catchError((error) =>
-          of([401, 403, 404].includes(error?.status) ? null : undefined),
-        ),
+        catchError((error) => {
+          accountDisabled = isAccountDisabled(error);
+          return of([401, 403, 404].includes(error?.status) ? null : undefined);
+        }),
       )
       .subscribe((user: UserSession | null | undefined) => {
         if (user) {
@@ -464,7 +565,11 @@ export class AuthService {
               break;
           }
         } else {
-          if (accessToken || user === undefined) {
+          // shown with or without an access token, so that a user who was
+          // disabled while logged in learns it at the next page load
+          if (accountDisabled) {
+            this.showAccountDisabled();
+          } else if (accessToken || user === undefined) {
             this.#notify.showError('Failed to load user session.');
           }
           this.#oidcUserManager.removeUser();
@@ -580,31 +685,60 @@ export class AuthService {
 
   /**
    * Verify the given TOTP code
+   *
+   * When the outcome is "locked", "ended" or "disabled", the backend has already
+   * ended the session, and the user is forgotten locally as well.
+   *
+   * On success, the backend returns the session with its roles fetched again,
+   * since they can change, e.g. when a new TOTP token has reset the IVAs.
    * @param code - the 6-digit TOTP code to verify
-   * @returns a promise that resolves to true if the code is valid
+   * @returns a promise that resolves to the outcome of the verification
    */
-  async verifyTotpCode(code: string): Promise<boolean> {
+  async verifyTotpCode(code: string): Promise<TotpVerification> {
     const state = this.sessionState();
-    if (!['NewTotpToken', 'HasTotpToken'].includes(state)) return false;
+    if (!['NewTotpToken', 'HasTotpToken'].includes(state)) return 'invalid';
     let headers = new HttpHeaders();
     headers = headers.set('X-Authorization', `Bearer TOTP:${code}`);
     if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
       console.error('Invalid TOTP code');
-      return false;
+      return 'invalid';
     }
-    return firstValueFrom(
-      this.#http.post<null>(this.#verifyTotpUrl, null, { headers }).pipe(
-        map(() => {
-          console.info('TOTP code verified');
-          this.#setNewState('Authenticated');
-          return true;
-        }),
-        catchError(() => {
-          console.error('Failed to verify TOTP code');
-          return of(false);
-        }),
-      ),
+    const verification = await firstValueFrom(
+      this.#http
+        .post<null>(this.#verifyTotpUrl, null, { headers, observe: 'response' })
+        .pipe(
+          map((response: HttpResponse<null>): TotpVerification => {
+            console.info('TOTP code verified');
+            const session = response.headers.get('X-Session');
+            const user = session ? this.#parseUserFromSession(session) : null;
+            if (user) {
+              this.#userSignal.set(user);
+            } else {
+              this.#setNewState('Authenticated');
+            }
+            return 'verified';
+          }),
+          catchError((error) => {
+            console.error('Failed to verify TOTP code');
+            let verification: TotpVerification = 'invalid';
+            if (isAccountDisabled(error)) {
+              verification = 'disabled';
+            } else if (hasErrorDetail(error, 401, 'Too many failed attempts')) {
+              verification = 'locked';
+            } else if (
+              hasErrorDetail(error, 401, 'User account has been deleted') ||
+              hasErrorDetail(error, 401, 'Not logged in')
+            ) {
+              verification = 'ended';
+            }
+            return of(verification);
+          }),
+        ),
     );
+    if (verification !== 'verified' && verification !== 'invalid') {
+      await this.#clearUser();
+    }
+    return verification;
   }
 
   /**

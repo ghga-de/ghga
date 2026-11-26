@@ -75,8 +75,13 @@ async def consume_events(run_forever: bool = True):
         await event_subscriber.run(forever=run_forever)
 
 
-async def perform_cleanup(run_forever: bool = True) -> None:
-    """Run the periodic stale upload cleanup job."""
+async def perform_cleanup(
+    *, run_forever: bool = True, ignore_safeguards: bool = False
+) -> None:
+    """Run the periodic stale upload cleanup job.
+
+    `ignore_safeguards` is passed through to `cleanup_stale_uploads`.
+    """
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
@@ -86,7 +91,7 @@ async def perform_cleanup(run_forever: bool = True) -> None:
         while run_forever or is_first_run:
             is_first_run = False
             log.info("Running stale upload cleanup job.")
-            await controller.cleanup_stale_uploads()
+            await controller.cleanup_stale_uploads(ignore_safeguards=ignore_safeguards)
             log.info("Stale upload cleanup job complete.")
             if run_forever:
                 log.info(

@@ -31,7 +31,7 @@ Workspace members depend on it from source, and the platform images carry it; a 
 
 Work in the monorepo's dev container, as described in [Work inside the dev container](../../README.md#work-inside-the-dev-container).
 Run the tests with `just test libs/ghga-event-schemas`, and the linters with `just lint`.
-A change to a model changes the event contract between services, so check every consumer with `just affected`.
+A change to a model changes the event contract between services, so test every consumer with `just test-affected`.
 
 ## License
 

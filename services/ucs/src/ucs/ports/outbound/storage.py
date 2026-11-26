@@ -19,6 +19,7 @@ from abc import ABC, abstractmethod
 
 from pydantic import UUID4
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.objstorage import (  # noqa: F401
     ObjectStorageProtocol as ObjectStoragePort,
 )
@@ -215,14 +216,25 @@ class S3ClientPort(ABC):
         """
 
     @abstractmethod
-    async def cleanup_orphaned_objects(
-        self, *, storage_alias: str, known_object_ids: set[str]
-    ):
-        """Clean out all orphaned object IDs in the inbox bucket.
-
-        When finished, log basic stats for deleted objects.
+    async def list_object_ids(self, *, storage_alias: str) -> set[str]:
+        """Return the IDs of all objects in the inbox bucket for the alias.
 
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
             `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
+        """
+
+    @abstractmethod
+    async def delete_orphaned_objects(
+        self, *, storage_alias: str, object_ids: set[str], cutoff: UTCDatetime
+    ) -> None:
+        """Delete the given objects from the inbox bucket if they were last modified
+        before `cutoff`. Younger objects, and objects without a last-modified time,
+        are kept.
+
+        Each deletion is logged, and a summary with counts is logged when finished.
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
         """

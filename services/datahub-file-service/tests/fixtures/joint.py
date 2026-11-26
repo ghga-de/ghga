@@ -52,8 +52,10 @@ async def joint_fixture(s3: S3Fixture, config: Config) -> AsyncGenerator[JointFi
     patched_config = Config(**_patched_config)
 
     # Route Central API calls to the mock, but let S3 calls reach the testcontainer
-    central_api = CentralApiMock(config=patched_config, passthrough=True)
-    mocked_client_factory = partial(get_mocked_httpx_client, central_api=central_api)
+    central_api = CentralApiMock(config=patched_config)
+    mocked_client_factory = partial(
+        get_mocked_httpx_client, central_api=central_api, passthrough=True
+    )
 
     # Assemble joint fixture with config injection
     with patch("dhfs.inject.get_configured_httpx_client", mocked_client_factory):

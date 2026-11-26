@@ -15,6 +15,7 @@ import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
 import { Notifier } from '@app/shared/services/notification';
+import { html } from '@app/shared/utils/html';
 import { NewIvaDialog } from '../new-iva-dialog/new-iva-dialog';
 import { VerificationDialog } from '../verification-dialog/verification-dialog';
 
@@ -189,10 +190,13 @@ export class UserIvaList implements OnInit {
     const address = this.#ivaAddress(iva);
     this.#confirm.confirm({
       title: 'Confirm deletion of IVA',
-      message:
-        `<p>Please confirm deleting the ${address}.` +
-        '</p><p><strong>Remember that you will lose access to any datasets' +
-        ' whose access was linked to that address</strong>.</p>',
+      message: html`<p>Please confirm deleting the ${address}.</p>
+        <p>
+          <strong
+            >Remember that you will lose access to any datasets whose access was linked
+            to that address</strong
+          >.
+        </p>`,
       cancelText: 'Cancel',
       confirmText: 'Confirm deletion',
       callback: (confirmed) => {

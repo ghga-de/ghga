@@ -1,0 +1,8 @@
+# Config for actionlint, which the pre-commit hook runs over .github/workflows/.
+paths:
+  .github/workflows/**/*.yaml:
+    ignore:
+      # actionlint's bundled metadata predates create-github-app-token@v3, where client-id
+      # replaced the deprecated app-id.
+      - 'missing input "app-id" which is required by action "actions/create-github-app-token@v3"'
+      - 'input "client-id" is not defined in action "actions/create-github-app-token@v3"'

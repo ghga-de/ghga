@@ -2,12 +2,16 @@
 
 **Epic Type:** Implementation Epic
 
+## Scope
+
+### Outline
+
 The goal for this epic is to integrate all Backend File Services into the Testbed developed in [*19 - Pied Raven*](./epic-0019-pied-raven/README.md).
 This epic builds on [*23 - Thick-Billed Raven*](./epic-0023-thick-billed-raven/README.md) and aims to bring the Testbed to completion by including the complete file download path and changes required to make everything work according to the arch-concept.
 
-## Scope
+### Not included
 
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/MIBSDQ>
+- the complete upload path, see [*23 - Thick-Billed Raven*](./epic-0023-thick-billed-raven/README.md) for that
 
 ## User Journeys
 

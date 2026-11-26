@@ -115,6 +115,32 @@ async def test_get_artifact_resource_endpoint(mongodb: MongoDbFixture):
     assert observed_resource["alias"] == resource_id
 
 
+@pytest.mark.parametrize(
+    "artifact_name, class_name, resource_id",
+    [
+        ("embedded_dataset", "Dataset", "test_sample_01_R1"),
+        (MINIMAL_ARTIFACT_INFO.name, "NoSuchClass", "test_sample_01_R1"),
+        (MINIMAL_ARTIFACT_INFO.name, "File", "no_such_resource"),
+    ],
+    ids=["unknown_artifact", "unknown_class", "unknown_resource"],
+)
+async def test_get_artifact_resource_not_found(
+    artifact_name: str, class_name: str, resource_id: str, mongodb: MongoDbFixture
+):
+    """Test that an unknown artifact, class or resource gives a 404, not a 500."""
+    await load_example_artifact_resources(dao_factory=mongodb.dao_factory)
+
+    async with await get_example_app_client(
+        dao_factory=mongodb.dao_factory,
+        artifact_infos=[MINIMAL_ARTIFACT_INFO],
+    ) as client:
+        response = await client.get(
+            f"/artifacts/{artifact_name}/classes/{class_name}/resources/{resource_id}"
+        )
+
+    assert response.status_code == 404
+
+
 async def test_get_stats_endpoint(mongodb: MongoDbFixture):
     """Test happy path of using the get stats endpoint."""
     # load example resources and prepare client:

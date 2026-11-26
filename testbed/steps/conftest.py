@@ -235,6 +235,10 @@ def authenticate_user(full_name: str, fixtures: JointFixture):
         name=full_name, state_store=fixtures.state
     )
     assert session, f"No session found for {full_name}"
+    # log in again without waiting for the next TOTP time step
+    reset_user_token_counter(
+        fixtures.auth.get_sub(full_name), fixtures, keep_failed_attempts=True
+    )
     response = fixtures.auth.authenticate(session=session, state_store=fixtures.state)
     assert response.status_code == 204, response.text
 
@@ -403,15 +407,15 @@ def empty_mail_server(fixtures: JointFixture):
 @then(parse('I get only dataset "{ega_accession}" as search result'))
 def check_study_search_result(ega_accession: str, response: Response):
     results = response.json()
-    assert results["count"] == 1
-    assert results["hits"][0]["content"]["ega_accession"] == ega_accession
+    assert results["total_count"] == 1
+    assert results["items"][0]["content"]["ega_accession"] == ega_accession
 
 
 @then(parse('I get "{count:d}" search results'))
 def check_number_of_search_results(count: int, response: Response):
     results = response.json()
-    assert results["count"] == count
-    assert len(results["hits"]) == count
+    assert results["total_count"] == count
+    assert len(results["items"]) == count
 
 
 @then(parse('I get "{page_count:d}" out of "{total_count:d}" search results'))
@@ -419,8 +423,8 @@ def check_number_of_search_results_on_the_page(
     page_count: int, total_count: int, response: Response
 ):
     results = response.json()
-    assert results["count"] == total_count
-    assert len(results["hits"]) == page_count
+    assert results["total_count"] == total_count
+    assert len(results["items"]) == page_count
 
 
 @then(parse('the expected item count is "{count:d}"'))
@@ -437,7 +441,7 @@ def check_item_count_in_response(count: int, response: Response):
 
     if isinstance(results, dict):
         # Handle paginated responses like {'count': 0, 'boxes': []}
-        for key in ("boxes", "results", "hits", "items"):
+        for key in ("boxes", "results", "items"):
             if key in results:
                 results = results[key]
                 break

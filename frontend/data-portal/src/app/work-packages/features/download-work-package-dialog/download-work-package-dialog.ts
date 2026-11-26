@@ -25,6 +25,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AccessGrantWithIva } from '@app/access-requests/models/access-requests';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
+import { ConfigService } from '@app/shared/services/config';
 import { Notifier } from '@app/shared/services/notification';
 import { Paragraphs } from '@app/shared/ui/paragraphs/paragraphs';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
@@ -63,6 +64,8 @@ export class DownloadWorkPackageDialog {
   #clipboard = inject(Clipboard);
   #dialogRef = inject(MatDialogRef<DownloadWorkPackageDialog>);
   #notify = inject(Notifier);
+  /** The URL of the public GHGA contact page */
+  protected contactUrl = inject(ConfigService).contactUrl;
   #wpService = inject(WorkPackageService);
   #datasets = this.#wpService.datasets;
   #iva = inject(IvaService);

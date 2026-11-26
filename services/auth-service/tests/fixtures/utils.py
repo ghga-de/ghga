@@ -16,6 +16,7 @@
 """Utils for testing"""
 
 import json
+import time
 from collections.abc import AsyncIterator, Mapping
 from contextlib import suppress
 from datetime import timedelta
@@ -24,10 +25,9 @@ from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
 
-import httpx2
 from fastapi import Request
 from jwcrypto import jwk, jwt
-from pydantic import UUID4
+from pydantic import UUID4, BaseModel
 
 from auth_service.auth_adapter.core.session_store import Session
 from auth_service.auth_adapter.ports.dao import UserToken
@@ -55,7 +55,7 @@ from auth_service.user_registry.ports.event_pub import (
     EventPublisherPort,
 )
 from ghga_service_commons.api import ApiConfigBase
-from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.http.mock_api import respond
 from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
 from hexkit.config import config_from_yaml
 from hexkit.protocols.dao import (
@@ -63,6 +63,7 @@ from hexkit.protocols.dao import (
     FindResult,
     MultipleHitsFoundError,
     NoHitsFoundError,
+    PreconditionFailedError,
     ResourceNotFoundError,
 )
 from hexkit.utils import now_utc_ms_prec
@@ -78,6 +79,7 @@ from tests.fixtures.constants import (
     IVA_IDS,
     PHONE_OF_JOHN,
 )
+from tests.fixtures.oidc_provider import OidcProviderMock
 
 BASE_DIR = Path(__file__).parent.resolve()
 
@@ -88,12 +90,11 @@ USER_INFO = {
 }
 
 
-def mock_userinfo(router: MockRouter, user_info: Mapping[str, Any] = USER_INFO) -> None:
-    """Register a response for the OIDC userinfo endpoint on the given mock router."""
-
-    @router.get("/userinfo")
-    def _userinfo() -> httpx2.Response:
-        return httpx2.Response(200, json=dict(user_info))
+def mock_userinfo(
+    oidc_provider: OidcProviderMock, user_info: Mapping[str, Any] = USER_INFO
+) -> None:
+    """Have the mocked OIDC provider answer userinfo requests with `user_info`."""
+    oidc_provider.on_get_userinfo = respond(200, json=dict(user_info))
 
 
 @config_from_yaml(prefix="test_auth_service")
@@ -152,7 +153,7 @@ def create_access_token(
         "aud": CONFIG.oidc_client_id,
         "scope": "openid email profile",
     }
-    iat = int(now_utc_ms_prec().timestamp())
+    iat = int(time.time())
     if expired:
         exp = iat - 60 * 10  # expired 10 minutes ago
         iat = exp - 60 * 10  # created 20 minutes ago
@@ -189,7 +190,7 @@ def create_internal_token(
         "email": "john@home.org",
         "status": "active",
     }
-    iat = int(now_utc_ms_prec().timestamp())
+    iat = int(time.time())
     if expired:
         exp = iat - 60 * 10  # expired 10 minutes ago
         iat = exp - 60 * 10  # created 20 minutes ago
@@ -259,6 +260,25 @@ def _matches(data: Mapping[str, Any], filter_: Mapping[str, Any]) -> bool:
         elif data[key] != value:
             return False
     return True
+
+
+def check_precondition(
+    resource: BaseModel, id_: Any, precondition: Mapping[str, Any] | None
+) -> None:
+    """Mimic the precondition check of the DAO update method.
+
+    Keys may use dot notation for fields of nested models.
+    """
+    if not precondition:
+        return
+    data = resource.model_dump()
+    for key, value in precondition.items():
+        current: Any = data
+        for part in key.split("."):
+            # like MongoDB, a missing nested field matches only None
+            current = current.get(part) if isinstance(current, dict) else None
+        if current != value:
+            raise PreconditionFailedError(id_=id_, precondition=precondition)
 
 
 def mock_find_all(
@@ -367,10 +387,13 @@ class MockUserDao:
         user = User(**dto.model_dump())
         self.users.append(user)
 
-    async def update(self, dto: User) -> None:
+    async def update(
+        self, dto: User, *, precondition: Mapping[str, Any] | None = None
+    ) -> None:
         """Update the dummy user."""
         for index, user in enumerate(self.users):
             if dto.id == user.id:
+                check_precondition(user, dto.id, precondition)
                 self.users[index] = dto
                 break
         else:
@@ -468,14 +491,25 @@ class MockUserTokenDao:
         self.user_tokens = {}
 
     async def get_by_id(self, id_: UUID4) -> UserToken:
-        """Get the user token via the (user) ID."""
+        """Get a copy of the user token via the (user) ID.
+
+        Like the database, this returns a copy, so that changes to the token
+        take effect only when it is written back.
+        """
         try:
-            return self.user_tokens[id_]
+            return self.user_tokens[id_].model_copy(deep=True)
         except KeyError as error:
             raise ResourceNotFoundError(id_=id_) from error
 
-    async def update(self, dto: UserToken) -> None:
+    async def update(
+        self, dto: UserToken, *, precondition: Mapping[str, Any] | None = None
+    ) -> None:
         """Update a user token."""
+        try:
+            stored = self.user_tokens[dto.user_id]
+        except KeyError as error:
+            raise ResourceNotFoundError(id_=dto.user_id) from error
+        check_precondition(stored, dto.user_id, precondition)
         self.user_tokens[dto.user_id] = dto
 
     async def upsert(self, dto: UserToken) -> None:

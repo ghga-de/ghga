@@ -39,6 +39,7 @@ import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
+import { html } from '@app/shared/utils/html';
 import { DeletionConfirmationDialog } from '../deletion-confirmation-dialog/deletion-confirmation-dialog';
 
 /**
@@ -238,12 +239,16 @@ export class UserManagerDetail implements OnInit {
    * @param isDeactivated Whether the user is currently deactivated (thus we want to reactivate the account)
    */
   safeStatusChange(isDeactivated: boolean = false): void {
+    const action = isDeactivated ? 'activation' : 'deactivation';
     this.#confirmationService.confirm({
-      title: 'Confirm user account deactivation',
-      message: `<p>Please confirm that the user account of ${this.user()!.displayName} shall be <strong>${!isDeactivated ? 'de' : ''}activated</strong>.`,
+      title: `Confirm user account ${action}`,
+      message: html`<p>
+        Please confirm that the user account of ${this.user()!.displayName} shall be
+        <strong>${isDeactivated ? 'activated' : 'deactivated'}</strong>.
+      </p>`,
       cancelText: 'Cancel',
-      confirmText: `Confirm ${!isDeactivated ? 'de' : ''}activation`,
-      confirmClass: 'danger',
+      confirmText: `Confirm ${action}`,
+      confirmClass: isDeactivated ? 'success' : 'danger',
       callback: (statusChangeConfirmed) => {
         if (statusChangeConfirmed)
           this.#update({

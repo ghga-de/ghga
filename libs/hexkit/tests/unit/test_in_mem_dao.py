@@ -15,16 +15,21 @@
 
 """Testing the in-memory DAO."""
 
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, PydanticInvalidForJsonSchema
 
 from hexkit.protocols.dao import (
-    InvalidMappingError,
+    BatchOperationError,
+    DaoFactoryBase,
+    InvalidFilterError,
     NoHitsFoundError,
     PreconditionFailedError,
+    ResourceAlreadyExistsError,
     ResourceNotFoundError,
+    UniqueConstraintViolationError,
 )
 from hexkit.providers.testing import MockDAOEmptyError, new_mock_dao_class
 from hexkit.providers.testing.dao import (
@@ -115,12 +120,12 @@ async def test_update_precondition(handle_mql: bool):
         await dao.update(item, precondition={"count": 1})
 
     # An unknown field is rejected before the existence check, as in the real provider
-    with pytest.raises(InvalidMappingError):
+    with pytest.raises(InvalidFilterError):
         await dao.update(item, precondition={"no_such_field": 1})
 
     await dao.insert(item)
 
-    with pytest.raises(InvalidMappingError):
+    with pytest.raises(InvalidFilterError):
         await dao.update(item, precondition={"no_such_field": 1})
 
     # A resource that doesn't match the criteria is left unchanged
@@ -190,9 +195,9 @@ async def test_find_invalid_filter():
     dao = DaoClass()
 
     for filter_ in ({"no_such_field": 1}, {"": 1}):
-        with pytest.raises(InvalidMappingError):
+        with pytest.raises(InvalidFilterError):
             await dao.find_one(filter_=filter_)
-        with pytest.raises(InvalidMappingError):
+        with pytest.raises(InvalidFilterError):
             _ = dao.find_all(filter_=filter_)
 
 
@@ -266,6 +271,70 @@ async def test_mql_comparison_ops(filter_: dict[str, Any], expected: list[str]):
 
     results = sorted([x.title async for x in dao.find_all(filter_=filter_)])
     assert results == expected
+
+
+class MixedValue(BaseModel):
+    """A model with an optional datetime, as a plain and as a nested field"""
+
+    id: str
+    value: datetime | None = None
+    nested: dict[str, datetime] | None = None
+
+
+NOW = datetime(2026, 1, 1, 12, tzinfo=UTC)
+
+
+@pytest.mark.parametrize(
+    "filter_,expected",
+    [
+        ({"value": {"$gt": None}}, []),
+        ({"value": {"$lt": None}}, []),
+        ({"value": {"$gte": None}}, ["null"]),
+        ({"value": {"$lte": None}}, ["null"]),
+        ({"value": {"$gt": NOW - timedelta(days=1)}}, ["datetime"]),
+        ({"value": {"$lt": NOW + timedelta(days=1)}}, ["datetime"]),
+        ({"value": {"$gte": NOW}}, ["datetime"]),
+        ({"value": {"$lte": NOW}}, ["datetime"]),
+    ],
+)
+async def test_ordering_ops_with_null_match_mongodb(
+    filter_: dict[str, Any], expected: list[str]
+):
+    """Test that $gt, $gte, $lt and $lte handle null without raising.
+
+    The expected results were taken from MongoDB 7.0: null never matches a value and
+    vice versa, and $gte/$lte null match null.
+    """
+    MixedValueDao = new_mock_dao_class(dto_model=MixedValue, id_field="id")  # noqa: N806
+    dao = MixedValueDao()
+    await dao.insert(MixedValue(id="datetime", value=NOW))
+    await dao.insert(MixedValue(id="null", value=None))
+
+    results = sorted([x.id async for x in dao.find_all(filter_=filter_)])
+    assert results == expected
+
+
+async def test_ordering_ops_with_missing_field_match_mongodb():
+    """Test that a missing field behaves like null for $gt, $gte, $lt and $lte"""
+    MixedValueDao = new_mock_dao_class(dto_model=MixedValue, id_field="id")  # noqa: N806
+    dao = MixedValueDao()
+    await dao.insert(MixedValue(id="present", nested={"when": NOW}))
+    await dao.insert(MixedValue(id="missing", nested={}))
+    await dao.insert(MixedValue(id="no_parent"))
+
+    async def find_ids(filter_: dict[str, Any]) -> list[str]:
+        return sorted([x.id async for x in dao.find_all(filter_=filter_)])
+
+    assert await find_ids({"nested.when": {"$lt": NOW + timedelta(days=1)}}) == [
+        "present"
+    ]
+    assert await find_ids({"nested.when": {"$gte": None}}) == [
+        "missing",
+        "no_parent",
+    ]
+    assert await find_ids(
+        {"$or": [{"nested.when": {"$lt": NOW}}, {"nested.when": None}]}
+    ) == ["missing", "no_parent"]
 
 
 async def test_build_predicates_empty_mapping():
@@ -856,37 +925,234 @@ async def test_sort_with_missing_values_matches_mongodb():
     assert desc == [1, 3, 2, 4]
 
 
-async def test_nested_id_sort_matches_mongodb():
-    """The in-mem DAO matches MongoDB's (limited) behavior: it cannot sort by a nested
-    sub-field of the ID field, because the ID is stored under "_id". Such a sort is a
-    no-op that preserves the existing order rather than raising or secretly resolving
-    the value - exactly as MongoDB would silently fail to sort by "inner.x".
+class ModelId(BaseModel):
+    """An ID that is a model itself, which the DAO factories reject"""
+
+    x: int
+
+
+class ModelIdDto(BaseModel):
+    """A DTO whose `inner` field holds a model"""
+
+    inner: ModelId
+    label: int
+
+
+class Opaque:
+    """A type that Pydantic cannot describe in a JSON schema"""
+
+
+class OpaqueDto(BaseModel):
+    """A DTO without a JSON schema, which the DAO factories reject"""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    id: str
+    opaque: Opaque
+
+
+@pytest.mark.parametrize(
+    "dto_model, id_field, error",
+    [
+        (ModelIdDto, "missing", DaoFactoryBase.IdFieldNotFoundError),
+        (ModelIdDto, "inner", DaoFactoryBase.IdTypeNotSupportedError),
+        (OpaqueDto, "id", PydanticInvalidForJsonSchema),
+    ],
+)
+async def test_rejected_id_field(
+    dto_model: type[BaseModel], id_field: str, error: type[Exception]
+):
+    """Test that the mock DAO rejects the DTO models the DAO factories reject."""
+    with pytest.raises(error):
+        new_mock_dao_class(dto_model=dto_model, id_field=id_field)
+
+
+WRENCH = InventoryItem(title="Wrench", count=12)
+CANDLE = InventoryItem(title="Candle", count=100)
+HAMMER = InventoryItem(title="Hammer", count=3)
+
+
+async def stored_titles(dao) -> list[str]:
+    """Return the titles of all stored items, in insertion order."""
+    return [item.title async for item in dao.find_all(filter_={})]
+
+
+async def test_insert_many():
+    """Test that insert_many creates the new items and collects the existing IDs."""
+    dao = DaoClass()
+    await dao.insert(CANDLE)
+
+    with pytest.raises(BatchOperationError) as caught:
+        await dao.insert_many([WRENCH, CANDLE, HAMMER])
+
+    assert list(caught.value.errors) == ["Candle"]
+    assert isinstance(caught.value.errors["Candle"], ResourceAlreadyExistsError)
+    assert caught.value.not_attempted == ()
+    assert await stored_titles(dao) == ["Candle", "Wrench", "Hammer"]
+
+
+async def test_insert_many_ordered():
+    """Test that an ordered insert_many stops at the first existing ID."""
+    dao = DaoClass()
+    await dao.insert(CANDLE)
+
+    with pytest.raises(BatchOperationError) as caught:
+        await dao.insert_many([WRENCH, CANDLE, HAMMER], ordered=True)
+
+    assert list(caught.value.errors) == ["Candle"]
+    assert caught.value.not_attempted == ("Hammer",)
+    assert await stored_titles(dao) == ["Candle", "Wrench"]
+
+
+@pytest.mark.parametrize(
+    ("batch", "single"), [("insert_many", "insert"), ("upsert_many", "upsert")]
+)
+@pytest.mark.parametrize(
+    ("ordered", "not_attempted", "stored"),
+    [(False, (), ["Wrench", "Hammer"]), (True, ("Hammer",), ["Wrench"])],
+)
+async def test_batch_with_other_dao_error(
+    monkeypatch: pytest.MonkeyPatch,
+    batch: str,
+    single: str,
+    ordered: bool,
+    not_attempted: tuple[str, ...],
+    stored: list[str],
+):
+    """Test that a batch fails only the DTO whose write raised another DaoError."""
+    dao = DaoClass()
+    write = getattr(dao, single)
+
+    async def write_without_candle(dto: InventoryItem) -> None:
+        if dto.title == "Candle":
+            raise UniqueConstraintViolationError(unique_fields={"count": dto.count})
+        await write(dto)
+
+    monkeypatch.setattr(dao, single, write_without_candle)
+
+    with pytest.raises(BatchOperationError) as caught:
+        await getattr(dao, batch)([WRENCH, CANDLE, HAMMER], ordered=ordered)
+
+    assert list(caught.value.errors) == ["Candle"]
+    assert isinstance(caught.value.errors["Candle"], UniqueConstraintViolationError)
+    assert caught.value.not_attempted == not_attempted
+    assert await stored_titles(dao) == stored
+
+
+@pytest.mark.parametrize("method", ["insert_many", "update_many", "upsert_many"])
+async def test_batch_rejects_duplicate_ids(method: str):
+    """Test that a batch with a repeated ID is rejected before anything is written."""
+    dao = DaoClass()
+    await dao.insert(WRENCH)
+    changed = WRENCH.model_copy(update={"count": 1})
+
+    with pytest.raises(ValueError, match="Hammer"):
+        await getattr(dao, method)([HAMMER, changed, HAMMER])
+
+    assert await stored_titles(dao) == ["Wrench"]
+    assert (await dao.get_by_id("Wrench")).count == 12
+
+
+@pytest.mark.parametrize(
+    "method", ["insert_many", "update_many", "upsert_many", "delete_many"]
+)
+async def test_batch_with_empty_input(method: str):
+    """Test that an empty batch changes nothing and raises nothing."""
+    dao = DaoClass()
+    await dao.insert(WRENCH)
+
+    await getattr(dao, method)([])
+
+    assert await stored_titles(dao) == ["Wrench"]
+
+
+async def test_update_many():
+    """Test that update_many replaces the existing items and collects missing IDs."""
+    dao = DaoClass()
+    await dao.insert(WRENCH)
+    await dao.insert(CANDLE)
+    changed = [
+        WRENCH.model_copy(update={"count": 1}),
+        HAMMER,
+        CANDLE.model_copy(update={"count": 2}),
+    ]
+
+    with pytest.raises(BatchOperationError) as caught:
+        await dao.update_many(changed, ordered=True)
+
+    # A missing resource never stops a batch, even an ordered one
+    assert list(caught.value.errors) == ["Hammer"]
+    assert isinstance(caught.value.errors["Hammer"], ResourceNotFoundError)
+    assert caught.value.not_attempted == ()
+    assert (await dao.get_by_id("Wrench")).count == 1
+    assert (await dao.get_by_id("Candle")).count == 2
+    assert await stored_titles(dao) == ["Wrench", "Candle"]
+
+
+async def test_update_many_ordered_with_other_dao_error(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Test that an ordered update_many goes on past a missing resource and stops at
+    the first other failure.
     """
+    dao = DaoClass()
+    await dao.insert(WRENCH)
+    await dao.insert(CANDLE)
+    update = dao.update
 
-    class InnerDto(BaseModel):
-        def __hash__(self) -> int:
-            return self.x
+    async def update_without_candle(dto: InventoryItem) -> None:
+        if dto.title == "Candle":
+            raise UniqueConstraintViolationError(unique_fields={"count": dto.count})
+        await update(dto)
 
-        x: int
-
-    class OuterDto(BaseModel):
-        inner: InnerDto
-        label: int
-
-    OuterDtoDao = new_mock_dao_class(dto_model=OuterDto, id_field="inner")  # noqa: N806
-    dao = OuterDtoDao()
-
-    dtos = [
-        OuterDto(inner=InnerDto(x=3), label=1),
-        OuterDto(inner=InnerDto(x=1), label=2),
-        OuterDto(inner=InnerDto(x=7), label=3),
+    monkeypatch.setattr(dao, "update", update_without_candle)
+    changed = [
+        HAMMER,
+        CANDLE.model_copy(update={"count": 2}),
+        WRENCH.model_copy(update={"count": 1}),
     ]
-    for dto in dtos:
-        await dao.insert(dto)
 
-    # Sorting by a nested sub-field of the ID field is a no-op (insertion order kept)
-    assert [x.label async for x in dao.find_all(filter_={}, sort=["inner.x"])] == [
-        1,
-        2,
-        3,
-    ]
+    with pytest.raises(BatchOperationError) as caught:
+        await dao.update_many(changed, ordered=True)
+
+    assert list(caught.value.errors) == ["Hammer", "Candle"]
+    assert isinstance(caught.value.errors["Hammer"], ResourceNotFoundError)
+    assert isinstance(caught.value.errors["Candle"], UniqueConstraintViolationError)
+    assert caught.value.not_attempted == ("Wrench",)
+    assert (await dao.get_by_id("Wrench")).count == 12
+
+
+async def test_upsert_many():
+    """Test that upsert_many creates new items and replaces existing ones."""
+    dao = DaoClass()
+    await dao.insert(WRENCH)
+
+    await dao.upsert_many([WRENCH.model_copy(update={"count": 1}), HAMMER])
+
+    assert (await dao.get_by_id("Wrench")).count == 1
+    assert await dao.get_by_id("Hammer") == HAMMER
+
+
+async def test_delete_many():
+    """Test that delete_many deletes the given items and ignores unknown IDs."""
+    dao = DaoClass()
+    for item in (WRENCH, CANDLE, HAMMER):
+        await dao.insert(item)
+
+    await dao.delete_many(["Wrench", "Unknown", "Hammer", "Wrench"])
+
+    assert await stored_titles(dao) == ["Candle"]
+
+
+async def test_delete_many_rejects_a_single_id():
+    """Test that delete_many rejects one string ID instead of deleting the items
+    named by its characters.
+    """
+    dao = DaoClass()
+    for item in (WRENCH, CANDLE, HAMMER):
+        await dao.insert(item)
+
+    with pytest.raises(TypeError):
+        await dao.delete_many("Wrench")
+
+    assert await stored_titles(dao) == ["Wrench", "Candle", "Hammer"]

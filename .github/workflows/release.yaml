@@ -10,6 +10,9 @@
 #                  re-derives the set from the index and publishes every lane member ahead
 #                  of it, dependencies first. The version component is a label; it names
 #                  no member and is not checked against one.
+#   name/X.Y.Z of a companion (a platform-lane member with release notes of its own,
+#                  ADR-0043) -> nothing to do: it ships with ghga/X.Y.Z, and `resolve`
+#                  only checks that it tags the same commit.
 #
 # A pre-release ref (ghga/X.Y.Z-rc.N) is a normal platform-lane cut for staging: same
 # mechanism, same lockstep guarantee, just a SemVer pre-release identifier — not a
@@ -80,7 +83,8 @@ jobs:
       contents: read
       actions: read # to read this commit's CI run conclusion
     outputs:
-      lane: ${{ steps.route.outputs.lane }}
+      # A companion's tag leaves the lane `companion`, which no job below runs for.
+      lane: ${{ steps.member.outputs.lane || steps.route.outputs.lane }}
       mode: ${{ steps.route.outputs.mode }}
       name: ${{ steps.route.outputs.name }}
       version: ${{ steps.route.outputs.version }}
@@ -132,10 +136,12 @@ jobs:
             packages) lane=pypi;     mode=sweep ;;
             *)        lane=pypi;     mode=targeted ;;
           esac
-          echo "name=$name"       >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "lane=$lane"       >> "$GITHUB_OUTPUT"
-          echo "mode=$mode"       >> "$GITHUB_OUTPUT"
+          {
+            echo "name=$name"
+            echo "version=$version"
+            echo "lane=$lane"
+            echo "mode=$mode"
+          } >> "$GITHUB_OUTPUT"
           # A candidate (x.y.z-rc.N) gets no draft release; the regex above vouched for the
           # shape, so a `-` is decisive.
           prerelease=false
@@ -189,7 +195,7 @@ jobs:
             what="a release candidate is cut from dev; hotfixes are released from main without one"
           else
             branch=main
-            what="a PyPI tag is cut from main — the PyPI lane moves in lockstep with the platform release"
+            what="a PyPI or companion tag is cut from main — both move in lockstep with the platform release"
           fi
 
           git fetch --no-tags --quiet origin "+refs/heads/$branch:refs/remotes/origin/$branch"
@@ -286,15 +292,24 @@ jobs:
       #
       # Targeted tags only: a sweep deliberately names no member, so there is nothing here
       # for it to match against.
+      #
+      # A companion's tag is pushed with the workflow token by the platform release's
+      # draft-release job, which starts no run. One pushed by hand does, and it is fine
+      # as long as it tags the commit of the platform release it belongs to.
       - name: Check the tag against the member it names
+        id: member
         if: ${{ steps.route.outputs.mode == 'targeted' }}
         env:
           NAME: ${{ steps.route.outputs.name }}
           VERSION: ${{ steps.route.outputs.version }}
         run: |
           uv run --script scripts/pypi_members.py --members > /tmp/members.json
-          python3 - <<'EOF'
-          import json, os, re, sys
+          # release_notes knows the companions; it needs `packaging`, like pypi_members.
+          uv run --no-project --with 'packaging>=25' python - <<'EOF'
+          import json, os, re, subprocess, sys
+
+          sys.path.insert(0, "scripts")
+          from release_notes import PLATFORM, layout
 
           def canon(name):  # PEP 503: the tag spells the distribution either way
               return re.sub(r"[-_.]+", "-", name).lower()
@@ -302,6 +317,18 @@ jobs:
           name, version = os.environ["NAME"], os.environ["VERSION"]
           members = {canon(m["package"]): m for m in json.load(open("/tmp/members.json"))}
           member = members.get(canon(name))
+          if member is None and canon(name) in layout().companions:
+              platform = f"{PLATFORM}/{version}"
+              found = subprocess.run(
+                  ["git", "rev-parse", "--verify", "--quiet", f"{platform}^{{commit}}"],
+                  capture_output=True, text=True,
+              ).stdout.strip()
+              if found != os.environ["GITHUB_SHA"]:
+                  sys.exit(f"::error::{name} is released with the platform: tag the commit of {platform}")
+              print(f"{name} {version} ships with {platform}; nothing to build or publish")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+                  output.write("lane=companion\n")
+              sys.exit(0)
           if member is None:
               known = ", ".join(sorted(members))
               sys.exit(f"::error::{name} is not a PyPI-lane member (lane: {known})")
@@ -340,17 +367,18 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - name: Short SHA
         run: echo "SHORT_SHA=${GITHUB_SHA::12}" >> "$GITHUB_ENV"
-      # arm64 has no native GitHub-hosted runner, so cross-building it on this amd64
-      # runner needs QEMU emulation registered with the kernel, plus a buildx builder
+      # arm64 is emulated so one buildx call pushes the multi-platform index; native arm64
+      # runners (ubuntu-24.04-arm) would need a job per platform and a manifest merge.
+      # Cross-building on this amd64 runner needs QEMU registered, plus a buildx builder
       # that can actually target multiple platforms in one invocation (the default
       # "docker" driver can't) — the same docker-container builder that attestation
       # export requires (see the Build step below), so no separate builder step needed.
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
           platforms: arm64
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       # The hardened base (dhi.io) is auth-gated: log in with the org's Docker Hub
       # credentials (same secrets mainline uses). Skipped if the org secrets are not
       # exposed to this repo — the build then fails at the base-image pull with a
@@ -376,13 +404,42 @@ jobs:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Refuse to overwrite an existing release tag
+      # A tag pushed from this same commit is a re-run after a later step failed, so its
+      # image is reused rather than rebuilt: the tag never moves, and signing and
+      # attesting run again on it (an extra signature or attestation is harmless).
+      - name: Guard release tag against reuse from another commit
+        id: existing
         if: ${{ inputs.push }}
         run: |
           tag="${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}"
-          if docker manifest inspect "$tag" >/dev/null 2>&1; then
-            echo "::error::$tag already exists — releases are immutable. Bump the version to re-run."
+          # Only a missing manifest means the tag is free; any other failure (rate
+          # limit, network) must not be mistaken for it, or the build pushes over the tag.
+          if inspect_err=$(docker manifest inspect "$tag" 2>&1 >/dev/null); then
+            exists=true
+          elif grep -qiE 'no such manifest|manifest unknown' <<<"$inspect_err"; then
+            exists=false
+          else
+            echo "::error::could not check whether $tag exists: ${inspect_err}"
             exit 1
+          fi
+          if [ "$exists" = true ]; then
+            revision=$(docker buildx imagetools inspect "$tag" --format '{{json .Image}}' |
+              jq -r 'if has("config") then .config.Labels else (.[] | .config.Labels) end
+                | .["org.opencontainers.image.revision"] // empty' | head -1)
+            if [ "$revision" = "$SHORT_SHA" ]; then
+              digest=$(docker buildx imagetools inspect "$tag" --format '{{json .Manifest}}' | jq -r .digest)
+              # An empty digest would let the build run and push over the tag.
+              if [[ "$digest" != sha256:* ]]; then
+                echo "::error::could not resolve the digest of existing $tag (got '${digest}')"
+                exit 1
+              fi
+              echo "::warning::$tag already exists from this commit (${SHORT_SHA}) — reusing ${digest}, not rebuilding."
+              echo "digest=$digest" >> "$GITHUB_OUTPUT"
+              echo "DIGEST=$digest" >> "$GITHUB_ENV"
+            else
+              echo "::error::$tag already exists from commit '${revision:-unknown}', not ${SHORT_SHA} — releases are immutable. Bump the version to re-run."
+              exit 1
+            fi
           fi
       # OCI labels are set on the CLI so members whose Dockerfile does not stamp them
       # itself (the mainline-synced frontend one) still carry version + revision;
@@ -392,8 +449,9 @@ jobs:
       # existing "build-only dry run" (push=false) mode — that mode's behavior is
       # otherwise unchanged (no --push/--load means buildx discards the result after
       # verifying it builds, same as before: nothing to keep around for a dry run).
+      # Skipped when the guard above reuses an image pushed from this commit.
       - name: Build (stamped, attested when pushing)
-        id: build
+        if: ${{ steps.existing.outputs.digest == '' }}
         run: |
           push_flags=()
           attest_flags=()
@@ -418,7 +476,7 @@ jobs:
             "${{ matrix.member.context }}"
           if [ "${{ inputs.push }}" = "true" ]; then
             digest=$(jq -r '."containerimage.digest"' metadata.json)
-            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+            echo "DIGEST=$digest" >> "$GITHUB_ENV"
           fi
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
@@ -426,11 +484,11 @@ jobs:
         if: ${{ inputs.push }}
       - name: Sign the published image (keyless)
         if: ${{ inputs.push }}
-        run: cosign sign --yes --recursive "${{ env.REGISTRY }}/${{ matrix.member.package }}@${{ steps.build.outputs.digest }}"
+        run: cosign sign --yes --recursive "${{ env.REGISTRY }}/${{ matrix.member.package }}@${DIGEST}"
       # See dev-images.yaml. Gated like signing: no pushed digest to attest in build-only mode.
       - name: Attest SBOM + provenance (keyless)
         if: ${{ inputs.push }}
-        run: scripts/attest-image.sh "${REGISTRY}/${{ matrix.member.package }}@${{ steps.build.outputs.digest }}"
+        run: scripts/attest-image.sh "${REGISTRY}/${{ matrix.member.package }}@${DIGEST}"
       # Hands the resolved digest to package-charts so a chart can pin image.digest
       # instead of the mutable tag (create_charts.py's --digests). One artifact per
       # matrix member (not a job output) because matrix job outputs don't aggregate
@@ -439,7 +497,7 @@ jobs:
         if: ${{ inputs.push }}
         run: |
           mkdir -p digests
-          echo -n "${{ steps.build.outputs.digest }}" > "digests/${{ matrix.member.package }}"
+          echo -n "${DIGEST}" > "digests/${{ matrix.member.package }}"
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: ${{ inputs.push }}
         with:
@@ -448,7 +506,9 @@ jobs:
           retention-days: 1
       - name: Summary
         run: |
-          if [ "${{ inputs.push }}" = "true" ]; then
+          if [ -n "${{ steps.existing.outputs.digest }}" ]; then
+            echo "reused existing ${REGISTRY}/${{ matrix.member.package }}@${DIGEST} for ${{ needs.resolve.outputs.version }} (signed and cosign-attested again)"
+          elif [ "${{ inputs.push }}" = "true" ]; then
             echo "pushed ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} (signed; SBOM + provenance attached and cosign-attested)"
           else
             echo "build-only: ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} (push input not set)"
@@ -636,7 +696,7 @@ jobs:
         if: ${{ inputs.push }}
         run: |
           work=$(mktemp -d)
-          while read -r name version; do
+          while read -r name _; do
             c="deploy/charts/${name}/"
             rm -rf "${work:?}"/*
             cp -r "$c" "$work/${name}-chart"
@@ -706,6 +766,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write # to push the companions' tags and create the draft releases
+      pull-requests: read # the upgrade notes are in the descriptions
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -731,6 +792,8 @@ jobs:
       # For trusted publishing in the called workflow, which cannot hold more than its
       # caller grants.
       id-token: write
+      # To read the upgrade notes from the pull request descriptions for the drafts.
+      pull-requests: read
     uses: ./.github/workflows/pypi-publish.yaml
     with:
       mode: ${{ needs.resolve.outputs.mode }}

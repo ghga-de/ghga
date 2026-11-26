@@ -10,6 +10,8 @@ cors_allowed_origins:
 - https://client.test
 cors_exposed_headers: null
 docs_url: /docs
+enable_opentelemetry: false
+enable_otel_metrics: false
 generate_correlation_id: true
 host: 0.0.0.0
 issuer: https://op.test/
@@ -17,6 +19,7 @@ log_format: null
 log_level: INFO
 log_traceback: true
 openapi_url: /openapi.json
+otel_trace_sampling_rate: 1.0
 port: 8080
 redirect_url: https://client.test/oauth/callback
 service_instance_id: '1'

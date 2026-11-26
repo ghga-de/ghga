@@ -12,7 +12,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { UploadBoxState, UploadBoxStateFilter } from '@app/upload/models/box';
+import {
+  UploadBoxFileStatesFilter,
+  UploadBoxFileStatesFilterLabel,
+  UploadBoxState,
+  UploadBoxStateFilter,
+} from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 
 /**
@@ -49,6 +54,7 @@ export class UploadBoxManagerFilter {
       title: this.#filter().title ?? '',
       state: (this.#filter().state ?? 'not_archived') as UploadBoxStateFilter | '',
       location: this.#filter().location ?? '',
+      fileStates: (this.#filter().fileStates ?? '') as UploadBoxFileStatesFilter | '',
     }),
   );
 
@@ -56,11 +62,12 @@ export class UploadBoxManagerFilter {
    * Communicate filter changes to the upload box service.
    */
   #filterEffect = effect(() => {
-    const { title, state, location } = this.filterForm().value();
+    const { title, state, location, fileStates } = this.filterForm().value();
     this.#uploadBoxService.setUploadBoxesFilter({
       title: title || undefined,
       state: state || undefined,
       location: location || undefined,
+      fileStates: fileStates || undefined,
     });
   });
 
@@ -74,6 +81,27 @@ export class UploadBoxManagerFilter {
       label: s.charAt(0).toUpperCase() + s.slice(1),
     })),
   ];
+
+  /**
+   * All conditions on the file states of a box. Choosing one other than the
+   * check for an empty box loads the file state counts of all open and locked
+   * boxes, so none is disabled for counts that are not loaded yet.
+   */
+  fileStateOptions = Object.entries(UploadBoxFileStatesFilterLabel).map(
+    ([value, label]) => ({ value: value as UploadBoxFileStatesFilter, label }),
+  );
+
+  /**
+   * Why the chosen condition on the file states finds no boxes yet, if it can't.
+   */
+  fileStatesHint = computed(() => {
+    const fileStates = this.filterForm.fileStates().value();
+    if (!fileStates || fileStates === 'no_files') return '';
+    if (this.#uploadBoxService.fileStateCountsByBox()) return '';
+    const counts = this.#uploadBoxService.fileStateCounts;
+    if (counts.error()) return 'The file states could not be loaded.';
+    return counts.isLoading() ? 'Loading the file states…' : '';
+  });
 
   /**
    * All available upload-box locations including display labels.

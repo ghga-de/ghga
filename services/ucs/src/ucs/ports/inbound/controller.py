@@ -16,11 +16,13 @@
 """Defines the main upload controller class"""
 
 from abc import ABC, abstractmethod
+from collections.abc import Collection
 
 from pydantic import UUID4
 
 from ghga_event_schemas.pydantic_ import (
     FileInternallyRegistered,
+    FileUploadState,
     InterrogationFailure,
     InterrogationSuccess,
     UploadBoxState,
@@ -550,6 +552,19 @@ class UploadControllerPort(ABC):
         ...
 
     @abstractmethod
+    async def get_file_state_counts(
+        self, *, box_ids: Collection[UUID4]
+    ) -> dict[UUID4, dict[FileUploadState, int]]:
+        """Return the number of FileUploads per state for each of the given
+        FileUploadBoxes.
+
+        Only the states that count toward a box's `file_count` are included, so each
+        box's counts add up to its `file_count`. Boxes without such FileUploads are
+        absent from the result, as are states without FileUploads.
+        """
+        ...
+
+    @abstractmethod
     async def process_interrogation_success(
         self, *, report: InterrogationSuccess
     ) -> None:
@@ -603,13 +618,18 @@ class UploadControllerPort(ABC):
         ...
 
     @abstractmethod
-    async def cleanup_stale_uploads(self) -> None:
+    async def cleanup_stale_uploads(self, *, ignore_safeguards: bool = False) -> None:
         """Abort stale in-progress multipart uploads and mark their FileUpload records
-        as 'cancelled'. Also aborts any orphaned S3 multipart uploads that have no
-        corresponding FileUpload record.
+        as 'cancelled'. Also aborts any orphaned S3 multipart uploads and deletes any
+        orphaned inbox objects that have no corresponding FileUpload record.
 
         An upload is considered stale if its last-activity timestamp is older than
         `config.multipart_upload_ttl_hours` hours. If no activity entry exists,
         falls back to comparing the FileUpload's `initiated` timestamp.
+
+        Orphaned objects younger than `config.orphaned_object_min_age_hours` are kept.
+        Orphans are left alone for a storage alias if the FileUpload collection is
+        empty, the objects in the bucket can't be listed, or the orphaned object count
+        exceeds `config.max_orphaned_objects`, unless `ignore_safeguards` is True.
         """
         ...

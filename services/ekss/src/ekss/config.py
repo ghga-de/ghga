@@ -103,7 +103,7 @@ class Crypt4GHConfig(BaseSettings):
         examples=["./key.sec"],
         description="Path to the Crypt4GH private key file",
     )
-    private_key_passphrase: str | None = Field(
+    private_key_passphrase: SecretStr | None = Field(
         default=None,
         description=(
             "Passphrase needed to read the content of the private key file. "

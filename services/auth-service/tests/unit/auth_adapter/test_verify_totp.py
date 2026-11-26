@@ -17,6 +17,7 @@
 """Test the application logic for verifying user TOTP tokens."""
 
 from contextlib import nullcontext
+from enum import StrEnum
 from typing import cast
 from unittest.mock import AsyncMock, Mock
 
@@ -25,6 +26,7 @@ from fastapi import HTTPException, status
 from pydantic import SecretStr
 
 from auth_service.auth_adapter.adapters.memory_session_store import MemorySessionStore
+from auth_service.auth_adapter.core.session_check import totp_token_hash
 from auth_service.auth_adapter.core.session_store import SessionState
 from auth_service.auth_adapter.core.totp import TOTPHandler
 from auth_service.auth_adapter.core.verify_totp import verify_totp
@@ -121,6 +123,8 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
 
     session_store.save_session = AsyncMock()
     session_store.delete_session = AsyncMock()
+    session.roles = ["role_from_login"]
+    get_roles = AsyncMock(return_value=["role_from_database"])
 
     with nullcontext() if should_verify else pytest.raises(HTTPException) as exc_info:
         await verify_totp(
@@ -130,21 +134,34 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
             totp_handler=totp_handler,
             user_registry=user_registry,
             token_dao=cast(UserTokenDao, user_token_dao),
+            get_roles=get_roles,
         )
     if should_verify:
         assert session.state is SessionState.AUTHENTICATED
         assert session.totp_token is None
+        get_roles.assert_awaited_once_with(user_dao.user)
+        assert session.roles == ["role_from_database"]
+        assert totp_token
+        assert session.totp_token_hash == totp_token_hash(totp_token)
     else:
         assert exc_info
-        assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        expected_message = (
-            "Too many failed attempts"
-            if limit_reached and has_token
-            else "Invalid TOTP code"
-        )
+        if limit_reached and user_has_token:
+            # a stored user has been disabled
+            expected_status = status.HTTP_403_FORBIDDEN
+            expected_message = "User account is disabled"
+        elif limit_reached:
+            # a new TOTP token only ends the session
+            expected_status = status.HTTP_401_UNAUTHORIZED
+            expected_message = "Too many failed attempts"
+        else:
+            expected_status = status.HTTP_401_UNAUTHORIZED
+            expected_message = "Invalid TOTP code"
+        assert exc_info.value.status_code == expected_status
         assert exc_info.value.detail == expected_message
         assert session.state is session_state
         assert session.totp_token is totp_token
+        get_roles.assert_not_called()
+        assert session.roles == ["role_from_login"]
 
     if limit_reached and user_has_token:
         assert user_dao.user.status is UserStatus.INACTIVE
@@ -155,8 +172,10 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
         assert status_change.context == "Too many failed TOTP login attempts"
         assert status_change.change_date
         assert 0 <= (now_utc_ms_prec() - status_change.change_date).total_seconds() < 3
-        assert totp_token
-        assert not totp_handler.is_invalid(totp_token)
+        # the stored token has been cleared
+        assert not totp_handler.is_invalid(
+            user_token_dao.user_tokens[user_id].totp_token
+        )
     else:
         assert user_dao.user.status is UserStatus.ACTIVE
         assert not user_dao.user.status_change
@@ -167,7 +186,9 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
         session_store.delete_session.assert_not_called()
 
     if should_verify or user_has_token:
-        assert user_token_dao.user_tokens[user_id].totp_token is totp_token
+        stored_token = user_token_dao.user_tokens[user_id].totp_token
+        assert totp_token
+        assert stored_token.encrypted_secret == totp_token.encrypted_secret
     else:
         assert not user_token_dao.user_tokens
 
@@ -175,7 +196,9 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
         totp_handler.verify_code.assert_called_once_with(totp_token, totp_code)
     else:
         totp_handler.verify_code.assert_not_called()
-    if should_verify is not None:
+    if should_verify:
+        session_store.save_session.assert_awaited_once_with(session, checked=True)
+    elif should_verify is not None:
         session_store.save_session.assert_awaited_once_with(session)
     else:
         session_store.save_session.assert_not_called()
@@ -186,3 +209,300 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
         assert iva_state is IvaState.UNVERIFIED
     else:
         assert iva_state is IvaState.VERIFIED
+
+
+@pytest.mark.parametrize(
+    "session_state",
+    [
+        SessionState.NEW_TOTP_TOKEN,
+        SessionState.HAS_TOTP_TOKEN,
+        SessionState.AUTHENTICATED,
+    ],
+)
+@pytest.mark.asyncio()
+async def test_verify_totp_for_disabled_user(session_state: SessionState):
+    """Test that a user disabled after login cannot verify a TOTP code."""
+    session_store = MemorySessionStore(config=config)
+    session = await session_store.create_session(**SESSION_ARGS)
+    session.state = session_state
+
+    totp_handler = TOTPHandler(config=config)
+    totp_token = totp_handler.generate_token()
+    totp_handler.verify_code = Mock(return_value=True)
+    new_totp_token = None
+    if session_state is SessionState.NEW_TOTP_TOKEN:
+        # the user asked to replace the stored token
+        new_totp_token = session.totp_token = totp_handler.generate_token()
+
+    user_registry = MockUserRegistry(config=config)
+    user_dao = user_registry.mock_user_dao
+    user_dao.users[-1] = user_dao.user.model_copy(
+        update={"status": UserStatus.INACTIVE}
+    )
+    user_token_dao = MockUserTokenDao()
+    await user_token_dao.upsert(
+        UserToken(user_id=user_dao.user.id, totp_token=totp_token)
+    )
+
+    get_roles = AsyncMock()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await verify_totp(
+            "423715",
+            session_store=session_store,
+            session=session,
+            totp_handler=totp_handler,
+            user_registry=user_registry,
+            token_dao=cast(UserTokenDao, user_token_dao),
+            get_roles=get_roles,
+        )
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc_info.value.detail == "User account is disabled"
+
+    totp_handler.verify_code.assert_not_called()
+    assert not await session_store.get_session(session.session_id)
+    assert session.state is session_state
+    assert session.totp_token is new_totp_token
+
+    # the stored token has not been replaced
+    user_token = await user_token_dao.get_by_id(user_dao.user.id)
+    assert user_token.totp_token == totp_token
+    assert not user_registry.published_events
+
+
+@pytest.mark.parametrize(
+    "session_state",
+    [
+        SessionState.NEW_TOTP_TOKEN,
+        SessionState.HAS_TOTP_TOKEN,
+        SessionState.AUTHENTICATED,
+    ],
+)
+@pytest.mark.asyncio()
+async def test_verify_totp_for_deleted_user(session_state: SessionState):
+    """Test that a user deleted after login cannot verify a TOTP code."""
+    session_store = MemorySessionStore(config=config)
+    session = await session_store.create_session(**SESSION_ARGS)
+    session.state = session_state
+
+    totp_handler = TOTPHandler(config=config)
+    totp_handler.verify_code = Mock(return_value=True)
+    if session_state is SessionState.NEW_TOTP_TOKEN:
+        session.totp_token = totp_handler.generate_token()
+
+    user_registry = MockUserRegistry(config=config)
+    user_registry.mock_user_dao.users.clear()
+    user_token_dao = MockUserTokenDao()
+    get_roles = AsyncMock()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await verify_totp(
+            "423715",
+            session_store=session_store,
+            session=session,
+            totp_handler=totp_handler,
+            user_registry=user_registry,
+            token_dao=cast(UserTokenDao, user_token_dao),
+            get_roles=get_roles,
+        )
+    assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
+    assert exc_info.value.detail == "User account has been deleted"
+
+    totp_handler.verify_code.assert_not_called()
+    get_roles.assert_not_called()
+    assert not await session_store.get_session(session.session_id)
+    assert not user_token_dao.user_tokens
+    assert not user_registry.published_events
+
+
+async def _verify_in_new_session(
+    code: str,
+    *,
+    totp_handler: TOTPHandler,
+    user_registry: MockUserRegistry,
+    user_token_dao: MockUserTokenDao,
+) -> int:
+    """Verify a code with the stored token in a new session.
+
+    Returns the HTTP status code of the outcome.
+    """
+    session_store = MemorySessionStore(config=config)
+    session = await session_store.create_session(**SESSION_ARGS)
+    session.state = SessionState.HAS_TOTP_TOKEN
+    try:
+        await verify_totp(
+            code,
+            session_store=session_store,
+            session=session,
+            totp_handler=totp_handler,
+            user_registry=user_registry,
+            token_dao=cast(UserTokenDao, user_token_dao),
+            get_roles=AsyncMock(return_value=[]),
+        )
+    except HTTPException as error:
+        return error.status_code
+    return status.HTTP_204_NO_CONTENT
+
+
+@pytest.mark.asyncio()
+async def test_verify_totp_stores_usage_of_token():
+    """Test that a successful verification stores the usage counters of the token."""
+    totp_handler = TOTPHandler(config=config)
+    totp_token = totp_handler.generate_token()
+    totp_token.total_attempts = 3  # failed attempts before
+    user_registry = MockUserRegistry(config=config)
+    user_token_dao = MockUserTokenDao()
+    await user_token_dao.upsert(UserToken(user_id=ID_OF_JOHN, totp_token=totp_token))
+    code = totp_handler.generate_code(totp_token)
+
+    async def verify() -> int:
+        return await _verify_in_new_session(
+            code,
+            totp_handler=totp_handler,
+            user_registry=user_registry,
+            user_token_dao=user_token_dao,
+        )
+
+    assert await verify() == status.HTTP_204_NO_CONTENT
+    stored_token = user_token_dao.user_tokens[ID_OF_JOHN].totp_token
+    assert stored_token.counter_attempts == -1  # marked as verified
+    assert stored_token.total_attempts == 0  # failed attempts are forgotten
+
+    # the same code is rejected in another session
+    assert await verify() == status.HTTP_401_UNAUTHORIZED
+
+
+class ConcurrentChange(StrEnum):
+    """How a concurrent request changes the stored token."""
+
+    COUNTERS = "counters"  # a concurrent attempt updated the usage counters
+    SECRET = "secret"  # the token was replaced, with the same usage counters
+    DELETED = "deleted"  # the token was deleted
+
+
+@pytest.mark.parametrize("change", list(ConcurrentChange))
+@pytest.mark.parametrize("valid_code", [True, False], ids=["valid", "wrong"])
+@pytest.mark.asyncio()
+async def test_verify_totp_with_concurrent_change(
+    change: ConcurrentChange, valid_code: bool
+):
+    """Test that an attempt fails when the token changes concurrently.
+
+    The change happens between reading the token and writing it back. The attempt
+    fails without writing the token, whether its code was valid or not.
+    """
+    totp_handler = TOTPHandler(config=config)
+    totp_token = totp_handler.generate_token()
+    user_registry = MockUserRegistry(config=config)
+    user_token_dao = MockUserTokenDao()
+    await user_token_dao.upsert(UserToken(user_id=ID_OF_JOHN, totp_token=totp_token))
+    code = totp_handler.generate_code(totp_token)
+    if not valid_code:
+        code = "000000" if code != "000000" else "111111"
+
+    get_by_id = user_token_dao.get_by_id
+    changed_token: UserToken | None = None
+
+    async def get_by_id_then_change(id_):
+        """Read the token, then change it concurrently."""
+        nonlocal changed_token
+        user_token = await get_by_id(id_)
+        if change is ConcurrentChange.DELETED:
+            del user_token_dao.user_tokens[id_]
+            return user_token
+        changed_token = user_token.model_copy(deep=True)
+        if change is ConcurrentChange.COUNTERS:
+            changed_token.totp_token.last_counter = 1
+            changed_token.totp_token.total_attempts = 1
+        else:
+            new_token = totp_handler.generate_token()
+            changed_token.totp_token.encrypted_secret = new_token.encrypted_secret
+        user_token_dao.user_tokens[id_] = changed_token
+        return user_token
+
+    user_token_dao.get_by_id = get_by_id_then_change
+    outcome = await _verify_in_new_session(
+        code,
+        totp_handler=totp_handler,
+        user_registry=user_registry,
+        user_token_dao=user_token_dao,
+    )
+
+    assert outcome == status.HTTP_401_UNAUTHORIZED
+    # the token is as the concurrent request left it
+    assert user_token_dao.user_tokens.get(ID_OF_JOHN) == changed_token
+    assert user_registry.dummy_user.status is UserStatus.ACTIVE
+
+
+@pytest.mark.parametrize("change", list(ConcurrentChange))
+@pytest.mark.asyncio()
+async def test_verify_totp_at_limit_with_concurrent_change(change: ConcurrentChange):
+    """Test the attempts limit when the token changes concurrently.
+
+    The account is disabled first, so it is disabled either way, but the cleared
+    token is written only if the token has not changed.
+    """
+    totp_handler = TOTPHandler(config=config)
+    totp_token = totp_handler.generate_token()
+    totp_token.total_attempts = 10
+    assert totp_handler.is_invalid(totp_token)
+    user_registry = MockUserRegistry(config=config)
+    user_token_dao = MockUserTokenDao()
+    await user_token_dao.upsert(UserToken(user_id=ID_OF_JOHN, totp_token=totp_token))
+
+    get_by_id = user_token_dao.get_by_id
+    changed_token: UserToken | None = None
+
+    async def get_by_id_then_change(id_):
+        """Read the token, then change it concurrently."""
+        nonlocal changed_token
+        user_token = await get_by_id(id_)
+        if change is ConcurrentChange.DELETED:
+            del user_token_dao.user_tokens[id_]
+            return user_token
+        changed_token = user_token.model_copy(deep=True)
+        if change is ConcurrentChange.COUNTERS:
+            changed_token.totp_token.total_attempts = 11
+        else:
+            new_token = totp_handler.generate_token()
+            changed_token.totp_token.encrypted_secret = new_token.encrypted_secret
+        user_token_dao.user_tokens[id_] = changed_token
+        return user_token
+
+    user_token_dao.get_by_id = get_by_id_then_change
+    outcome = await _verify_in_new_session(
+        "123456",
+        totp_handler=totp_handler,
+        user_registry=user_registry,
+        user_token_dao=user_token_dao,
+    )
+
+    assert outcome == status.HTTP_403_FORBIDDEN
+    assert user_registry.dummy_user.status is UserStatus.INACTIVE
+    # the cleared token has not been written
+    assert user_token_dao.user_tokens.get(ID_OF_JOHN) == changed_token
+
+
+@pytest.mark.asyncio()
+async def test_verify_totp_at_limit_keeps_token_if_disabling_fails():
+    """Test that the token stays at the limit if the account cannot be disabled."""
+    totp_handler = TOTPHandler(config=config)
+    totp_token = totp_handler.generate_token()
+    totp_token.total_attempts = 10
+    user_registry = MockUserRegistry(config=config)
+    user_registry.update_user = AsyncMock(
+        side_effect=user_registry.UserUpdateError(user_id=ID_OF_JOHN)
+    )
+    user_token_dao = MockUserTokenDao()
+    await user_token_dao.upsert(UserToken(user_id=ID_OF_JOHN, totp_token=totp_token))
+
+    with pytest.raises(user_registry.UserUpdateError):
+        await _verify_in_new_session(
+            "123456",
+            totp_handler=totp_handler,
+            user_registry=user_registry,
+            user_token_dao=user_token_dao,
+        )
+
+    stored = user_token_dao.user_tokens[ID_OF_JOHN].totp_token
+    assert totp_handler.is_invalid(stored)

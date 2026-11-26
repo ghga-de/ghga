@@ -16,8 +16,14 @@
 """Outbound DAO port definitions."""
 
 from hexkit.protocols.daopub import DaoPublisher
-from rs.core.models import FileAccession, ResearchDataUploadBox, Study
+from rs.core.models import (
+    FileAccession,
+    ResearchDataUploadBox,
+    Study,
+    UploadBoxPriority,
+)
 
 FileAccessionDao = DaoPublisher[FileAccession]
 BoxDao = DaoPublisher[ResearchDataUploadBox]
 StudyDao = DaoPublisher[Study]
+UploadBoxPriorityDao = DaoPublisher[UploadBoxPriority]

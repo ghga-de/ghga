@@ -25,11 +25,13 @@ Located in the `features` directory, the **feature files** are numerically prefi
 Each file contains multiple scenarios executed sequentially.
 Corresponding step definitions are found in the `steps` directory.
 Pytest fixtures are stored in the `fixtures` directory.
+The `example_data/metadata/legacy/` directory holds the submission record and accession store of a study submitted before study PIDs.
+dskit 5.4.2 from `main` at `8dd922f86` (release 15.3.1) wrote both; to change them, run that dskit again instead of editing them by hand.
 
 ### Execution
 
 - Use `just testbed` to run all tests.
-- For specific steps, such as step 240, use `just testbed steps/test_240_*`.
+- For specific steps, such as step 001, use `just testbed steps/test_001_*`.
 - For specific group of tests, BDD tags (pytest markers) can also be used, e.g. `just testbed -m browse`.
 - Use `just testbed-remote <config>` to run against the deployment a `tb.*.yaml` names, without the kind prelude; see [Running against a cluster](#running-against-a-cluster).
 

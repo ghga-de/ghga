@@ -16,6 +16,8 @@
 """Utilities used in step functions"""
 
 import json
+import re
+import subprocess
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
@@ -24,13 +26,71 @@ from typing import Any
 from fixtures import Config, JointFixture, MongoFixture, Response
 from fixtures.state import StateStorage
 from fixtures.utils import write_data_to_yaml
-from ghga_datasteward_kit.file_ingest import IngestConfig
 from ghga_datasteward_kit.loading import LoadConfig
+from ghga_service_commons.utils.accessions import (
+    DATASET_PID_PATTERN,
+    FILE_ACCESSION_PATTERN,
+    STUDY_PID_PATTERN,
+)
 from hexkit.providers.s3.testutils import FileObject
 from pydantic import BaseModel, EmailStr
 from pytest_bdd import parsers
 
 parse: type[parsers.StepParser] = parsers.parse  # pylint: disable=invalid-name
+
+
+def is_study_pid(accession: str) -> bool:
+    """Tell whether the accession is a study PID."""
+    return re.fullmatch(STUDY_PID_PATTERN, accession) is not None
+
+
+def is_dataset_pid(accession: str) -> bool:
+    """Tell whether the accession is a dataset PID."""
+    return re.fullmatch(DATASET_PID_PATTERN, accession) is not None
+
+
+def is_alias_accession(accession: str) -> bool:
+    """Tell whether the accession is that of an entity other than a study or a
+    dataset.
+    """
+    # every entity but the study and its datasets gets '{study_pid}.{alias}', the
+    # shape of a file accession
+    return re.fullmatch(FILE_ACCESSION_PATTERN, accession) is not None
+
+
+def is_legacy_accession(accession: str) -> bool:
+    """Tell whether the accession is a flat one from before study PIDs."""
+    # pins the 14 digits dskit mints; service-commons' LEGACY_* patterns are looser
+    return re.fullmatch(r"GHGA[A-Z][0-9]{14}", accession) is not None
+
+
+def run_dskit(*args: str | Path, timeout: int = 600) -> subprocess.CompletedProcess:
+    """Run a 'ghga-datasteward-kit' command with the given arguments, print what
+    it reported, and return the finished process.
+    """
+    completed = subprocess.run(  # nosec B607, B603
+        ["ghga-datasteward-kit", *args],
+        capture_output=True,
+        check=False,
+        encoding="utf-8",
+        text=True,
+        timeout=timeout,
+    )
+
+    if completed.stdout:
+        print(completed.stdout)
+    if "ERROR" in completed.stderr or completed.returncode:
+        print(completed.stderr)
+
+    return completed
+
+
+def read_submission(fixtures: JointFixture, submission_id: str) -> dict:
+    """Read a submission JSON from the local submission store."""
+    submission_path = fixtures.dsk.config.submission_store / f"{submission_id}.json"
+    with open(submission_path, encoding="utf-8") as submission_file:
+        return json.load(submission_file)
+
 
 DATASET_OVERVIEW_KEYS = {"accession", "title", "description"}
 DATASET_SEARCH_RESULT_KEYS = {"accession", "title", "ega_accession", "alias"}
@@ -53,6 +113,15 @@ EXPECTED_NOTIFICATIONS = {
     "iva_code_requested": "IVA Request Received",
     "iva_verification_requested": "Contact Address Verification Request Received",
     "iva_code_transmitted": "Contact Address Verification Code Transmitted",
+}
+
+# The phone numbers of the SMS addresses the suite creates, by the word the features
+# use for them: feature 110 verifies the main one and keeps it, and feature 501 asks
+# for consent before an SMS to the other one, from the US block reserved for fiction,
+# and deletes it again
+USER_PHONE_NUMBERS = {
+    "main": "+491710000001",
+    "other": "+12025550123",
 }
 
 IVA_TYPE_NAMES = {
@@ -105,22 +174,6 @@ class Notification(BaseModel):
         return abs((datetime.now(UTC) - self.created_time).seconds) <= seconds
 
 
-def ingest_config_as_file(config: IngestConfig):
-    """Create upload config file for data steward kit files ingest-upload-metadata"""
-    ingest_config = {
-        "file_ingest_baseurl": config.file_ingest_baseurl,
-        "file_ingest_pubkey": config.file_ingest_pubkey,
-        "submission_store_dir": str(config.submission_store_dir),
-        "input_dir": str(config.input_dir),
-        "map_files_fields": config.map_files_fields,
-        "selected_storage_alias": config.selected_storage_alias,
-        "fallback_bucket_id": config.fallback_bucket_id,
-        "wkvs_api_url": config.wkvs_api_url,
-    }
-
-    return write_data_to_yaml(data=ingest_config)
-
-
 def load_config_as_file(config: LoadConfig):
     """Create upload config file for data steward kit files load"""
     load_config = {
@@ -132,14 +185,6 @@ def load_config_as_file(config: LoadConfig):
     }
 
     return write_data_to_yaml(data=load_config)
-
-
-def get_ext_char(file_path: Path):
-    """Get file path and return first character of the extension"""
-    first_char = " "
-    if file_path.suffixes:
-        first_char = file_path.suffixes[0].strip(".")[0]
-    return first_char
 
 
 def verify_named_file(
@@ -171,11 +216,11 @@ def verify_named_file(
             assert alias.startswith(first_line)
 
 
-def search_dataset(  # noqa: C901
+def search_dataset(
     fixtures: JointFixture,
     query: str | None = None,
     filters: Mapping[str, str | int | list[str | int]] | None = None,
-    sorts: Mapping[str, str] | None = None,
+    sort: str | None = None,
     limit: int | None = None,
     skip: int | None = None,
     class_name: str = "EmbeddedDataset",
@@ -202,13 +247,7 @@ def search_dataset(  # noqa: C901
             value = value[0]
         params["filter_by"] = filter_by
         params["value"] = value
-    if sorts:
-        order_by: Any = list(sorts)
-        sort: Any = list(sorts.values())
-        if len(order_by) == 1:
-            order_by = order_by[0]
-            sort = sort[0]
-        params["order_by"] = order_by
+    if sort:
         params["sort"] = sort
     url = f"{fixtures.config.mass_url}/search"
     return fixtures.http.get(url, params=params)
@@ -242,18 +281,6 @@ def get_dataset_search_summary(content: dict) -> dict:
     }
 
 
-def get_secret_ids(file_metadata_dir: Path, file_objects: list[FileObject]) -> set[str]:
-    """Returns secret ids of the ingested files using their file metadata"""
-    secret_ids = set()
-    for file_object in file_objects:
-        metadata_file_path = file_metadata_dir / f"{file_object.object_id}.json"
-        secret_id = json.loads(metadata_file_path.read_text())[
-            "Symmetric file encryption secret ID"
-        ]
-        secret_ids.add(secret_id)
-    return secret_ids
-
-
 def parse_notifications(raw_data: dict) -> list[Notification]:
     """Parse Email data from Mailhog into a sorted list of Notification instances."""
     return [
@@ -269,10 +296,13 @@ def parse_notifications(raw_data: dict) -> list[Notification]:
     ]
 
 
-def reset_user_token_counter(sub: str, fixtures: JointFixture) -> None:
+def reset_user_token_counter(
+    sub: str, fixtures: JointFixture, *, keep_failed_attempts: bool = False
+) -> None:
     """Forget the previous TOTP logins for the user with the given sub.
 
     This allows logging in again with the same TOTP counter.
+    Keep the failed attempts to reset only what limits the logins per time step.
     """
     config, mongo = fixtures.config, fixtures.mongo
 
@@ -297,7 +327,9 @@ def reset_user_token_counter(sub: str, fixtures: JointFixture) -> None:
 
     totp_token = user_token_document["totp_token"]
     assert {"last_counter", "counter_attempts", "total_attempts"}.issubset(totp_token)
-    totp_token.update({"last_counter": -1, "counter_attempts": -1, "total_attempts": 0})
+    totp_token.update({"last_counter": -1, "counter_attempts": -1})
+    if not keep_failed_attempts:
+        totp_token["total_attempts"] = 0
 
     # Update the TOTP token counter directly in the database
     mongo.upsert_document(
@@ -312,6 +344,11 @@ def reset_user_token_counter(sub: str, fixtures: JointFixture) -> None:
         timeout=1,
     )
     assert document
+
+    # the auth service accepts a code of the same time step again now
+    token = fixtures.state.get_state(f"totp-token-{sub}")
+    if token:
+        fixtures.auth.forget_used_totp(token)
 
 
 def get_alias_from_ega_accession(state: StateStorage, ega_accession):

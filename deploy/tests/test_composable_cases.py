@@ -1,5 +1,7 @@
 """Composable render cases for the ghga-common library chart."""
 
+import pytest
+
 
 def test_common_labels_reach_every_resource_service_labels_stay_scoped(rendered_chart):
     """commonLabels/commonAnnotations land on every rendered resource - there is no
@@ -84,93 +86,63 @@ def test_kafka_user(rendered_chart, expected):
     )
 
 
-def test_vault_agent(rendered_chart, release_name, expected):
-    """Vault agent annotations and command wrapper render when enabled."""
-    manifests = rendered_chart("common.yaml", "vault_enabled.yaml")
-    exp = expected("vault_enabled", "podAnnotations")
-    got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
+def test_secret_env_files(rendered_chart, expected):
+    """With secretEnvFiles enabled, the shell sources every file in its dir first."""
+    manifests = rendered_chart("common.yaml", "secret_env_files.yaml")
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert container["command"] == expected("secret_env_files", "command")
+    assert container["args"] == expected("secret_env_files", "args")
 
-    diff = {k: (v, got.get(k)) for k, v in exp.items() if got.get(k) != v}
-    print(diff)
-    assert not diff, diff
+    manifests = rendered_chart("common.yaml")
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert container["args"] == ["/usr/local/bin/sleep 100000000"]
 
-    assert (
-        expected("vault_enabled", "podAnnotations").items()
-        <= manifests["Deployment"]["spec"]["template"]["metadata"][
-            "annotations"
-        ].items()
+
+def test_secret_env_files_need_a_shell(rendered_chart):
+    """An exec-style command cannot source files, so the render fails loudly."""
+    with pytest.raises(AssertionError, match="cannot source secretEnvFiles"):
+        rendered_chart(
+            "common.yaml", "command_style_exec.yaml", "secret_env_files.yaml"
+        )
+
+
+def test_pod_annotations_and_secret_env_files_reach_every_kind(rendered_chart):
+    """Deployment, Job and CronJob get the same pod annotations and command.
+
+    The platform injects its secrets sidecar through these two values alone, so a
+    kind that missed either would start without its secrets.
+    """
+    manifests = rendered_chart(
+        "common.yaml",
+        "pod_annotations.yaml",
+        "secret_env_files.yaml",
+        "cronjob_pod_annotations.yaml",
     )
+    pods = {
+        "Deployment": manifests["Deployment"]["spec"]["template"],
+        "Job": manifests["Job"]["spec"]["template"],
+        "CronJob": manifests["CronJob"]["spec"]["jobTemplate"]["spec"]["template"],
+    }
+    deployment_container = pods["Deployment"]["spec"]["containers"][0]
+    for kind, pod in pods.items():
+        annotations = pod["metadata"]["annotations"]
+        assert annotations["vault.hashicorp.com/agent-inject"] == "true", kind
+        container = pod["spec"]["containers"][0]
+        assert container["command"] == deployment_container["command"], kind
+        assert container["args"] == deployment_container["args"], kind
 
-    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0][
-        "command"
-    ]
-    args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
-    assert command == expected("vault_enabled", "command")
-    assert args == expected("vault_enabled", "args")
 
-
-def test_vault_boilerplate_extra_annotations(rendered_chart, release_name, expected):
-    """Extra vault annotations merge into the boilerplate."""
-    manifests = rendered_chart("common.yaml", "vault_boilerplate.yaml")
-    exp = expected("vault_boilerplate", "podAnnotations")
-    got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
-
-    diff = {k: (v, got.get(k)) for k, v in exp.items() if got.get(k) != v}
-    print(diff)
-    assert not diff, diff
-
-    assert (
-        expected("vault_boilerplate", "podAnnotations").items()
-        <= manifests["Deployment"]["spec"]["template"]["metadata"][
-            "annotations"
-        ].items()
+def test_deployment_share_process_namespace_stays_scoped(rendered_chart):
+    """deployment.shareProcessNamespace applies to the Deployment only."""
+    manifests = rendered_chart(
+        "common.yaml",
+        "cronjob_pod_annotations.yaml",
+        "deployment_share_process_namespace.yaml",
     )
-
-    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0][
-        "command"
-    ]
-    args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
-    assert command == expected("vault_boilerplate", "command")
-    assert args == expected("vault_boilerplate", "args")
-
-
-def test_vault_boilerplate_omits_unset_annotations(rendered_chart):
-    """Unset vault annotations stay absent."""
-    manifests = rendered_chart("common.yaml", "vault_enabled.yaml")
-    annotations = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
-
-    for key in (
-        "vault.hashicorp.com/ca-cert",
-        "vault.hashicorp.com/tls-secret",
-        "vault.hashicorp.com/service",
-        "vault.hashicorp.com/tls-server-name",
-    ):
-        assert key not in annotations
-
-
-def test_vault_single_template(rendered_chart, release_name, expected):
-    """Single-template vault mode renders exec-style command."""
-    manifests = rendered_chart("common.yaml", "vault_single_template.yaml")
-    exp = expected("vault_single_template", "podAnnotations")
-    got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
-
-    diff = {k: (v, got.get(k)) for k, v in exp.items() if got.get(k) != v}
-    print(diff)
-    assert not diff, diff
-
-    assert (
-        expected("vault_single_template", "podAnnotations").items()
-        <= manifests["Deployment"]["spec"]["template"]["metadata"][
-            "annotations"
-        ].items()
-    )
-
-    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0][
-        "command"
-    ]
-    args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
-    assert command == expected("vault_single_template", "command")
-    assert args == expected("vault_single_template", "args")
+    assert manifests["Deployment"]["spec"]["template"]["spec"]["shareProcessNamespace"]
+    assert not manifests["Job"]["spec"]["template"]["spec"]["shareProcessNamespace"]
+    cronjob_pod = manifests["CronJob"]["spec"]["jobTemplate"]["spec"]["template"]
+    assert not cronjob_pod["spec"]["shareProcessNamespace"]
 
 
 def test_http_route(rendered_chart):
@@ -257,7 +229,8 @@ def test_command_style_exec(rendered_chart):
 def test_cronjob_single_backward_compatible(rendered_chart, expected):
     """A single, unnamed cronjobs[] entry keeps the pre-array naming (no suffix).
 
-    and inherits schedule/command/history-limit from the top-level values.
+    and inherits schedule/command/history-limit from the top-level values. By
+    default it forbids overlapping runs and sets no deadlines.
     """
     manifests = rendered_chart("common.yaml", "cronjob_single.yaml")
 
@@ -270,6 +243,12 @@ def test_cronjob_single_backward_compatible(rendered_chart, expected):
         cronjob["spec"]["successfulJobsHistoryLimit"]
         == expected("cronjob_single", "spec")["successfulJobsHistoryLimit"]
     )
+    assert (
+        cronjob["spec"]["concurrencyPolicy"]
+        == expected("cronjob_single", "spec")["concurrencyPolicy"]
+    )
+    assert "startingDeadlineSeconds" not in cronjob["spec"]
+    assert "activeDeadlineSeconds" not in cronjob["spec"]["jobTemplate"]["spec"]
 
     container = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"][
         "containers"
@@ -281,7 +260,8 @@ def test_cronjob_single_backward_compatible(rendered_chart, expected):
 def test_cronjobs_multiple_with_overrides(rendered_objects, expected):
     """Deployment and multiple cronjobs can be shipped side by side; each cronjob.
 
-    entry can override its own schedule/history-limit/entrypoint/resources, an
+    entry can override its own schedule/history-limit/concurrency/deadlines/
+    entrypoint/resources, an
     entry with `enabled: false` is skipped, and entries without overrides fall
     back to the top-level values (same as the Deployment uses).
     """
@@ -311,6 +291,14 @@ def test_cronjobs_multiple_with_overrides(rendered_objects, expected):
             job["spec"]["successfulJobsHistoryLimit"]
             == exp["successfulJobsHistoryLimit"]
         )
+        assert job["spec"]["concurrencyPolicy"] == exp["concurrencyPolicy"]
+        assert (
+            job["spec"].get("startingDeadlineSeconds") == exp["startingDeadlineSeconds"]
+        )
+        job_spec = job["spec"]["jobTemplate"]["spec"]
+        assert job_spec["activeDeadlineSeconds"] == exp["activeDeadlineSeconds"]
+        # A pod-level activeDeadlineSeconds would not stop the Job from retrying.
+        assert "activeDeadlineSeconds" not in job_spec["template"]["spec"]
         container = job["spec"]["jobTemplate"]["spec"]["template"]["spec"][
             "containers"
         ][0]
@@ -321,13 +309,13 @@ def test_cronjobs_multiple_with_overrides(rendered_objects, expected):
 
 
 def test_cronjob_pod_annotations_override(rendered_objects, expected):
-    """A cronjob entry can add/override pod annotations (e.g. to run the vault.
+    """A cronjob entry can add or override pod annotations.
 
-    agent as an init-only container for a short-lived Job) without affecting
-    the Deployment or other cronjobs, which keep the shared/vault annotations.
+    For example, to run the Vault agent as an init-only container for a short-lived
+    Job, without affecting the Deployment or other cronjobs.
     """
     objects = rendered_objects(
-        "common.yaml", "vault_enabled.yaml", "cronjob_pod_annotations.yaml"
+        "common.yaml", "pod_annotations.yaml", "cronjob_pod_annotations.yaml"
     )
 
     deployment = next(obj for obj in objects if obj["kind"] == "Deployment")
@@ -352,77 +340,16 @@ def test_cronjob_pod_annotations_override(rendered_objects, expected):
 
 
 def test_cronjob_pod_annotations_override_no_duplicate_key(rendered_text):
-    """Regression test: annotations used to be built by concatenating three raw YAML.
+    """A per-cronjob key that overrides a top-level one is emitted once.
 
-    blocks (top-level podAnnotations, vaultAgent-generated annotations, per-cronjob
-    podAnnotations) with no deduplication. A cronjob overriding a key the vaultAgent
-    block already sets (e.g. agent-pre-populate-only, to run a one-shot job without
-    the agent as a long-lived sidecar) produced a literal duplicate YAML key. That
-    happened to "work" under yaml.safe_load (last occurrence wins) but is invalid
-    under stricter YAML consumers, so assert directly against the rendered text.
+    A duplicate YAML key loads under yaml.safe_load (last one wins) but is invalid
+    for stricter consumers, so assert directly against the rendered text.
     """
     text = rendered_text(
-        "common.yaml", "vault_enabled.yaml", "cronjob_pod_annotations.yaml"
+        "common.yaml", "pod_annotations.yaml", "cronjob_pod_annotations.yaml"
     )
     cronjob_section = text.split("kind: CronJob", 1)[1]
     assert cronjob_section.count("vault.hashicorp.com/agent-pre-populate-only:") == 1
-
-
-def test_vault_single_template_applies_to_job_and_cronjob(rendered_chart, expected):
-    """SingleTemplate mode must fold vault secrets into one combined annotation set for.
-
-    every workload kind (Deployment, Job, CronJob), not just the Deployment. Job and
-    CronJob previously always used the old per-secret annotations regardless of the
-    singleTemplate flag, while the command/args template dropped the vault-secrets
-    sourcing wrapper for *every* kind once singleTemplate was set -- silently leaving
-    Job/CronJob with no way to load their secrets at all.
-    """
-    manifests = rendered_chart(
-        "common.yaml",
-        "vault_single_template.yaml",
-        "vault_single_template_cronjob.yaml",
-    )
-
-    deployment_annotations = manifests["Deployment"]["spec"]["template"]["metadata"][
-        "annotations"
-    ]
-    deployment_command = manifests["Deployment"]["spec"]["template"]["spec"][
-        "containers"
-    ][0]["command"]
-    deployment_args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][
-        0
-    ]["args"]
-
-    exp = expected("vault_single_template", "podAnnotations")
-    assert exp.items() <= deployment_annotations.items()
-    assert deployment_command == expected("vault_single_template", "command")
-    assert deployment_args == expected("vault_single_template", "args")
-
-    def strip(annotations):
-        return {
-            k: v
-            for k, v in annotations.items()
-            if k not in ("helm.sh/revision", "configmap-hash")
-        }
-
-    job = manifests["Job"]
-    job_container = job["spec"]["template"]["spec"]["containers"][0]
-    assert strip(job["spec"]["template"]["metadata"]["annotations"]) == strip(
-        deployment_annotations
-    )
-    assert job_container["command"] == deployment_command
-    assert job_container["args"] == deployment_args
-
-    cronjob = manifests["CronJob"]
-    cronjob_container = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"][
-        "containers"
-    ][0]
-    cronjob_annotations = cronjob["spec"]["jobTemplate"]["spec"]["template"][
-        "metadata"
-    ]["annotations"]
-    assert strip(cronjob_annotations) == strip(deployment_annotations)
-    assert cronjob_container["command"] == deployment_command
-    assert cronjob_container["args"] == deployment_args
 
 
 def test_probes_render_one_handler(rendered_chart):
@@ -457,3 +384,220 @@ def test_local_image_id_annotates_only_its_own_image(rendered_chart):
         "annotations"
     ]
     assert "local-image-id" not in annotations
+
+
+def test_migration_init_container(rendered_chart):
+    """The migration init container runs migrate-db with the main container's env."""
+    manifests = rendered_chart("common.yaml", "migration_init_container.yaml")
+    pod = manifests["Deployment"]["spec"]["template"]["spec"]
+    (init,) = pod["initContainers"]
+    assert init["name"] == "migration"
+    assert init["command"] == ["myexe"]
+    assert init["args"] == ["migrate-db"]
+    assert init["envFrom"] == pod["containers"][0]["envFrom"]
+    assert init["envFrom"] == [
+        {"configMapRef": {"name": "my-env-configmap"}},
+        {"secretRef": {"name": "my-env-secret"}},
+    ]
+
+
+def test_authorization_policy(rendered_chart):
+    """The AuthorizationPolicy is off by default and, when on, binds to the chart's
+    own Service, which the ambient waypoint enforces it on. Each caller becomes one
+    rule, in key order, followed by the extra rules.
+    """
+    assert "AuthorizationPolicy" not in rendered_chart("common.yaml")
+
+    manifests = rendered_chart("common.yaml", "authorization_policy.yaml")
+    spec = manifests["AuthorizationPolicy"]["spec"]
+    assert spec["targetRefs"] == [
+        {
+            "kind": "Service",
+            "group": "",
+            "name": manifests["Service"]["metadata"]["name"],
+        }
+    ]
+    assert "selector" not in spec
+    assert spec["action"] == "ALLOW"
+    assert spec["rules"] == [
+        {
+            "from": [{"source": {"principals": ["cluster.local/ns/test/sa/caller"]}}],
+            "to": [
+                {
+                    "operation": {
+                        "paths": ["/health"],
+                        "methods": ["GET"],
+                        "ports": ["8080"],
+                    }
+                }
+            ],
+        },
+        {
+            "from": [{"source": {"principals": ["cluster.local/ns/test/sa/multi"]}}],
+            "to": [
+                {"operation": {"paths": ["/items"], "methods": ["POST"]}},
+                {"operation": {"paths": ["/items/{*}"], "methods": ["DELETE"]}},
+            ],
+        },
+        {
+            "from": [
+                {"source": {"principals": ["cluster.local/ns/elsewhere/sa/other-sa"]}}
+            ]
+        },
+        {
+            "from": [
+                {"source": {"principals": ["cluster.local/ns/test-ingress/sa/gateway"]}}
+            ]
+        },
+        {"when": [{"key": "request.headers[x-test]", "values": ["yes"]}]},
+    ]
+
+
+def test_authorization_policy_deny_all_selects_the_pods(rendered_chart):
+    """DenyAll has no L7 rules, so ztunnel enforces it on the pods themselves,
+    selected with the Deployment's own labels so the two cannot drift apart.
+    """
+    manifests = rendered_chart("common.yaml", "authorization_policy_deny_all.yaml")
+    spec = manifests["AuthorizationPolicy"]["spec"]
+    deployment_selector = manifests["Deployment"]["spec"]["selector"]["matchLabels"]
+    assert spec["selector"]["matchLabels"] == deployment_selector
+    assert "targetRefs" not in spec
+    assert "rules" not in spec
+
+
+def test_authorization_policy_deny_all_overrides_rules(rendered_chart):
+    """DenyAll drops the chart's callers and the extra rules, as for a consumer
+    that takes no calls.
+    """
+    manifests = rendered_chart(
+        "common.yaml",
+        "authorization_policy.yaml",
+        "authorization_policy_deny_all.yaml",
+    )
+    assert "rules" not in manifests["AuthorizationPolicy"]["spec"]
+
+
+def test_authorization_policy_merges_per_key(rendered_chart):
+    """An environment overlay changes one caller's identity without touching its
+    operations, and adds or drops single callers by key.
+    """
+    manifests = rendered_chart(
+        "common.yaml",
+        "authorization_policy.yaml",
+        "authorization_policy_override.yaml",
+    )
+    rules = manifests["AuthorizationPolicy"]["spec"]["rules"]
+    assert [rule["from"][0]["source"]["principals"][0] for rule in rules] == [
+        "prod.example/ns/test/sa/added",
+        "prod.example/ns/test/sa/caller-prod",
+    ]
+    assert rules[1]["to"][0]["operation"]["paths"] == ["/health"]
+
+
+def _policy(**values):
+    return {"authorizationPolicy": {"enabled": True, **values}}
+
+
+GET = [{"methods": ["GET"], "paths": ["/x"]}]
+SA = {"c": {"serviceAccount": "c"}}
+GATEWAY = {"from": [{"source": {"principals": ["gw"]}}]}
+
+
+@pytest.mark.parametrize(
+    "values, message",
+    [
+        (_policy(), "would deny all traffic"),
+        # callers
+        (_policy(callers={"c": []}, identities=SA), "has no operation"),
+        (_policy(callers={"c": {"methods": ["GET"]}}, identities=SA), "must be a list"),
+        (_policy(callers={"c": [{}]}, identities=SA), "restricts nothing"),
+        (_policy(callers={"c": [{"methods": []}]}, identities=SA), "is empty"),
+        (
+            _policy(callers={"c": [{"methods": [], "paths": ["/x"]}]}, identities=SA),
+            "methods is empty",
+        ),
+        (
+            _policy(callers={"c": [{"ports": [], "paths": ["/x"]}]}, identities=SA),
+            "ports is empty",
+        ),
+        (
+            _policy(callers={"c": [{"path": ["/x"]}]}, identities=SA),
+            "unknown operation key",
+        ),
+        (
+            _policy(callers={"c": [{"allowAll": True}, *GET]}, identities=SA),
+            "allowAll must be the",
+        ),
+        (
+            _policy(callers={"c": [{"allowAll": "false"}]}, identities=SA),
+            "allowAll must be true or false",
+        ),
+        # identities
+        (_policy(callers={"c": GET}), "identities.c is missing"),
+        (
+            _policy(callers={"c": GET}, identities={**SA, "d": SA["c"]}),
+            "identities.d has no caller",
+        ),
+        (
+            _policy(callers={"c": GET}, identities={"c": {"serviceaccount": "x"}}),
+            "unknown key",
+        ),
+        (
+            _policy(callers={"c": GET}, identities={"c": {"namespace": "elsewhere"}}),
+            "needs serviceAccount or principals",
+        ),
+        (
+            _policy(
+                callers={"c": GET},
+                identities={"c": {"principals": ["p"], "serviceAccount": "c"}},
+            ),
+            "principals replaces",
+        ),
+        (
+            _policy(
+                callers={"c": GET},
+                identities={"c": {"principals": [], "serviceAccount": "c"}},
+            ),
+            "principals is empty",
+        ),
+        (_policy(callers={"c": GET}, identities={"c": "ghga-c"}), "must be a map"),
+        # extraRules
+        (_policy(extraRules=[{}]), r"extraRules\[0\] is empty"),
+        (_policy(extraRules=[{"allowAnySource": True}]), r"extraRules\[0\] is empty"),
+        (
+            _policy(extraRules=[{"when": [{"key": "k", "values": ["v"]}]}]),
+            "has no from",
+        ),
+        (_policy(extraRules=[{"from": [{}]}]), r"from\[0\] needs a source"),
+        (_policy(extraRules=[{"from": [{"source": {}}]}]), r"from\[0\] needs a source"),
+        (
+            _policy(extraRules=[{**GATEWAY, "allowAnySource": "yes"}]),
+            "allowAnySource must be",
+        ),
+        # workload
+        (
+            {
+                **_policy(callers={"c": GET}, identities=SA),
+                "service": {"enabled": False},
+            },
+            "need the chart's Service",
+        ),
+    ],
+)
+def test_authorization_policy_fails_closed(rendered_chart, values, message):
+    """Anything that would allow more than it says, or that cannot be matched to a
+    caller, stops the render instead of opening the service.
+    """
+    with pytest.raises(AssertionError, match=message):
+        rendered_chart("common.yaml", values)
+
+
+def test_authorization_policy_ignores_allow_all_false(rendered_chart):
+    """AllowAll: false next to real restrictions is the same as leaving it out."""
+    manifests = rendered_chart(
+        "common.yaml",
+        _policy(callers={"c": [{"allowAll": False, **GET[0]}]}, identities=SA),
+    )
+    assert manifests["AuthorizationPolicy"]["spec"]["rules"][0]["to"] == [
+        {"operation": {"methods": ["GET"], "paths": ["/x"]}}
+    ]

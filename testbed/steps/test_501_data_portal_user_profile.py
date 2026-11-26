@@ -28,7 +28,7 @@ from .conftest import (
     then,
     when,
 )
-from .utils import IVA_TYPE_NAMES, UI_TIMEOUT
+from .utils import IVA_TYPE_NAMES, UI_TIMEOUT, USER_PHONE_NUMBERS
 
 scenarios("../features/501_data_portal_user_profile.feature")
 
@@ -36,6 +36,7 @@ STATE_MSG_MAP = {
     "verified": "Address has been verified",
     "unverified": "Needs verification",
     "coderequested": "Waiting for verification",
+    "codetransmitted": "Code has been sent",
 }
 
 
@@ -115,6 +116,11 @@ def validate_profile_page(fixtures: JointFixture, full_name: str):
     expect(profile_components.nth(2)).to_contain_text("Dataset Access")
     expect(profile_components.nth(3)).to_contain_text("Pending Access Requests")
     return full_name
+
+
+def _iva_rows(page, text: str):
+    """Get the rows of the IVA list in the user profile page holding the text."""
+    return page.locator("app-user-iva-list > .grid > .grid").filter(has_text=text)
 
 
 @then(parse('I have a "{iva_type}" contact address with state "{iva_state}"'))
@@ -215,25 +221,36 @@ def add_new_iva(playwright: PlaywrightFixture, iva_type: str, iva_value: str):
     page.wait_for_load_state()
 
 
-@when(parse('I request verification for the "{iva_type}" IVA'))
-def request_iva_verification(playwright: PlaywrightFixture, iva_type: str):
-    page = playwright.page
-    iva_component = page.locator("app-user-iva-list")
+def _click_request_verification(page, iva_type: str) -> None:
+    """Click "Request verification" on the one unverified IVA of the given type."""
     page.wait_for_selector(
         "app-user-iva-list > .grid", timeout=UI_TIMEOUT
     )  # Wait for items to be loaded
-    all_iva_items = iva_component.locator(".grid")
-    filtered_iva_items = all_iva_items.locator(f'.grid:has-text("{iva_type}")')
-    assert filtered_iva_items.count() == 1, (
-        f"Unexpected number of IVAs: {filtered_iva_items.count()}, expected 1"
+    unverified_items = _iva_rows(page, iva_type).filter(
+        has_text=STATE_MSG_MAP["unverified"]
     )
-    request_button = filtered_iva_items.get_by_role(
-        "button", name="Request verification"
-    ).first
+    expect(unverified_items).to_have_count(1, timeout=UI_TIMEOUT)
+    request_button = unverified_items.get_by_role("button", name="Request verification")
     expect(request_button).to_be_visible()
     request_button.click()
-
     page.wait_for_selector("app-confirm-dialog", timeout=UI_TIMEOUT)
+
+
+@when(parse('I click to request verification for the "{iva_type}" IVA'))
+def click_request_iva_verification(playwright: PlaywrightFixture, iva_type: str):
+    """Open the dialog with which requesting verification of an IVA starts.
+
+    Sending an SMS needs the user's consent, so for an SMS address the steps
+    that check and answer the consent dialog follow this one.
+    """
+    _click_request_verification(playwright.page, iva_type)
+
+
+@when(parse('I request verification for the "{iva_type}" IVA'))
+def request_iva_verification(playwright: PlaywrightFixture, iva_type: str):
+    """Request verification of the one unverified IVA of the given type."""
+    page = playwright.page
+    _click_request_verification(page, iva_type)
     confirm_dialog = page.locator("app-confirm-dialog").first
     expect(confirm_dialog).to_contain_text("Request verification of your address")
     continue_button = page.get_by_role(
@@ -309,3 +326,73 @@ def filter_ivas_as_admin(fixtures: JointFixture, num: str, iva_state: str):
     expect(rows).to_have_count(num_expected, timeout=UI_TIMEOUT)
     if num_expected:
         assert iva_state in rows.first.inner_text()
+
+
+def _sms_address(which: str) -> str:
+    """Get the SMS address of the user profile page with the given number."""
+    return f"SMS: {USER_PHONE_NUMBERS[which]}"
+
+
+@when(parse('I add a new "SMS" contact address with the "{which}" number'))
+def add_new_sms_iva(playwright: PlaywrightFixture, which: str):
+    """Add an SMS address with the main or the other number of the suite."""
+    add_new_iva(playwright, "SMS", USER_PHONE_NUMBERS[which])
+
+
+@then(parse('the "{which}" SMS contact address has state "{iva_state}"'))
+def check_sms_iva_state_in_profile(
+    playwright: PlaywrightFixture, which: str, iva_state: str
+):
+    """Check the state of the SMS address with the given number."""
+    row = _iva_rows(playwright.page, _sms_address(which))
+    expect(row).to_have_count(1, timeout=UI_TIMEOUT)
+    expect(row).to_contain_text(STATE_MSG_MAP[iva_state.lower()], timeout=UI_TIMEOUT)
+
+
+@then(parse('I am asked for consent to send an SMS to the "{which}" number'))
+def check_sms_consent_dialog(playwright: PlaywrightFixture, which: str):
+    """Check the consent dialog the portal shows before sending a verification SMS."""
+    number = USER_PHONE_NUMBERS[which]
+    dialog = playwright.page.locator("app-confirm-dialog").first
+    expect(dialog).to_be_visible(timeout=UI_TIMEOUT)
+    expect(dialog.get_by_role("heading")).to_have_text("Send verification code by SMS")
+    expect(dialog).to_contain_text(
+        f"We will send a verification code by SMS to your phone number {number}."
+    )
+    expect(dialog).to_contain_text(
+        'By clicking "Send SMS", you agree to receive this message.'
+    )
+    expect(dialog.get_by_role("button", name="Cancel", exact=True)).to_be_visible()
+    expect(dialog.get_by_role("button", name="Send SMS", exact=True)).to_be_visible()
+
+
+@when("I consent to sending the SMS")
+def consent_to_sms(playwright: PlaywrightFixture):
+    """Confirm the consent dialog, which sends the verification SMS."""
+    dialog = playwright.page.locator("app-confirm-dialog").first
+    dialog.get_by_role("button", name="Send SMS", exact=True).click()
+    expect(dialog).to_have_count(0, timeout=UI_TIMEOUT)
+
+
+@when(parse('I delete the "{which}" SMS contact address'))
+def delete_sms_iva_in_profile(playwright: PlaywrightFixture, which: str):
+    """Delete the SMS address with the given number through the user profile page."""
+    page = playwright.page
+    address = _sms_address(which)
+    row = _iva_rows(page, address)
+    expect(row).to_have_count(1, timeout=UI_TIMEOUT)
+    row.get_by_role("button", name="Delete").click()
+    dialog = page.locator("app-confirm-dialog").first
+    expect(dialog.get_by_role("heading")).to_have_text(
+        "Confirm deletion of IVA", timeout=UI_TIMEOUT
+    )
+    expect(dialog).to_contain_text(f"Please confirm deleting the {address}.")
+    dialog.get_by_role("button", name="Confirm deletion", exact=True).click()
+    expect(dialog).to_have_count(0, timeout=UI_TIMEOUT)
+
+
+@then(parse('the "{which}" SMS contact address is gone'))
+def check_sms_iva_gone(playwright: PlaywrightFixture, which: str):
+    """Check that the SMS address with the given number is not listed any more."""
+    rows = _iva_rows(playwright.page, _sms_address(which))
+    expect(rows).to_have_count(0, timeout=UI_TIMEOUT)

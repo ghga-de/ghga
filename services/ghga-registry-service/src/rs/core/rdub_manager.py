@@ -17,6 +17,7 @@
 
 import logging
 from collections import Counter
+from collections.abc import Collection
 from typing import Any
 from uuid import UUID
 
@@ -28,15 +29,16 @@ from hexkit.protocols.dao import (
     NoHitsFoundError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
+    race_condition_retries,
 )
 from hexkit.utils import now_utc_ms_prec
 from rs.constants import RDUB_OWNED_FIELDS, STAMP_FIELDS, VALID_STATE_TRANSITIONS
-from rs.core._rc_helper import race_condition_retries
 from rs.core.models import (
     PID,
     BoxRequeueResult,
     BoxRetrievalResults,
     BoxUploadsPage,
+    FileStateCounts,
     FileUploadBox,
     FileUploadWithAccession,
     GrantId,
@@ -46,6 +48,7 @@ from rs.core.models import (
     UploadBoxState,
 )
 from rs.ports.inbound.files import FileControllerPort
+from rs.ports.inbound.priority import UploadBoxPriorityManagerPort
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
 from rs.ports.outbound.audit import AuditRepositoryPort
 from rs.ports.outbound.dao import BoxDao
@@ -94,7 +97,7 @@ def _sort_file_uploads(
 class RDUBManager(RDUBManagerPort):
     """A class for executing operations surrounding ResearchDataUploadBoxes"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         box_dao: BoxDao,
@@ -102,8 +105,10 @@ class RDUBManager(RDUBManagerPort):
         audit_repository: AuditRepositoryPort,
         file_upload_box_client: FileBoxClientPort,
         access_client: AccessClientPort,
+        priority_manager: UploadBoxPriorityManagerPort,
     ):
         self._box_dao = box_dao
+        self._priority_manager = priority_manager
         self._file_controller = file_controller
         self._audit_repository = audit_repository
         self._file_upload_box_client = file_upload_box_client
@@ -182,8 +187,29 @@ class RDUBManager(RDUBManagerPort):
             )
             raise self.BoxTitleExistsError() from err
 
+        await self._update_priority_list(box_id=box.id, user_id=data_steward_id)
         await self._audit_repository.log_box_created(box=box, user_id=data_steward_id)
         return box.id
+
+    async def _update_priority_list(self, *, box_id: UUID4, user_id: UUID4) -> None:
+        """Repair the priority list after a box was created, archived or deleted,
+        which adds the box to the list or removes it.
+
+        The box is stored at this point, so a failed list write does not fail the
+        request. It is only logged: the next write to the list, or the next start of
+        RS, repairs it.
+        """
+        message = (
+            "Could not update the upload box priority list after a change to box %s."
+            + " The next write to the list or the next start of RS repairs it."
+        )
+        try:
+            await self._priority_manager.repair(user_id=user_id)
+        except UploadBoxPriorityManagerPort.PriorityUpdateError:
+            # race_condition_retries has logged the error already
+            log.warning(message, box_id, extra={"box_id": box_id})
+        except Exception:
+            log.exception(message, box_id, extra={"box_id": box_id})
 
     async def update_research_data_upload_box(  # noqa: PLR0913
         self,
@@ -666,6 +692,8 @@ class RDUBManager(RDUBManagerPort):
         await self._persist_rdub_update(
             box=box, updated_box=updated_box, remote_committed=True
         )
+        if updated_box.state == "archived":
+            await self._update_priority_list(box_id=box.id, user_id=user_id)
         await self._audit_repository.log_box_updated(box=updated_box, user_id=user_id)
 
     async def grant_upload_access(  # noqa: PLR0913
@@ -995,56 +1023,66 @@ class RDUBManager(RDUBManagerPort):
             )
             limit = None
 
-        # Check if user is a data steward
-        is_ds = is_data_steward(auth_context)
-
-        # Filter by state if specified
-        filter_ = {"state": state} if state is not None else {}
-
-        if is_ds:
-            # Data stewards can see all boxes
-            boxes = await self._box_dao.find_all(filter_=filter_).to_list()
-        else:
-            # Regular users can only see boxes they have access to
-            user_id = UUID(auth_context.id)
+        filter_: dict[str, Any] = {"state": state} if state is not None else {}
+        if not is_data_steward(auth_context):
+            # Regular users can only see boxes they have access to. A grant may
+            # reference a box that has since been deleted, which the filter skips.
             accessible_box_ids = await self._access_client.get_accessible_upload_boxes(
-                user_id=user_id
+                user_id=UUID(auth_context.id)
             )
+            filter_["id"] = {"$in": accessible_box_ids}
 
-            # Generally very few boxes per user, so make distinct call for each. A grant
-            # may reference a box that has since been deleted (e.g. a race with deletion
-            # or a not-yet-revoked grant). Suppress the error and opt for a warning log.
-            boxes = []
-            for box_id in accessible_box_ids:
-                try:
-                    boxes.append(await self._box_dao.get_by_id(box_id))
-                except ResourceNotFoundError:
-                    log.warning(
-                        "User %s has access to box %s, but it doesn't exist in RS."
-                        + " Skipping it.",
-                        user_id,
-                        box_id,
-                        extra={"user_id": user_id, "box_id": box_id},
-                    )
-            if state is not None:
-                boxes = [x for x in boxes if x.state == state]
-
-        count = len(boxes)
-        boxes.sort(
-            key=lambda x: (
-                tuple(-ord(c) for c in x.state),  # Reverse alphabetical
-                -x.last_changed.timestamp(),  # DESC by last_changed
-                x.id,  # ASC by ID
-            )
+        # "-state" sorts the open boxes first, then the locked and the archived ones.
+        # The data portal pages the list itself for now, so asks without skip or limit.
+        find_result = self._box_dao.find_all(
+            filter_=filter_,
+            skip=skip,
+            limit=limit or None,  # 0 means no limit, like None
+            sort=["-state", "-last_changed", "id"],
         )
-
-        if skip:
-            boxes = boxes[skip:]
-
-        if limit:
-            boxes = boxes[:limit]
+        boxes = await find_result.to_list()
+        # Only a page needs the extra count query; the whole list is its own count
+        count = await find_result.total_count() if skip or limit else len(boxes)
 
         return BoxRetrievalResults(count=count, boxes=boxes)
+
+    async def get_file_state_counts(
+        self, *, box_ids: Collection[UUID4] | None = None
+    ) -> dict[UUID4, FileStateCounts]:
+        """Get the number of file uploads per state for the open and locked research
+        data upload boxes, keyed by the box ID.
+
+        If `box_ids` is given, only the boxes among them are counted, else all of them.
+        Only the states that count toward a box's `file_count` are included, so each
+        box's counts add up to its `file_count`. Boxes without such file uploads and
+        states without file uploads are absent from the result. Archived boxes are
+        absent too: archiving a box archives all its files, so their counts follow
+        from the `file_count` and are not worth asking the file box service for.
+
+        Raises:
+            OperationError: If there's a problem querying the file box service.
+        """
+        filter_: dict[str, Any] = {
+            "state": {"$in": ["open", "locked"]},
+            "file_count": {"$gt": 0},
+        }
+        if box_ids is not None:
+            filter_["id"] = {"$in": list(box_ids)}
+        box_ids_by_file_upload_box_id = {
+            box.file_upload_box_id: box.id
+            async for box in self._box_dao.find_all(filter_=filter_)
+        }
+        if not box_ids_by_file_upload_box_id:
+            return {}
+
+        counts = await self._file_upload_box_client.get_file_state_counts(
+            box_ids=list(box_ids_by_file_upload_box_id)
+        )
+        return {
+            box_ids_by_file_upload_box_id[file_upload_box_id]: box_counts
+            for file_upload_box_id, box_counts in counts.items()
+            if file_upload_box_id in box_ids_by_file_upload_box_id
+        }
 
     async def get_storage_overview(self) -> list[HubStorageSummary]:
         """Aggregate upload box storage statistics per data hub (storage alias)."""
@@ -1359,6 +1397,7 @@ class RDUBManager(RDUBManagerPort):
             log.info(error)
             raise error from err
         else:
+            await self._update_priority_list(box_id=box_id, user_id=user_id)
             await self._audit_repository.log_box_deleted(box=box, user_id=user_id)
             log.info("Deleted RDUB %s and its FileUploadBox %s.", box_id, fub_id)
 

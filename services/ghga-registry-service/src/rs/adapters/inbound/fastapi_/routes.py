@@ -20,13 +20,15 @@ import logging
 from fastapi import APIRouter
 
 from rs.adapters.inbound.fastapi_.routers.studies import study_router
+from rs.adapters.inbound.fastapi_.routers.upload_box_priority import (
+    priority_router,
+)
 from rs.adapters.inbound.fastapi_.routers.upload_boxes import (
     box_router,
     box_rpc_router,
     storage_router,
 )
 from rs.adapters.inbound.fastapi_.routers.upload_grants import upload_grant_router
-from rs.constants import TRACER
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +46,9 @@ router.include_router(storage_router, prefix="/storages", tags=["Storages"])
 router.include_router(
     box_rpc_router, prefix="/rpc/upload-boxes", tags=["ResearchDataUploadBoxes"]
 )
+router.include_router(
+    priority_router, prefix="/upload-box-priority", tags=["UploadBoxPriority"]
+)
 
 
 @router.get(
@@ -51,7 +56,6 @@ router.include_router(
     summary="health",
     status_code=200,
 )
-@TRACER.start_as_current_span("routes.health")
 async def health():
     """Used to test if this service is alive"""
     return {"status": "OK"}

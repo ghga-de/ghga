@@ -54,6 +54,7 @@ from .user_registry.deps import (
     get_user_dao,
     get_user_registry,
 )
+from .user_registry.ports.dao import UserDaoPublisherFactoryPort
 from .user_registry.rest.router import router as users_router
 from .user_registry.translators.dao import UserDaoPublisherFactory
 from .user_registry.translators.event_pub import EventPubTranslator
@@ -85,10 +86,26 @@ async def prepare_event_subscriber(
     """Get an event subscriber for dataset deletion events."""
     async with prepare_event_handler(config) as handler:
         translator = EventSubTranslator(config=config, handler=handler)
-        async with KafkaEventSubscriber.construct(
-            config=config, translator=translator
-        ) as event_subscriber:
+        async with (
+            KafkaEventPublisher.construct(config=config) as dlq_publisher,
+            KafkaEventSubscriber.construct(
+                config=config, translator=translator, dlq_publisher=dlq_publisher
+            ) as event_subscriber,
+        ):
             yield event_subscriber
+
+
+@asynccontextmanager
+async def prepare_user_dao_publisher_factory(
+    config: Config,
+) -> AsyncGenerator[UserDaoPublisherFactoryPort]:
+    """Get the factory of the user registry's DAOs, which publish through the outbox."""
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=config
+    ) as dao_publisher_factory:
+        yield UserDaoPublisherFactory(
+            config=config, dao_publisher_factory=dao_publisher_factory
+        )
 
 
 @asynccontextmanager
@@ -122,11 +139,8 @@ async def prepare_rest_app(config: Config) -> AsyncGenerator[FastAPI]:
             else nullcontext()
         ) as event_publisher,
         MongoDbDaoFactory.construct(config=config) as dao_factory,
-        MongoKafkaDaoPublisherFactory.construct(config=config) as dao_publisher_factory,
+        prepare_user_dao_publisher_factory(config) as user_dao_publisher_factory,
     ):
-        user_dao_publisher_factory = UserDaoPublisherFactory(
-            config=config, dao_publisher_factory=dao_publisher_factory
-        )
         user_dao = await user_dao_publisher_factory.get_user_dao()
         app.dependency_overrides[get_user_dao] = lambda: user_dao
 

@@ -17,6 +17,12 @@ describe('validateDOI', () => {
     expect(pipe.transform('')).toBe('');
   });
 
+  it('returns an empty string for a missing DOI', () => {
+    const pipe = new ValidateDOI();
+    expect(pipe.transform(undefined)).toBe('');
+    expect(pipe.transform(null)).toBe('');
+  });
+
   it('returns 10.1000/123 for "doi: 10.1000/123"', () => {
     const pipe = new ValidateDOI();
     expect(pipe.transform('doi: 10.1000/123')).toBe('10.1000/123');

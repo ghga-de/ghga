@@ -58,7 +58,6 @@ RESPONSES = {
     tags=["DatasetInformationService"],
     status_code=200,
 )
-@TRACER.start_as_current_span("routes.health")
 async def health():
     """Used to test if this service is alive"""
     return {"status": "OK"}

@@ -19,6 +19,7 @@ import { withFetch } from '@angular/common/http';
 import { provideDateFnsAdapter } from '@angular/material-date-fns-adapter';
 import { MAT_DATE_LOCALE } from '@angular/material/core';
 import { csrfInterceptor } from '@app/auth/services/csrf';
+import { sessionEndedInterceptor } from '@app/auth/services/session-ended';
 import { routes, TemplatePageTitleStrategy } from './app-routes';
 
 import {
@@ -44,7 +45,11 @@ export const appConfig: ApplicationConfig = {
     { provide: TitleStrategy, useClass: TemplatePageTitleStrategy },
     provideHttpClient(
       withFetch(),
-      withInterceptors([withHttpCacheInterceptor(), csrfInterceptor]),
+      withInterceptors([
+        withHttpCacheInterceptor(),
+        csrfInterceptor,
+        sessionEndedInterceptor,
+      ]),
     ),
     // Cache all GET requests by default, for an hour (cashew's default). Most
     // of what is cached is metadata that only changes with an archive release,

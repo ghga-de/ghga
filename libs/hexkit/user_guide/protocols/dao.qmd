@@ -98,11 +98,11 @@ The [`Dao`](../../reference/protocols.dao.Dao.qmd) interface offers seven operat
 | --------- | ----------- | ------ |
 | `insert(dto)` | Create a new resource. | `ResourceAlreadyExistsError`, `UniqueConstraintViolationError` |
 | `get_by_id(id_)` | Fetch a resource by its ID. | `ResourceNotFoundError` |
-| `update(dto, precondition=...)` | Replace an existing resource, optionally only if it still matches `precondition`. | `ResourceNotFoundError`, `UniqueConstraintViolationError`, `PreconditionFailedError`, `InvalidMappingError` |
+| `update(dto, precondition=...)` | Replace an existing resource, optionally only if it still matches `precondition`. | `ResourceNotFoundError`, `UniqueConstraintViolationError`, `PreconditionFailedError`, `InvalidFilterError` |
 | `upsert(dto)` | Update the resource if it exists, insert it otherwise. | `UniqueConstraintViolationError` |
 | `delete(id_)` | Remove a resource by its ID. | `ResourceNotFoundError` |
-| `find_one(filter_=...)` | Fetch the single resource matching a filter. | `NoHitsFoundError`, `MultipleHitsFoundError`, `InvalidMappingError` |
-| `find_all(filter_=...)` | Iterate over all resources matching a filter. | `InvalidMappingError`, `ValueError` |
+| `find_one(filter_=...)` | Fetch the single resource matching a filter. | `NoHitsFoundError`, `MultipleHitsFoundError`, `InvalidFilterError` |
+| `find_all(filter_=...)` | Iterate over all resources matching a filter. | `InvalidFilterError`, `ValueError` |
 
 The write operations are deliberately strict about existence.
 `insert` refuses to overwrite, `update` refuses to create, and both signal violations with exceptions rather than silent no-ops.
@@ -115,6 +115,28 @@ The ID field is implied, so leave it out:
 
 ```python
 await book_dao.update(extended, precondition={"pages": 448})
+```
+
+To retry an update that lost such a race, re-read the resource and try again inside [`race_condition_retries`](../../reference/protocols.dao.race_condition_retries.qmd) from `hexkit.protocols.dao`.
+It retries on `PreconditionFailedError` only, waits a jittered interval between tries, and raises the error you give it once all tries have failed.
+Pass a `logger` to record each conflict and the final failure; without one, nothing is logged:
+
+```python
+import logging
+
+from hexkit.protocols.dao import race_condition_retries
+
+log = logging.getLogger(__name__)
+
+async for attempt in race_condition_retries(
+    description=f"add pages to book {book_id}",
+    error_on_failure=lambda: BookUpdateError(book_id),
+    logger=log,
+):
+    with attempt:
+        book = await book_dao.get_by_id(book_id)
+        extended = book.model_copy(update={"pages": book.pages + 16})
+        await book_dao.update(extended, precondition={"pages": book.pages})
 ```
 
 A typical session with a DAO looks like this:
@@ -134,12 +156,52 @@ assert same_book == extended
 await book_dao.delete(book.id)
 ```
 
+## Batch Operations
+
+The batch operations apply a write to many resources in one call, which the MongoDB provider sends to the database in one round-trip:
+
+| Operation | Description | Fails per resource with |
+| --------- | ----------- | ----------------------- |
+| `insert_many(dtos)` | Create new resources. | `ResourceAlreadyExistsError`, `UniqueConstraintViolationError`, `DbTimeoutError`, `DaoError` |
+| `update_many(dtos)` | Replace existing resources, matched by their IDs. | `ResourceNotFoundError`, `UniqueConstraintViolationError`, `DbTimeoutError`, `DaoError` |
+| `upsert_many(dtos)` | Create or replace resources, matched by their IDs. | `UniqueConstraintViolationError`, `DbTimeoutError`, `DaoError` |
+| `delete_many(ids)` | Remove resources by their IDs, ignoring unknown ones. | nothing; with the [outbox publisher](../providers/mongokafka.qmd#publishing-a-batch), `DbTimeoutError`, `DaoError` |
+
+A batch is not atomic.
+When some resources fail, the others are still written, and the call raises a [`BatchOperationError`](../../reference/protocols.dao.BatchOperationError.qmd).
+Its `errors` attribute maps each failed ID to the error the single-resource method would have raised:
+
+```python
+try:
+    await book_dao.insert_many(books)
+except BatchOperationError as error:
+    for book_id, reason in error.errors.items():
+        log.warning("Book %s was not stored: %s", book_id, reason)
+```
+
+`errors` also names each resource whose write was applied but not confirmed, such as after a MongoDB write concern error; such a write stays stored.
+
+By default, every resource in a batch is attempted.
+Pass `ordered=True` to stop at the first failure instead; `error.not_attempted` then lists the IDs after it, in input order.
+A missing resource never stops an ordered `update_many`, because the database does not count it as a failed write.
+
+Every batch also follows these rules:
+
+- No two DTOs in a batch may share an ID.
+  Such a batch raises `ValueError` before anything is written.
+  `delete_many` deletes a repeated ID once instead.
+- `delete_many` rejects a single string with `TypeError`, since a string is also a collection of its characters.
+- An empty batch writes nothing and raises nothing.
+
+`update_many` names the missing IDs with one lookup after its write, so it reports what is missing when the lookup runs.
+A resource that another writer creates in between is therefore not reported as missing, although the batch did not update it.
+A resource that another writer deletes in between is reported as missing, although the batch did update it.
+
 ## Finding Resources
 
 Beyond lookups by ID, DAOs support searching by field values.
 Both find methods take a filter as the `filter_` argument: a mapping from field names of the DTO model to the values a matching resource must have.
 Multiple entries must all match (a logical AND).
-The argument used to be called `mapping`, which still works until hexkit v11 but emits a `DeprecationWarning`:
 
 ```python
 # Exactly one match expected:
@@ -156,7 +218,7 @@ all_books = await book_dao.find_all(filter_={}).to_list()
 `find_one` enforces that exactly one resource matches and raises `NoHitsFoundError` or `MultipleHitsFoundError` otherwise.
 Use it when your logic depends on uniqueness; use `find_all` when zero or many hits are acceptable.
 
-Filter keys are validated against the DTO model, so a typo in a field name raises `InvalidMappingError` instead of silently matching nothing.
+Filter keys are validated against the DTO model, so a typo in a field name raises `InvalidFilterError` instead of silently matching nothing.
 Pass filter values using the same Python types as the corresponding model fields: a `UUID` for a UUID field, a `datetime` for a datetime field, and so on.
 Whether richer values (nested structures, or query operators expressed as dictionaries) are supported is up to the provider.
 The [MongoDB provider](../providers/mongodb.qmd#queries-and-filters), for example, passes dictionary values through to MongoDB's query language, enabling range and pattern queries.
@@ -199,16 +261,14 @@ The full hierarchy:
 - `DaoError`: base for everything below
   - `ResourceNotFoundError`: the requested ID does not exist (`get_by_id`, `update`, `delete`)
   - `ResourceAlreadyExistsError`: the ID is already taken (`insert`)
-  - `UniqueConstraintViolationError`: a write would break a unique index on a field
-    other than the ID
-  - `PreconditionFailedError`: the resource exists but does not match the
-    `precondition` passed to `update`
+  - `UniqueConstraintViolationError`: a write would break a unique index on a field other than the ID
+  - `PreconditionFailedError`: the resource exists but does not match the `precondition` passed to `update`
   - `FindError`: base for find-related errors
-    - `InvalidMappingError`: a filter or precondition key is not a field of the DTO
-      model
+    - `InvalidFilterError`: a filter or precondition key is not a field of the DTO model
     - `NoHitsFoundError`: `find_one` found nothing
     - `MultipleHitsFoundError`: `find_one` found more than one match
   - `DbTimeoutError`: a database operation timed out
+  - `BatchOperationError`: some resources of a batch failed; `errors` holds one of the errors above per failed ID
 
 Providers translate their native driver errors into these types, so your error handling stays portable across backends:
 
@@ -280,7 +340,6 @@ from hexkit.protocols.dao import (
     PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
-    resolve_filter,
 )
 
 
@@ -341,14 +400,11 @@ class DictDao(Generic[Dto]):
     def _matches(dto: Dto, filter_: Mapping[str, Any]) -> bool:
         return all(getattr(dto, field) == value for field, value in filter_.items())
 
-    # `mapping` is the deprecated name of `filter_`, accepted until hexkit v11
     async def find_one(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
     ) -> Dto:
-        filter_ = resolve_filter(filter_, mapping)
         hits = await self.find_all(filter_=filter_).to_list()
         if not hits:
             raise NoHitsFoundError(filter_=filter_)
@@ -359,13 +415,11 @@ class DictDao(Generic[Dto]):
     def find_all(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,  # sorting omitted for brevity
     ) -> FindResult[Dto]:
-        filter_ = resolve_filter(filter_, mapping)
         hits = [dto for dto in self._resources.values() if self._matches(dto, filter_)]
         end = None if limit is None else (skip or 0) + limit
         page = hits[skip or 0 : end]

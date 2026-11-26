@@ -1,24 +1,4 @@
 {
-  "window.title": "Data Portal - ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}",
-  "cSpell.words": [
-    "datapack",
-    "devcontainer",
-    "devkit",
-    "GHGA",
-    "IVA",
-    "IVAs",
-    "lifescience",
-    "metldata",
-    "micropip",
-    "Pydantic",
-    "Pyodide",
-    "qrcode",
-    "schemapack",
-    "teardown",
-    "TOTP",
-    "unpaginated"
-  ],
-  "cSpell.language": "en-GB",
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
   "[html]": {
@@ -41,13 +21,5 @@
   "eslint.options": {
     "overrideConfigFile": "eslint.config.js"
   },
-  "remote.localPortHost": "allInterfaces",
-  "files.insertFinalNewline": true,
-  "files.trimFinalNewlines": true,
-  "js/ts.tsdk.path": "node_modules/typescript/lib",
-  "vitest.nodeExecutable": "",
-  "vitest.cliArguments": "",
-  "vitest.applyDiagnostic": false,
-  "workbench.browser.enableChatTools": true,
-  "yaml.maxItemsComputed": 15000
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
 }

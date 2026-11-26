@@ -180,6 +180,9 @@ The rules of the game:
   `abort_multipart_upload` cancels the procedure and deletes all content uploaded so far; it raises a `MultiPartUploadAbortError` if parts could not be removed (for example because a part upload was still running).
 - **Integrity checks are optional but available.**
   `get_part_upload_url` accepts a `part_md5` checksum that the backend verifies when the part arrives.
+- **Part URLs check the upload first.**
+  By default, `get_part_upload_url` makes sure the upload exists and is the only one active for the object, which costs the S3 provider a ListMultipartUploads call per part.
+  A caller that created the upload itself moments earlier can pass `verify_upload=False` to skip it; a part sent to an upload that has gone then fails at the backend instead.
 
 Choosing a part size involves trade-offs between part count limits and request overhead; the `calc_part_size` helper [documented with the S3 provider](../providers/s3.qmd#multipart-uploads-and-part-sizing) recommends a suitable value for a given file size.
 

@@ -2,17 +2,21 @@
 set -euo pipefail
 
 # Named volumes mount root-owned; chown the mount points back to vscode
-# so uv, Playwright, Claude Code, and gh can write to them.
+# so uv, Playwright, Claude Code, Copilot, and gh can write to them.
 sudo chown vscode:vscode ~/.local ~/.local/share ~/.cache ~/.config
-sudo chown -R vscode:vscode ~/.claude ~/.config/gh ~/.local/share/uv ~/.cache/uv ~/.cache/ms-playwright
+sudo chown -R vscode:vscode ~/.claude ~/.copilot ~/.agents ~/.config/gh ~/.local/share/uv ~/.cache/uv ~/.cache/ms-playwright
+# Copilot creates its directory private, and the volume's mount point would otherwise be 755.
+chmod 700 ~/.copilot
 
 # just and kind come from no feature, and ~/.local/bin is not one of the persisted
 # volumes — so a rebuild loses them and every justfile recipe stops working, including
 # the whole local cluster and test-bed flow. Pinned to the versions the demo and the
 # integration gate are verified against. The arch split is not hypothetical: this runs
 # on arm64 workstations as readily as on an x86 runner.
+# The workflows pin the same just and kind, and deploy/kind-config.yaml a node image built
+# for this kind; scripts/tests/test_tool_pins.py fails when they differ.
 JUST_VERSION=1.57.0
-KIND_VERSION=0.30.0
+KIND_VERSION=0.33.0
 case "$(uname -m)" in
   aarch64 | arm64) JUST_ARCH=aarch64 KIND_ARCH=arm64 ;;
   x86_64 | amd64) JUST_ARCH=x86_64 KIND_ARCH=amd64 ;;

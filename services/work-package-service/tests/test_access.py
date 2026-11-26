@@ -23,10 +23,11 @@ from uuid import UUID, uuid4
 import pytest
 import pytest_asyncio
 
+from ghga_service_commons.http.mock_api import respond
 from ghga_service_commons.utils.utc_dates import utc_datetime
 from wps.adapters.outbound.http import AccessCheckAdapter, AccessCheckConfig
 
-from .fixtures.access_api import AccessApiMock, respond
+from .fixtures.access_api import AccessApiMock
 
 pytestmark = pytest.mark.asyncio
 
@@ -72,7 +73,7 @@ async def test_check_download_access(
         == f"{DOWNLOAD_ACCESS_URL}/users/{TEST_USER_ID}/datasets/some-data-id"
     )
 
-    access_api.on_check_download_access = respond(json=None)
+    access_api.on_check_download_access = respond(content=b"null")
     assert await check_access(TEST_USER_ID, "other-data-id") is None
 
     access_api.on_check_download_access = respond(404)
@@ -217,7 +218,7 @@ async def test_check_upload_access(
 
     # Test null response (no access)
     other_box_id = uuid4()
-    access_api.on_check_upload_access = respond(json=None)
+    access_api.on_check_upload_access = respond(content=b"null")
     assert await check_access(TEST_USER_ID, other_box_id) is None
 
     # Test 404 response (box not found)

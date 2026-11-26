@@ -28,7 +28,7 @@ from fixtures import (
 from playwright.sync_api import expect
 from pytest_bdd import given, then, when
 
-from steps.utils import ADMIN_PAGES, parse
+from steps.utils import ADMIN_PAGES, parse, reset_user_token_counter
 
 
 @given(
@@ -40,6 +40,10 @@ def login_to_data_portal(
     fixtures: JointFixture,
 ) -> str:
     """Login to the Data Portal."""
+    # log in again without waiting for the next TOTP time step
+    reset_user_token_counter(
+        fixtures.auth.get_sub(full_name), fixtures, keep_failed_attempts=True
+    )
     fixtures.playwright.login(
         full_name, config=fixtures.config, auth_fixture=fixtures.auth
     )
@@ -129,6 +133,16 @@ def open_dataset_details(fixtures: JointFixture, alias: str):
     button.click()
     page.wait_for_load_state()
     expect(page).to_have_url(re.compile(f".*/dataset/{accession}"))
+
+
+def _filter_manager_by_title(fixtures: JointFixture, title: str):
+    """Open the manager filter (if collapsed) and filter the list by box title."""
+    page = fixtures.playwright.page
+    main = page.locator("main")
+    filter_toggle = page.get_by_role("button", name="Filter upload boxes")
+    if filter_toggle.is_visible():
+        filter_toggle.click()
+    main.get_by_label("Upload box title").first.fill(title)
 
 
 @when(parse('I load the admin page "{admin_page}"'))

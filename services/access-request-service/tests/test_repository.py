@@ -16,6 +16,7 @@
 
 """Test the access request repository"""
 
+import asyncio
 from collections.abc import AsyncIterator, Mapping
 from contextlib import suppress
 from datetime import timedelta
@@ -34,6 +35,7 @@ from ars.core.models import (
     AccessRequestStatus,
     BaseAccessGrant,
     Dataset,
+    VerificationSmsData,
 )
 from ars.core.repository import AccessRequestConfig, AccessRequestRepository
 from ars.ports.outbound.access_grants import AccessGrantsPort
@@ -42,6 +44,7 @@ from ars.ports.outbound.daos import (
     DatasetDaoPort,
     ResourceNotFoundError,
 )
+from ars.ports.outbound.sms import SmsNotifierPort
 from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext
 from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
 from hexkit.custom_types import ID
@@ -229,6 +232,7 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
         """Reset the last recorded upsert."""
         self._requests = {request.id: request for request in ACCESS_REQUESTS}
         self.last_upsert = None
+        self.simulate_error = False
 
     def find_all(  # type: ignore[override]
         self, *, filter_: Mapping[str, Any]
@@ -262,6 +266,8 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
         self, dto: AccessRequest, *, precondition: Mapping[str, Any] | None = None
     ) -> None:
         """Update an existing resource."""
+        if self.simulate_error:
+            raise RuntimeError("Database not available")
         try:
             stored = self._requests[dto.id]
         except KeyError as error:
@@ -307,12 +313,19 @@ class AccessGrantsDummy(AccessGrantsPort):
     """Dummy adapter for granting download access."""
 
     last_grant: str
+    last_grant_id: UUID4 | None
+    last_revoked_id: UUID4 | None
     simulate_error: bool
+    revoke_calls: int
+    revoke_failures: int
 
     def reset(self) -> None:
         """Reset the recorded grant."""
         self.last_grant = "nothing granted so far"
+        self.last_grant_id = self.last_revoked_id = None
         self.simulate_error = False
+        self.revoke_calls = self.revoke_failures = 0
+        self.revoke_error: Exception = self.AccessGrantsError("Service not available")
 
     async def grant_download_access(
         self,
@@ -330,7 +343,8 @@ class AccessGrantsDummy(AccessGrantsPort):
             f"to {user_id} with {iva_id}"
             f" for {dataset_id} from {valid_from} until {valid_until}"
         )
-        return uuid4()
+        self.last_grant_id = uuid4()
+        return self.last_grant_id
 
     async def get_download_access_grants(
         self,
@@ -366,6 +380,13 @@ class AccessGrantsDummy(AccessGrantsPort):
 
         May raise an `AccessGrantNotFoundError` or a general `AccessGrantsError`.
         """
+        self.revoke_calls += 1
+        if self.revoke_failures:
+            self.revoke_failures -= 1
+            raise self.revoke_error
+        if grant_id == self.last_grant_id:
+            self.last_revoked_id = grant_id
+            return
         for ar in ACCESS_REQUESTS:
             with suppress(ValueError):
                 idx = REQUEST_IDS.index(ar.id)
@@ -374,9 +395,24 @@ class AccessGrantsDummy(AccessGrantsPort):
         raise self.AccessGrantNotFoundError(f"Grant with ID {grant_id} not found")
 
 
+class SmsNotifierDummy(SmsNotifierPort):
+    """Dummy SMS notifier that records the sent messages."""
+
+    sent: list[tuple[str, str, str]]
+
+    def reset(self):
+        """Forget the sent messages."""
+        self.sent = []
+
+    async def send_sms(self, *, phone: str, text: str, key: str) -> None:
+        """Record the message instead of sending it."""
+        self.sent.append((phone, text, key))
+
+
 access_request_dao = AccessRequestDaoDummy()  # type: ignore
 dataset_dao = DatasetDaoDummy()  # type: ignore
 access_grants = AccessGrantsDummy()
+sms_notifier = SmsNotifierDummy()
 
 
 @pytest.fixture(autouse=True)
@@ -385,6 +421,7 @@ def reset():
     access_request_dao.reset()
     dataset_dao.reset()
     access_grants.reset()
+    sms_notifier.reset()
 
 
 repository = AccessRequestRepository(
@@ -392,15 +429,13 @@ repository = AccessRequestRepository(
     access_request_dao=access_request_dao,
     dataset_dao=dataset_dao,
     access_grants=access_grants,
+    sms_notifier=sms_notifier,
 )
+repository._revoke_interval = 0
 
 
 async def test_dao_dummy_honours_precondition():
-    """Test the dummy DAO's `update`.
-
-    No repository method passes a precondition yet, so this pins the dummy's
-    behaviour for when one does.
-    """
+    """Test that the dummy DAO's `update` honours a precondition like MongoDB."""
     request = ACCESS_REQUESTS[0]
     assert request.status == AccessRequestStatus.ALLOWED
     changed = request.model_copy(update={"request_text": "Changed"})
@@ -627,15 +662,23 @@ async def test_cannot_create_request_nonexistent_dataset():
 
 
 async def test_can_get_own_request_as_requester():
-    """Test that requesters can get their own request individually."""
+    """Test that requesters can get their own request individually,
+    but without the internal fields.
+    """
     for request in ACCESS_REQUESTS:
-        if str(request.user_id) == auth_context_doe.id:
+        if str(request.user_id) == auth_context_doe.id and request.changed_by:
             break
     else:
         assert False, "Test request cannot be found"
+    request = request.model_copy(update={"internal_note": "Steward only"})
+    await access_request_dao.update(request)
+    assert await repository.get(
+        access_request_id=request.id, auth_context=auth_context_doe
+    ) == request.model_copy(update={"changed_by": None, "internal_note": None})
+    # the stored request keeps the internal fields
     assert (
         await repository.get(
-            access_request_id=request.id, auth_context=auth_context_doe
+            access_request_id=request.id, auth_context=auth_context_steward
         )
         == request
     )
@@ -961,10 +1004,329 @@ async def test_set_status_to_allowed_with_error_when_granting_access():
 
     assert access_grants.last_grant == f"to {ID_OF_JOHN_DOE} for DS007 failed"
 
-    # make sure the status is not changed in this case, and no mails are sent out
-    changed_request = access_request_dao.last_upsert
-    assert changed_request is not None
-    assert changed_request == original_request
+    # nothing is stored, so no status change is published and no mails are sent out
+    assert access_request_dao.last_upsert is None
+    assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == original_request
+
+
+async def test_set_status_to_allowed_with_error_when_storing_request():
+    """Test that the access grant is revoked when the allowed request is not stored."""
+    original_request = await access_request_dao.get_by_id(REQUEST_IDS[3])
+    access_request_dao.simulate_error = True
+
+    with pytest.raises(RuntimeError, match="Database not available"):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    assert access_grants.last_grant_id is not None
+    assert access_grants.last_revoked_id == access_grants.last_grant_id
+    assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == original_request
+
+
+def change_concurrently(
+    monkeypatch: pytest.MonkeyPatch, request_id: UUID4, **changes: Any
+) -> AccessRequest:
+    """Store the request with the given changes, but serve the first read of it
+    in its old state, as if another write happened right after that read.
+
+    Returns the stored request.
+    """
+    stale = access_request_dao._requests[request_id]
+    changed = stale.model_copy(update=changes)
+    access_request_dao._requests[request_id] = changed
+    stale_reads = [stale]
+    get_by_id, find_all = access_request_dao.get_by_id, access_request_dao.find_all
+
+    def read(request: AccessRequest) -> AccessRequest:
+        if request.id == request_id and stale_reads:
+            return stale_reads.pop()
+        return request
+
+    async def get_stale_by_id(id_: ID) -> AccessRequest:
+        return read(await get_by_id(id_))
+
+    async def find_all_stale(*, filter_: Mapping[str, Any]):
+        async for request in find_all(filter_=filter_):
+            yield read(request)
+
+    monkeypatch.setattr(access_request_dao, "get_by_id", get_stale_by_id)
+    monkeypatch.setattr(access_request_dao, "find_all", find_all_stale)
+    return changed
+
+
+def close_concurrently(
+    monkeypatch: pytest.MonkeyPatch, request_id: UUID4, status: AccessRequestStatus
+) -> AccessRequest:
+    """Close the request right after its first read, see `change_concurrently`."""
+    return change_concurrently(
+        monkeypatch, request_id, status=status, status_changed=now_utc_ms_prec()
+    )
+
+
+async def test_allow_request_denied_concurrently(monkeypatch: pytest.MonkeyPatch):
+    """Test that allowing a request that has been denied meanwhile fails
+    and revokes the access grant.
+    """
+    closed = close_concurrently(monkeypatch, REQUEST_IDS[3], AccessRequestStatus.DENIED)
+
+    with pytest.raises(repository.AccessRequestClosed):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    assert access_grants.last_grant_id is not None
+    assert access_grants.last_revoked_id == access_grants.last_grant_id
+    assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == closed
+
+
+async def test_deny_request_allowed_concurrently(monkeypatch: pytest.MonkeyPatch):
+    """Test that denying a request that has been allowed meanwhile fails."""
+    closed = close_concurrently(
+        monkeypatch, REQUEST_IDS[3], AccessRequestStatus.ALLOWED
+    )
+
+    with pytest.raises(repository.AccessRequestClosed):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(status=AccessRequestStatus.DENIED),
+            auth_context=auth_context_steward,
+        )
+
+    assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == closed
+
+
+async def test_allow_request_changed_concurrently(monkeypatch: pytest.MonkeyPatch):
+    """Test that allowing a request uses its access period as changed meanwhile."""
+    request = ACCESS_REQUESTS[3]
+    access_ends = request.access_ends - timedelta(days=100)
+    change_concurrently(monkeypatch, request.id, access_ends=access_ends)
+
+    await repository.update(
+        request.id,
+        patch_data=AccessRequestPatchData(
+            iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+        ),
+        auth_context=auth_context_steward,
+    )
+
+    # the grant from the stale read has been revoked and a new one registered
+    assert access_grants.last_revoked_id is not None
+    assert access_grants.last_grant_id != access_grants.last_revoked_id
+    assert access_grants.last_grant.endswith(f"until {access_ends}")
+    stored = await access_request_dao.get_by_id(request.id)
+    assert stored.status == AccessRequestStatus.ALLOWED
+    assert stored.access_ends == access_ends
+
+
+async def test_revoke_unused_grant_is_retried(caplog: pytest.LogCaptureFixture):
+    """Test that revoking the grant of a request that was not stored is retried."""
+    access_request_dao.simulate_error = True
+    access_grants.revoke_failures = 2
+
+    with pytest.raises(RuntimeError, match="Database not available"):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    assert access_grants.revoke_calls == 3
+    assert access_grants.last_revoked_id == access_grants.last_grant_id
+    assert not any(record.levelname == "CRITICAL" for record in caplog.records)
+
+
+@pytest.mark.parametrize(
+    "revoke_error",
+    [AccessGrantsPort.AccessGrantsError("Not available"), RuntimeError("Closed")],
+    ids=["grants_error", "other_error"],
+)
+async def test_revoke_unused_grant_fails(
+    revoke_error: Exception, caplog: pytest.LogCaptureFixture
+):
+    """Test that a grant that cannot be revoked is logged as critical."""
+    access_request_dao.simulate_error = True
+    access_grants.revoke_failures = 3
+    access_grants.revoke_error = revoke_error
+
+    with pytest.raises(RuntimeError, match="Database not available"):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    assert access_grants.revoke_calls == 3
+    assert access_grants.last_revoked_id is None
+    critical = [r for r in caplog.records if r.levelname == "CRITICAL"]
+    assert len(critical) == 1
+    assert str(access_grants.last_grant_id) in critical[0].getMessage()
+
+
+async def test_revoke_unused_grant_when_cancelled(monkeypatch: pytest.MonkeyPatch):
+    """Test that the grant is revoked when the request is cancelled while storing,
+    even if it is cancelled again while revoking.
+    """
+    storing, revoking, may_revoke = asyncio.Event(), asyncio.Event(), asyncio.Event()
+
+    async def update(*args, **kwargs):
+        storing.set()
+        await asyncio.sleep(10)
+
+    revoke = access_grants.revoke_download_access_grant
+
+    async def revoke_later(grant_id: UUID4) -> None:
+        revoking.set()
+        await may_revoke.wait()
+        await revoke(grant_id)
+
+    monkeypatch.setattr(access_request_dao, "update", update)
+    monkeypatch.setattr(access_grants, "revoke_download_access_grant", revoke_later)
+    task = asyncio.create_task(
+        repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+            ),
+            auth_context=auth_context_steward,
+        )
+    )
+    # fail instead of hanging if the cancellation is not handled
+    async with asyncio.timeout(5):
+        await storing.wait()
+        task.cancel()
+        await revoking.wait()
+        task.cancel()
+
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+        assert access_grants.last_revoked_id is None
+        may_revoke.set()
+        await repository.wait_for_discarded_grants()
+    assert access_grants.last_grant_id is not None
+    assert access_grants.last_revoked_id == access_grants.last_grant_id
+
+
+async def test_revoke_grant_when_another_change_was_stored(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Test that the grant is revoked when the request has been allowed by another
+    change, while storing this one failed.
+    """
+    request = ACCESS_REQUESTS[3]
+    other_change = request.model_copy(
+        update={
+            "status": AccessRequestStatus.ALLOWED,
+            "status_changed": now_utc_ms_prec() - timedelta(seconds=1),
+        }
+    )
+
+    async def store_other_change(*args, **kwargs):
+        access_request_dao._requests[request.id] = other_change
+        raise RuntimeError("Database not available")
+
+    monkeypatch.setattr(access_request_dao, "update", store_other_change)
+
+    with pytest.raises(RuntimeError, match="Database not available"):
+        await repository.update(
+            request.id,
+            patch_data=AccessRequestPatchData(
+                iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    assert access_grants.last_grant_id is not None
+    assert access_grants.last_revoked_id == access_grants.last_grant_id
+
+
+@pytest.mark.parametrize("hanging", [False, True], ids=["error", "hanging"])
+async def test_revoke_grant_when_read_back_fails(
+    hanging: bool,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+):
+    """Test that the grant is revoked when it is unknown whether the request
+    has been stored.
+    """
+    access_request_dao.simulate_error = True
+    get_by_id = access_request_dao.get_by_id
+    reads = 0
+
+    async def fail_to_read_back(id_: ID) -> AccessRequest:
+        nonlocal reads
+        reads += 1
+        if reads > 1:
+            if hanging:
+                await asyncio.sleep(3600)
+            raise RuntimeError("Database not available")
+        return await get_by_id(id_)
+
+    monkeypatch.setattr(access_request_dao, "get_by_id", fail_to_read_back)
+    monkeypatch.setattr(repository, "_read_back_timeout", 0.01)
+
+    with pytest.raises(RuntimeError, match="Database not available"):
+        async with asyncio.timeout(5):
+            await repository.update(
+                REQUEST_IDS[3],
+                patch_data=AccessRequestPatchData(
+                    iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+                ),
+                auth_context=auth_context_steward,
+            )
+
+    assert reads == 2
+    assert access_grants.last_grant_id is not None
+    assert access_grants.last_revoked_id == access_grants.last_grant_id
+    assert any(
+        message.startswith(f"Could not check whether access request {REQUEST_IDS[3]}")
+        for message in caplog.messages
+    )
+
+
+@pytest.mark.parametrize("cancelled", [False, True], ids=["error", "cancelled"])
+async def test_keep_grant_when_request_was_stored(
+    cancelled: bool, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that the grant is kept when the request has been stored as allowed,
+    but publishing the change failed or was cancelled.
+    """
+    store = access_request_dao.update
+
+    async def store_but_fail_to_publish(*args, **kwargs):
+        await store(*args, **kwargs)
+        if cancelled:
+            raise asyncio.CancelledError
+        raise RuntimeError("Cannot publish")
+
+    monkeypatch.setattr(access_request_dao, "update", store_but_fail_to_publish)
+
+    with pytest.raises(asyncio.CancelledError if cancelled else RuntimeError):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    stored = await access_request_dao.get_by_id(REQUEST_IDS[3])
+    assert stored.status == AccessRequestStatus.ALLOWED
+    assert access_grants.last_grant_id is not None
+    assert access_grants.revoke_calls == 0
 
 
 async def test_set_status_to_allowed_when_it_is_already_allowed():
@@ -1115,6 +1477,108 @@ async def test_set_invalid_access_end_date():
         )
 
     assert access_grants.last_grant == "nothing granted so far"
+
+
+async def expire_access_period(request_id: UUID4) -> AccessRequest:
+    """Move the access period of the given request into the past."""
+    request = await access_request_dao.get_by_id(request_id)
+    past = now_utc_ms_prec() - timedelta(days=30)
+    expired_request = request.model_copy(
+        update={"access_starts": past, "access_ends": past + timedelta(days=7)}
+    )
+    await access_request_dao.update(expired_request)
+    return expired_request
+
+
+@pytest.mark.parametrize(
+    "patch_data",
+    [
+        AccessRequestPatchData(status=AccessRequestStatus.DENIED),
+        AccessRequestPatchData(iva_id=uuid4()),
+        AccessRequestPatchData(ticket_id="GSI-1234"),
+        AccessRequestPatchData(internal_note="Some internal note"),
+        AccessRequestPatchData(note_to_requester="Some note to the requester"),
+    ],
+    ids=["deny", "iva", "ticket", "internal_note", "note_to_requester"],
+)
+async def test_change_request_whose_access_period_has_passed(
+    patch_data: AccessRequestPatchData,
+):
+    """Test that a request whose access period has passed can still be changed."""
+    expired_request = await expire_access_period(REQUEST_IDS[3])
+
+    await repository.update(
+        REQUEST_IDS[3], patch_data=patch_data, auth_context=auth_context_steward
+    )
+
+    changed_request = access_request_dao.last_upsert
+    assert changed_request is not None
+    patched = patch_data.model_dump(exclude_none=True)
+    assert changed_request.model_dump(include=set(patched)) == patched
+    assert changed_request.access_starts == expired_request.access_starts
+    assert changed_request.access_ends == expired_request.access_ends
+
+
+async def test_allow_request_whose_access_period_has_passed(
+    caplog: pytest.LogCaptureFixture,
+):
+    """Test that a request cannot be allowed when its access period has passed."""
+    await expire_access_period(REQUEST_IDS[3])
+    message = "The access period has ended; set a new end date before allowing"
+
+    with pytest.raises(repository.AccessRequestInvalidDuration, match=message):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=uuid4(), status=AccessRequestStatus.ALLOWED
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    assert message in caplog.messages
+    assert access_grants.last_grant == "nothing granted so far"
+
+
+async def test_allow_request_with_past_end_date(caplog: pytest.LogCaptureFixture):
+    """Test that allowing with a new end date in the past blames that date."""
+    await expire_access_period(REQUEST_IDS[3])
+    message = "Access end date must be later than access start date"
+
+    with pytest.raises(repository.AccessRequestInvalidDuration, match=message):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=uuid4(),
+                status=AccessRequestStatus.ALLOWED,
+                access_ends=now_utc_ms_prec() - timedelta(days=1),
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    assert message in caplog.messages
+    assert access_grants.last_grant == "nothing granted so far"
+
+
+async def test_allow_request_whose_access_period_has_passed_with_new_end():
+    """Test that a request whose period has passed can be allowed with a new end."""
+    await expire_access_period(REQUEST_IDS[3])
+    access_ends = now_utc_ms_prec() + timedelta(days=30)
+
+    await repository.update(
+        REQUEST_IDS[3],
+        patch_data=AccessRequestPatchData(
+            iva_id=SOME_IVA_ID,
+            status=AccessRequestStatus.ALLOWED,
+            access_ends=access_ends,
+        ),
+        auth_context=auth_context_steward,
+    )
+
+    changed_request = access_request_dao.last_upsert
+    assert changed_request is not None
+    assert changed_request.status == AccessRequestStatus.ALLOWED
+    assert changed_request.access_ends == access_ends
+    assert access_grants.last_grant.endswith(f" until {access_ends}")
 
 
 async def test_set_past_access_start_date():
@@ -1358,6 +1822,58 @@ async def test_keeps_processed_request_when_deleting_its_dataset(
     assert request.status_changed == status_changed
 
 
+@pytest.mark.parametrize("deleted", [False, True], ids=["updated", "deleted"])
+async def test_keeps_concurrent_changes_when_changing_a_dataset(
+    deleted: bool, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that changing a dataset keeps changes made to a pending request
+    while the change was processed.
+    """
+    request = ACCESS_REQUESTS[3]
+    dataset = DATASET.model_copy(update={"id": request.dataset_id})
+    await dataset_dao.upsert(dataset)
+    access_ends = request.access_ends - timedelta(days=100)
+    change_concurrently(monkeypatch, request.id, access_ends=access_ends)
+
+    if deleted:
+        await repository.delete_dataset(dataset_id=dataset.id)
+    else:
+        await repository.register_dataset(dataset)
+
+    stored = await access_request_dao.get_by_id(request.id)
+    assert stored.access_ends == access_ends
+    if deleted:
+        assert stored.status == AccessRequestStatus.DENIED
+    else:
+        assert stored.dataset_title == dataset.title
+
+
+@pytest.mark.parametrize("deleted", [False, True], ids=["updated", "deleted"])
+async def test_keeps_request_allowed_concurrently_when_changing_its_dataset(
+    deleted: bool,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+):
+    """Test that changing a dataset keeps a request that has been allowed
+    while the change was processed.
+    """
+    request = ACCESS_REQUESTS[3]
+    dataset = DATASET.model_copy(update={"id": request.dataset_id})
+    await dataset_dao.upsert(dataset)
+    closed = close_concurrently(monkeypatch, request.id, AccessRequestStatus.ALLOWED)
+
+    if deleted:
+        await repository.delete_dataset(dataset_id=dataset.id)
+    else:
+        await repository.register_dataset(dataset)
+
+    assert await access_request_dao.get_by_id(request.id) == closed
+    assert any(
+        message.startswith(f"A valid access request with ID {request.id}")
+        for message in caplog.messages
+    )
+
+
 async def test_can_get_all_access_grants():
     """Test that all access grants can be retrieved."""
     # first register all datasets
@@ -1460,3 +1976,143 @@ async def test_revoke_an_access_grant_without_authorization():
     """Test that revoking an access grant needs proper authorization."""
     with pytest.raises(repository.AccessRequestAuthorizationError):
         await repository.revoke_grant(GRANT_IDS[0], auth_context=auth_context_doe)
+
+
+SMS_DATA = VerificationSmsData(
+    phone="+49 1512 3456789",
+    text="Please send the code AB23CD to the GHGA helpdesk.",
+    code="AB23CD",
+)
+
+
+async def test_send_verification_sms():
+    """Test that a data steward can send a verification SMS and it is recorded."""
+    ar = ACCESS_REQUESTS[3]
+    assert ar.status == AccessRequestStatus.PENDING
+    assert not ar.internal_note
+    note = await repository.send_verification_sms(
+        ar.id, sms_data=SMS_DATA, auth_context=auth_context_steward
+    )
+    assert sms_notifier.sent == [("+4915123456789", SMS_DATA.text, str(ar.id))]
+    updated = access_request_dao.last_upsert
+    assert updated is not None
+    assert updated.id == ar.id
+    today = now_utc_ms_prec().date().isoformat()
+    assert note == updated.internal_note
+    assert note == f"{today}: Verification code AB23CD sent to +49…6789 by Rod Steward."
+    assert updated.status == AccessRequestStatus.PENDING
+
+
+async def test_send_verification_sms_is_recorded_before_sending(monkeypatch):
+    """Test that the SMS is recorded in the note even when sending it fails."""
+
+    async def fail(**kwargs):
+        raise RuntimeError("Cannot publish")
+
+    monkeypatch.setattr(sms_notifier, "send_sms", fail)
+    ar = ACCESS_REQUESTS[3]
+    with pytest.raises(RuntimeError, match="Cannot publish"):
+        await repository.send_verification_sms(
+            ar.id, sms_data=SMS_DATA, auth_context=auth_context_steward
+        )
+    updated = access_request_dao.last_upsert
+    assert updated is not None
+    assert updated.id == ar.id
+    assert updated.internal_note
+    assert updated.internal_note.endswith("AB23CD sent to +49…6789 by Rod Steward.")
+
+
+async def test_send_verification_sms_appends_to_note():
+    """Test that the record of a sent SMS is appended to an existing note."""
+    ar = ACCESS_REQUESTS[3]
+    await access_request_dao.update(ar.model_copy(update={"internal_note": "Hello"}))
+    await repository.send_verification_sms(
+        ar.id, sms_data=SMS_DATA, auth_context=auth_context_steward
+    )
+    updated = access_request_dao.last_upsert
+    assert updated is not None
+    note = updated.internal_note
+    assert note
+    assert note.startswith("Hello\n")
+    assert note.endswith(": Verification code AB23CD sent to +49…6789 by Rod Steward.")
+
+
+async def test_send_verification_sms_without_authorization():
+    """Test that only data stewards can send a verification SMS."""
+    with pytest.raises(repository.AccessRequestAuthorizationError):
+        await repository.send_verification_sms(
+            ACCESS_REQUESTS[3].id, sms_data=SMS_DATA, auth_context=auth_context_doe
+        )
+    assert not sms_notifier.sent
+    assert access_request_dao.last_upsert is None
+
+
+async def test_send_verification_sms_for_processed_request():
+    """Test that no verification SMS can be sent for a processed request."""
+    ar = ACCESS_REQUESTS[0]
+    assert ar.status == AccessRequestStatus.ALLOWED
+    with pytest.raises(repository.AccessRequestClosed):
+        await repository.send_verification_sms(
+            ar.id, sms_data=SMS_DATA, auth_context=auth_context_steward
+        )
+    assert not sms_notifier.sent
+
+
+async def test_send_verification_sms_for_request_closed_concurrently(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Test that no SMS is sent for a request that has been denied meanwhile."""
+    closed = close_concurrently(monkeypatch, REQUEST_IDS[3], AccessRequestStatus.DENIED)
+
+    with pytest.raises(repository.AccessRequestClosed):
+        await repository.send_verification_sms(
+            REQUEST_IDS[3], sms_data=SMS_DATA, auth_context=auth_context_steward
+        )
+
+    assert not sms_notifier.sent
+    assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == closed
+
+
+async def test_send_verification_sms_keeps_concurrent_note(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Test that the record of an SMS is appended to a note changed meanwhile."""
+    change_concurrently(monkeypatch, REQUEST_IDS[3], internal_note="Hello")
+
+    note = await repository.send_verification_sms(
+        REQUEST_IDS[3], sms_data=SMS_DATA, auth_context=auth_context_steward
+    )
+
+    assert note.startswith("Hello\n")
+    assert note.endswith("AB23CD sent to +49…6789 by Rod Steward.")
+    stored = await access_request_dao.get_by_id(REQUEST_IDS[3])
+    assert stored.internal_note == note
+    assert len(sms_notifier.sent) == 1
+
+
+async def test_send_verification_sms_for_non_existing_request():
+    """Test that sending a verification SMS for an unknown request fails."""
+    with pytest.raises(repository.AccessRequestNotFoundError):
+        await repository.send_verification_sms(
+            uuid4(), sms_data=SMS_DATA, auth_context=auth_context_steward
+        )
+    assert not sms_notifier.sent
+
+
+@pytest.mark.parametrize("phone", ["01512 3456789", "+49 6221 42 4242"])
+async def test_verification_sms_with_invalid_phone(phone: str):
+    """Test that the phone number is validated."""
+    with pytest.raises(ValueError, match="Invalid phone number"):
+        VerificationSmsData(phone=phone, text="Code AB23CD", code="AB23CD")
+
+
+async def test_verification_sms_with_code_missing_in_text():
+    """Test that a code that is not contained in the text is rejected."""
+    with pytest.raises(ValueError, match="must contain the verification code"):
+        VerificationSmsData(phone="+49 1512 3456789", text="Some text", code="AB23CD")
+
+
+async def test_verification_sms_without_code():
+    """Test that an SMS without a verification code is rejected."""
+    with pytest.raises(ValueError, match="code"):
+        VerificationSmsData(phone="+49 1512 3456789", text="Some text")  # type: ignore[call-arg]

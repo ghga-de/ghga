@@ -74,13 +74,13 @@ The service requires the following configuration parameters:
   - <a id="properties/client_retry_status_codes/items"></a>**Items** *(integer)*: Minimum: `0`.
 - <a id="properties/client_reraise_from_retry_error"></a>**`client_reraise_from_retry_error`** *(boolean)*: Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is.
   Default: `true`.
-- <a id="properties/per_request_jitter"></a>**`per_request_jitter`** *(number)*: Max amount of jitter (in seconds) to add to each request.
+- <a id="properties/min_request_interval"></a>**`min_request_interval`** *(number)*: Minimum number of seconds between requests to one host and first path segment.
+  If left at 0 some jitter is still added to pace concurrent requests.
   Minimum: `0`.
   Default: `0.0`.
-- <a id="properties/retry_after_applicable_for_num_requests"></a>**`retry_after_applicable_for_num_requests`** *(integer)*: Amount of requests after which the stored delay from a 429 response is ignored again.
-  Can be useful to adjust if concurrent requests are fired in quick succession.
-  Exclusive minimum: `0`.
-  Default: `1`.
+- <a id="properties/per_request_jitter"></a>**`per_request_jitter`** *(number)*: Max amount of jitter (in seconds) to add to each request.
+  Minimum: `0`.
+  Default: `0.05`.
 - <a id="properties/http_request_timeout_seconds"></a>**`http_request_timeout_seconds`** *(number)*: Request timeout setting in seconds.
   Default: `60.0`.
 - <a id="properties/data_hub_crypt4gh_public_key_path"></a>**`data_hub_crypt4gh_public_key_path`**: Path to the Data Hub's Crypt4GH public key file.
@@ -149,7 +149,7 @@ The service requires the following configuration parameters:
   Only needed if the private key is encrypted.
   Default: `null`.
   - **Any of**
-    - <a id="properties/data_hub_crypt4gh_private_key_passphrase/anyOf/0"></a>*string*
+    - <a id="properties/data_hub_crypt4gh_private_key_passphrase/anyOf/0"></a>*string, format: password*
     - <a id="properties/data_hub_crypt4gh_private_key_passphrase/anyOf/1"></a>*null*
 - <a id="properties/central_api_crypt4gh_public_key"></a>**`central_api_crypt4gh_public_key`** *(string, required)*: The Crypt4GH public key used by the Central API.
   This is used to encrypt new file encryption secrets.
@@ -267,6 +267,7 @@ The service requires the following configuration parameters:
 - <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages.
   Default: `true`.
 - <a id="properties/min_run_interval_seconds"></a>**`min_run_interval_seconds`** *(integer)*: The minimum number of seconds to wait before asking the CentralAPI about new files for interrogation.
+  DHFS asks again immediately after a round that concluded at least one file, though.
   Default: `60`.
 - <a id="properties/interrogation_bucket_id"></a>**`interrogation_bucket_id`** *(string, required)*: The name for the S3 'interrogation' bucket, which houses re-encrypted files until they are copied to permanent storage by IFRS.
 - <a id="properties/max_concurrent_parts"></a>**`max_concurrent_parts`** *(integer)*: How many file parts to process at the same time.

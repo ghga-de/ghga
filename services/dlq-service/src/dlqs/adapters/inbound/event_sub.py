@@ -14,15 +14,19 @@
 # limitations under the License.
 """Event subscriber implementation"""
 
+import logging
 from collections.abc import Mapping
 from datetime import datetime
+from uuid import UUID
 
-from pydantic import UUID4
+from pydantic import UUID4, ValidationError
 
 from dlqs.models import RawDLQEvent
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import DLQSubscriberProtocol
+
+log = logging.getLogger(__name__)
 
 
 class DLQSubTranslator(DLQSubscriberProtocol):
@@ -44,13 +48,28 @@ class DLQSubTranslator(DLQSubscriberProtocol):
         headers: Mapping[str, str],
     ) -> None:
         """Consume an event"""
-        event = RawDLQEvent(
-            payload=payload,
-            type_=type_,
-            topic=topic,
-            key=key,
-            dlq_id=event_id,
-            timestamp=timestamp,
-            headers=headers,
-        )
+        if event_id.version != 4:
+            # The subscriber accepts any UUID version. Derive the ID rather than
+            # draw a new one, so a redelivery is still recognized as a duplicate.
+            original_id = event_id
+            event_id = UUID(int=event_id.int, version=4)
+            log.warning(
+                "DLQ event ID %s is not a UUID4, storing the event as %s",
+                original_id,
+                event_id,
+            )
+        try:
+            event = RawDLQEvent(
+                payload=payload,
+                type_=type_,
+                topic=topic,
+                key=key,
+                dlq_id=event_id,
+                timestamp=timestamp,
+                headers=headers,
+            )
+        except ValidationError as err:
+            # Raising would stop the consumer, since the DLQ service has no DLQ
+            log.error("Dropped DLQ event %s that does not validate: %s", event_id, err)
+            return
         await self.dlq_manager.store_event(event=event)

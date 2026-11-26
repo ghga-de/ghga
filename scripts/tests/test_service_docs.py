@@ -1,10 +1,12 @@
-"""Tests for service_docs.py: member selection, the Markdown and the README splice."""
+"""Tests for service_docs.py: member selection, the Markdown, the README splice and
+the secret typing check."""
 
 import json
 import sys
 from pathlib import Path
 
 import pytest
+from pydantic import BaseModel, Secret, SecretStr
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -116,4 +118,42 @@ def test_members_all_for_a_path_outside_members(workspace):
     assert service_docs.members(paths) == [
         workspace / "services/a",
         workspace / "services/b",
+    ]
+
+
+class Nested(BaseModel):
+    """A nested model with a secret typed as a plain string."""
+
+    password: str
+    region: str
+
+
+class PlannedConfig(BaseModel):
+    """A config with secrets typed right, wrong, and fields that only look secret."""
+
+    db_password: SecretStr
+    api_token_secret: Secret[str]
+    key_passphrase: str | None = None
+    signing_key: str
+    private_key_path: str
+    vault_secret_id: str
+    vault_secrets_mount_point: str
+    mongo_dsn: str
+    s3_session_token: str
+    token_hashes: list[str]
+    cors_allow_credentials: bool
+    auth_key: str
+    nested: Nested
+
+
+def test_unmasked_secrets():
+    found = list(service_docs.unmasked_secrets(PlannedConfig, {"auth_key"}))
+    assert sorted(found) == [
+        "auth_key",
+        "key_passphrase",
+        "mongo_dsn",
+        "nested.password",
+        "s3_session_token",
+        "signing_key",
+        "vault_secret_id",
     ]

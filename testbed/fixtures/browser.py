@@ -76,7 +76,7 @@ class PlaywrightFixture:
         totp_input_box = self.page.get_by_label("Authentication code").first
         expect(totp_input_box).to_be_visible()
 
-        totp = auth_fixture.generate_totp(token)
+        totp = auth_fixture.generate_unused_totp(token)
         # TOTP input box auto-submits when the correct code is entered
         with self.page.expect_response(
             lambda response: "/verify-totp" in response.url

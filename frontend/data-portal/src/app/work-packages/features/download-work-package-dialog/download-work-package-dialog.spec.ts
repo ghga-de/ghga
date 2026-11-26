@@ -14,6 +14,7 @@ import {
 } from '@app/access-requests/models/access-requests';
 import { Iva, IvaState, IvaType } from '@app/ivas/models/iva';
 import { IvaService } from '@app/ivas/services/iva';
+import { ConfigService } from '@app/shared/services/config';
 import { Notifier } from '@app/shared/services/notification';
 import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
 import { WorkPackageService } from '@app/work-packages/services/work-package';
@@ -134,6 +135,7 @@ describe('DownloadWorkPackageDialog', () => {
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: WorkPackageService, useValue: wpServiceMock },
         { provide: Notifier, useValue: notifyMock },
+        { provide: ConfigService, useValue: { contactUrl: 'https://contact.test/' } },
         { provide: Clipboard, useValue: clipboardMock },
         { provide: IvaService, useClass: MockIvaService },
       ],
@@ -301,6 +303,10 @@ describe('DownloadWorkPackageDialog', () => {
       await result.fixture.whenStable();
 
       expect(screen.getByText(/could not be created/)).toBeVisible();
+      expect(screen.getByRole('link', { name: 'contact us' })).toHaveAttribute(
+        'href',
+        'https://contact.test/',
+      );
       expect(notificationService.showError).toHaveBeenCalled();
     });
   });

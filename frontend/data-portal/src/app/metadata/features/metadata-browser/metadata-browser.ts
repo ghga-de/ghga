@@ -53,7 +53,7 @@ export class MetadataBrowser {
       (f) => f.options.length > 0 && f.options.length <= this.#max_facet_options,
     ),
   );
-  protected numResults = computed(() => this.searchResults()?.count || 0);
+  protected numResults = computed(() => this.searchResults()?.total_count || 0);
 
   protected errorMessage = computed(() => {
     if (this.#error()) {

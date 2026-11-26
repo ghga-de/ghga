@@ -16,7 +16,7 @@ smtp_auth:
 from_address: "test@test.com"
 use_starttls: false
 mongo_dsn: "mongodb://mongodb:27017"
-db_name: "dev_db"
+db_name: notification
 migration_wait_sec: 10
 db_version_collection: nsDbVersions
 lox24_token: ""

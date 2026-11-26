@@ -76,6 +76,7 @@ class AccessionAdditionMetadataTransformer(
             accession_map=annotation.accession_map,
             references=self._references,
             anchor_points_by_target=self._anchor_points_by_target,
+            study_class_name=self._config.study_class_name,
         )
 
 

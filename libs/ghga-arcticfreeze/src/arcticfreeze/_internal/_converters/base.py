@@ -50,6 +50,10 @@ class Converter(Generic[InputObject]):
             Importantly, the callable passed in (2) does not make any assumption on the
             type of children objects passed to it (in that way it differs from the
             type-specific convert function).
+            Children must be frozen with this callable rather than with `freeze`, since
+            the depth limit, sharing and cycle detection rely on it. Each call counts
+            as one level of depth; levels that the convert callable adds itself, such
+            as wrapping its result in a tuple, are not counted.
             By default a no-op function is used as convert callable is that returns the
             object unchanged.
         priority:

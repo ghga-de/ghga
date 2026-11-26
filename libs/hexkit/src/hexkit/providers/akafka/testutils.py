@@ -41,7 +41,7 @@ from aiokafka import AIOKafkaConsumer, TopicPartition
 from aiokafka.admin import AIOKafkaAdminClient, RecordsToDelete
 from aiokafka.errors import KafkaError
 from pydantic import UUID4
-from testcontainers.kafka import KafkaContainer
+from testcontainers.community.kafka import KafkaContainer
 
 from hexkit.custom_types import Ascii, JsonObject, PytestScope
 from hexkit.providers.akafka import KafkaConfig
@@ -49,6 +49,11 @@ from hexkit.providers.akafka.provider import (
     ConsumerEvent,
     KafkaEventPublisher,
     headers_as_dict,
+)
+from hexkit.providers.akafka.provider.eventsub import (
+    _deserialize_key,
+    _deserialize_value,
+    _UndecodableRecordPart,
 )
 from hexkit.providers.akafka.testcontainer import DEFAULT_IMAGE as KAFKA_IMAGE
 
@@ -62,6 +67,7 @@ __all__ = [
     "KafkaEventPublisher",
     "KafkaFixture",
     "RecordedEvent",
+    "UndecodableEventError",
     "ValidationError",
     "clean_kafka_fixture",
     "get_clean_kafka_fixture",
@@ -109,6 +115,16 @@ class RecordedEvent(EventBase):
     key: Ascii
     event_id: Ascii
     headers: dict[str, str] | None = None
+
+
+class UndecodableEventError(RuntimeError):
+    """Raised when a recorded event has a key or value that cannot be decoded."""
+
+    def __init__(self, *, event: ConsumerEvent, problem: str):
+        super().__init__(
+            f"Recorded an undecodable event on topic {event.topic}, partition"
+            + f" {event.partition}, offset {event.offset}: {problem}."
+        )
 
 
 class ValidationError(RuntimeError):
@@ -296,10 +312,9 @@ class EventRecorder:
             client_id="__my_special_event_recorder__",
             group_id="__my_special_event_recorder__",
             auto_offset_reset="latest",
-            key_deserializer=lambda event_key: event_key.decode("ascii"),
-            value_deserializer=lambda event_value: json.loads(
-                event_value.decode("ascii")
-            ),
+            # The subscriber's deserializers, so the recorder accepts what it accepts
+            key_deserializer=_deserialize_key,
+            value_deserializer=_deserialize_value,
         )
 
     async def _count_events_since_start(self, *, consumer: AIOKafkaConsumer) -> int:
@@ -348,16 +363,21 @@ class EventRecorder:
         recorded_events: list[RecordedEvent] = []
 
         for raw_event in raw_events:
+            # A wrapper recorded in place of the event would only show up as a
+            # confusing mismatch, so name the undecodable record instead
+            key, value = raw_event.key, raw_event.value
+            if isinstance(key, _UndecodableRecordPart):
+                raise UndecodableEventError(event=raw_event, problem=key.error)
+            if isinstance(value, _UndecodableRecordPart):
+                raise UndecodableEventError(event=raw_event, problem=value.error)
             headers = headers_as_dict(raw_event)
-            type_ = headers.get("type", "")
-            event_id = headers.get("event_id", "")
-            del headers["type"]
-            del headers["event_id"]
+            type_ = headers.pop("type", "")
+            event_id = headers.pop("event_id", "")
 
             recorded_event = RecordedEvent(
-                payload=raw_event.value,
+                payload=value,
                 type_=type_,
-                key=raw_event.key,
+                key=key,
                 headers=headers if self._capture_headers else None,
                 event_id=event_id,
             )

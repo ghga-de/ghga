@@ -28,6 +28,7 @@ from .conftest import (
     then,
     when,
 )
+from .conftest_2x import _read_stable_box, _session_headers
 
 scenarios("../features/203_upload_completed.feature")
 
@@ -146,23 +147,22 @@ def submit_mapping(
     parse('"{full_name}" archives the data upload box for "{storage_name}" storage'),
     target_fixture="response",
 )
-def lock_upload_box(full_name: str, storage_name: str, fixtures: JointFixture):
-    """Lock the data upload box for the specified storage scope."""
-    assert storage_name in ["primary", "secondary"], f"Unknown storage: {storage_name}"
-    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
-    rdub_id = rdub["id"]
-    session = fixtures.auth.get_saved_session(
-        name=full_name, state_store=fixtures.state
-    )
-    assert session, f"No session found for {full_name}"
-    assert session.user_id, f"user_id is missing for {full_name}"
+def archive_upload_box(full_name: str, storage_name: str, fixtures: JointFixture):
+    """Archive the data upload box for the specified storage scope.
 
-    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
-    assert "version" in rdub, f"version is missing in rdub state for {storage_name}"
-    data = {"version": rdub["version"], "state": "archived"}
-    url = f"{fixtures.config.rs_url}/upload-boxes/{rdub_id}"
-    headers = fixtures.auth.headers(session=session)
-    return fixtures.http.patch(url, headers=headers, json=data)
+    A UCS event can still change the box between reading and archiving it, which
+    RS rejects as out of date, so the box is read again and archived anew then.
+    """
+    assert storage_name in ["primary", "secondary"], f"Unknown storage: {storage_name}"
+    headers = _session_headers(fixtures, full_name)
+    for _ in range(3):
+        box = _read_stable_box(fixtures, storage_name, full_name)
+        url = f"{fixtures.config.rs_url}/upload-boxes/{box['id']}"
+        data = {"version": box["version"], "state": "archived"}
+        response = fixtures.http.patch(url, headers=headers, json=data)
+        if response.status_code != 409:
+            break
+    return response
 
 
 @when(
