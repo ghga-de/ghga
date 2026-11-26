@@ -224,7 +224,7 @@ class Config(BaseSettings):
     nos_db_name: str = "nos"
 
     # notifications
-    mail_url: str = "http://mailhog:8025"
+    mail_url: str = "http://mailpit:8025"
 
     # test OP
     op_url: str = "op.test"

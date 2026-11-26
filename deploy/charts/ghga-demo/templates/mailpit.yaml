@@ -1,39 +1,52 @@
 {{- /*
-Demo SMTP sink (ADR-0028). Same image the compose test bed used; the notification
-service points at smtp://<release>-mailhog:1025, the web UI on :8025 is reachable
-via port-forward (the UI does not support path-prefix serving, so it is not routed
-through the gateway).
+Demo SMTP sink (ADR-0028). The notification service points at
+smtp://<release>-mailpit:1025, the web UI and API on :8025 are reachable via
+port-forward (not routed through the gateway).
+ns logs in over plain SMTP, which Mailpit refuses unless told to accept any login.
 */ -}}
-{{- if .Values.mailhog.enabled }}
+{{- if .Values.mailpit.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-mailhog
+  name: {{ .Release.Name }}-mailpit
   namespace: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/name: mailhog
+    app.kubernetes.io/name: mailpit
     app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: mailhog
+      app.kubernetes.io/name: mailpit
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: mailhog
+        app.kubernetes.io/name: mailpit
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       containers:
-        - name: mailhog
-          image: {{ .Values.mailhog.image }}
+        - name: mailpit
+          image: {{ .Values.mailpit.image }}
           imagePullPolicy: IfNotPresent
+          env:
+            - name: MP_SMTP_AUTH_ACCEPT_ANY
+              value: "true"
+            - name: MP_SMTP_AUTH_ALLOW_INSECURE
+              value: "true"
           ports:
             - name: smtp
               containerPort: 1025
             - name: http
               containerPort: 8025
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: http
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
@@ -44,14 +57,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-mailhog
+  name: {{ .Release.Name }}-mailpit
   namespace: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/name: mailhog
+    app.kubernetes.io/name: mailpit
     app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
   selector:
-    app.kubernetes.io/name: mailhog
+    app.kubernetes.io/name: mailpit
     app.kubernetes.io/instance: {{ .Release.Name }}
   ports:
     - name: smtp

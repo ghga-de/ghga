@@ -402,6 +402,7 @@ def unset_state_clause(name: str, state: StateStorage):
 
 def empty_mail_server(fixtures: JointFixture):
     """Delete all e-mails from mail server"""
+    # Mailpit deletes every message when the request names no IDs
     fixtures.http.delete(f"{fixtures.config.mail_url}/api/v1/messages")
 
 
@@ -468,7 +469,7 @@ def check_email_sent_to(
     within the given timeout (in seconds), an AssertionError is raised.
     """
     notification_type = notification_type.lower().replace(" ", "_")
-    url = f"{fixtures.config.mail_url}/api/v2/search"
+    url = f"{fixtures.config.mail_url}/api/v1/search"
     slept: float = 0
     subject = EXPECTED_NOTIFICATIONS.get(notification_type)
     assert subject, f"Undefined notification type: {notification_type}"
@@ -484,20 +485,23 @@ def check_email_sent_to(
         response = fixtures.http.get(
             url,
             headers={"accept": "application/json"},
-            params={"kind": "containing", "query": subject},
+            params={"query": f'subject:"{subject}"'},
             timeout=timeout,
         )  # not possible to filter by email and subject at the same time
         assert response.status_code == 200
         content = response.json()
-        if content["count"] > 0:
+        if content["messages_count"] > 0:
             notifications = parse_notifications(content)
             notifications = sorted(notifications, key=lambda n: n.created_time)
             latest_notification = notifications[0]
             assert email in latest_notification.receiver
             assert latest_notification.is_recent()
             # delete the notification from the mail server as already seen
-            url = f"{fixtures.config.mail_url}/api/v1/messages/{latest_notification.id}"
-            response = fixtures.http.delete(url, timeout=timeout)
+            url = f"{fixtures.config.mail_url}/api/v1/messages"
+            # httpx's delete() takes no body, which Mailpit needs for the IDs
+            response = fixtures.http.request(
+                "DELETE", url, json={"IDs": [latest_notification.id]}, timeout=timeout
+            )
             assert response.status_code == 200
             return latest_notification
         sleep(interval)

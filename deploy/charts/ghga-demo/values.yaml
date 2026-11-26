@@ -117,10 +117,10 @@ minio:
     - hub2-interrogations
     - hub2-permanent
 
-# demo SMTP sink (UI on :8025 via port-forward; same image as the compose test bed)
-mailhog:
+# demo SMTP sink (UI and API on :8025 via port-forward)
+mailpit:
   enabled: true
-  image: mailhog/mailhog:v1.0.1
+  image: axllent/mailpit:v1.33.1
 
 # SMS-gateway mock for the notification service (wiremock + compose's stub)
 lox24Mock:
@@ -616,7 +616,7 @@ ns:
     service_instance_id: consumer.1
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
-    smtp_host: ghga-mailhog
+    smtp_host: ghga-mailpit
     smtp_port: 1025
     use_starttls: false
     from_address: central@test.dev

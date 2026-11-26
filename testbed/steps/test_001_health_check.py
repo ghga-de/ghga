@@ -31,7 +31,7 @@ def check_api_is_healthy(api: str, fixtures: JointFixture):  # noqa: C901
     is_internal = api in config.internal_apis
     health_endpoint = getattr(config, f"{api}_url").rstrip("/")
     if api == "mail":
-        health_endpoint += "/api/v2/messages"
+        health_endpoint += "/readyz"
     else:
         health_endpoint += "/health"
 
