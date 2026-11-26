@@ -17,7 +17,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException, Request, status
+from fastapi import APIRouter, Body, HTTPException, Request, Response, status
 from packaging.specifiers import SpecifierSet
 from packaging.version import InvalidVersion, Version
 from pydantic import UUID4
@@ -195,6 +195,60 @@ async def validate_version(
         endpoint_description="validate_version",
         storage_alias=storage_alias,
     )
+
+
+@router.post(
+    "/rpc/storages/{storage_alias}/uploads/claim",
+    summary="Lease the next waiting file to the caller",
+    description=(
+        "Serve at most one file of the Data Hub (storage_alias) and lease it to the"
+        + " caller. Files of the highest-priority upload box go first."
+    ),
+    operation_id="claimUpload",
+    tags=["FileIngestService"],
+    status_code=status.HTTP_200_OK,
+    response_model=models.BaseFileInformation,
+    responses={
+        status.HTTP_204_NO_CONTENT: {"description": "No file is waiting"},
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "description": "The claim could not be completed"
+        },
+    },
+)
+@TRACER.start_as_current_span("routes.claim_upload")
+async def claim_upload(
+    storage_alias: str,
+    request: Request,
+    interrogator: dummies.InterrogatorPort,
+    _token: Annotated[JWT, require_data_hub_jwt],
+    _dhfs_version_constraint: dummies.DhfsVersionConstraint,
+    claimant: models.Claimant = Body(),
+) -> models.BaseFileInformation | Response:
+    """Lease the next waiting file of a Data Hub (storage_alias) to the caller."""
+    check_and_log_user_agent_header(
+        request=request,
+        dhfs_version_constraint=_dhfs_version_constraint,
+        endpoint_description="claim_upload",
+        storage_alias=storage_alias,
+    )
+    try:
+        file = await interrogator.claim_file(
+            storage_alias=storage_alias, claimant_id=claimant.claimant_id
+        )
+    except InterrogationHandlerPort.FileClaimError as err:
+        # 503 lets the caller's retry transport try again
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The claim could not be completed. Try again later.",
+        ) from err
+    except Exception as err:
+        error = HTTPException(status_code=500, detail="Something went wrong.")
+        log.error(error, exc_info=True, extra={"claimant_id": claimant.claimant_id})
+        raise error from err
+
+    if file is None:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return file
 
 
 @router.post(
