@@ -19,10 +19,9 @@
 from math import ceil
 from time import sleep
 
-from ghga_connector.core.progress_bar import (
-    DownloadProgressBar,
-    UploadProgressBar,
-)
+import pytest
+
+from ghga_connector.core.progress_bar import BatchUploadProgress, DownloadProgressBar
 
 
 def test_progress_bar():
@@ -39,10 +38,24 @@ def test_progress_bar():
         assert progress._progress.finished
         assert progress._progress.tasks[0].completed == file_size
 
-    with UploadProgressBar(file_name=file_name, file_size=file_size) as progress:
-        for _ in range(ceil(file_size / chunk_size)):
-            progress.advance(chunk_size)
-            sleep(0.1)
 
-        assert progress._progress.finished
-        assert progress._progress.tasks[0].completed == file_size
+def test_batch_upload_progress_rows():
+    """Two files share one display, and each row leaves it when its file ends,
+    finished or failed, without printing anything.
+    """
+    with BatchUploadProgress() as batch:
+        progress = batch._progress
+        progress.console.begin_capture()
+        finished = batch.file_row("finished.bam", 1000)
+        failed = batch.file_row("failed.bam", 2000)
+        with finished:
+            with pytest.raises(RuntimeError), failed:
+                failed.advance(500)
+                assert len(progress.tasks) == 2
+                raise RuntimeError("upload failed")
+            finished.advance(1500)  # clamped to the file size
+            assert [task.completed for task in progress.tasks] == [1000]
+        printed = progress.console.end_capture()
+
+        assert progress.tasks == []
+    assert printed == ""

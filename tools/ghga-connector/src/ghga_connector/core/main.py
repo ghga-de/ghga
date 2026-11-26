@@ -123,6 +123,7 @@ async def upload_files(  # noqa: PLR0913
         file_info_list=full_file_info,
         my_private_key=my_private_key,
         max_concurrent_uploads=config.max_concurrent_uploads,
+        max_concurrent_files=config.max_concurrent_files,
         max_retries=max_retries,
         dry_run=dry_run,
         shorten=shorten,

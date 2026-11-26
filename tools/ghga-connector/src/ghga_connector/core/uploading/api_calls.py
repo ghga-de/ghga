@@ -16,6 +16,8 @@
 """This module provides a client class for contacting the Upload API"""
 
 import logging
+import re
+from collections.abc import AsyncIterator
 from uuid import UUID
 
 import httpx2
@@ -25,12 +27,40 @@ from ghga_connector import exceptions
 from ghga_connector.config import get_upload_api_url
 from ghga_connector.constants import UPLOAD_LISTING_PAGE_SIZE
 from ghga_connector.core.api_calls.utils import is_service_healthy
+from ghga_connector.core.client import OpenUploadLimitReached
 from ghga_connector.core.uploading.structs import UploadedFileInfo
 from ghga_connector.core.work_package import WorkPackageClient
 
-__all__ = ["UploadClient"]
+__all__ = ["PartBody", "UploadClient"]
 
 log = logging.getLogger(__name__)
+
+# The size of each write when a part is sent, so no single socket write carries a part
+PART_BODY_CHUNK_SIZE = 2**20
+
+# The fields of S3's XML error body that say what went wrong
+_S3_ERROR_CODE = re.compile(r"<Code>([^<]{1,100})</Code>")
+_S3_ERROR_MESSAGE = re.compile(r"<Message>([^<]{0,500})</Message>")
+
+
+class PartBody:
+    """A part's bytes in chunks of `PART_BODY_CHUNK_SIZE`.
+
+    Each iteration starts at the first byte, so the retry transport can send it again.
+    """
+
+    def __init__(self, data: bytes | bytearray, chunk_size: int = PART_BODY_CHUNK_SIZE):
+        self._view = memoryview(data)
+        self._chunk_size = chunk_size
+
+    def __len__(self) -> int:
+        """Return the size of the part in bytes."""
+        return len(self._view)
+
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        """Yield the part's bytes in chunks, from the first byte on."""
+        for start in range(0, len(self._view), self._chunk_size):
+            yield self._view[start : start + self._chunk_size].tobytes()
 
 
 def _form_authorization_headers(work_order_token: str) -> dict[str, str]:
@@ -207,6 +237,8 @@ class UploadClient:
         try:
             log.debug("Requesting file upload creation at url %s", url)
             response = await self._client.post(url, headers=headers, json=body)
+        except OpenUploadLimitReached:
+            raise exceptions.TooManyOpenUploadsError(file_alias=file_alias) from None
         except exceptions.REQUEST_FAILURES as exc:
             response = exceptions.handle_request_error(exc, url=url)
 
@@ -303,27 +335,36 @@ class UploadClient:
         self,
         *,
         file_id: UUID4,
-        content: bytes,
+        content: bytes | bytearray,
         part_no: int,
+        url: str | None = None,
     ) -> None:
         """Upload an encrypted file part
+
+        The part is sent in chunks with its length announced up front, so a slow
+        uplink cannot run into the write timeout with a whole part in one write.
+        A presigned `url` fetched beforehand for this part is used as it is;
+        without one, the URL is fetched first.
 
         Raises:
             RequestFailedError: If the request fails without returning a response code.
             UnexpectedError: If the status code is not 200.
         """
-        url = await self.get_part_upload_url(file_id=file_id, part_no=part_no)
+        if url is None:
+            url = await self.get_part_upload_url(file_id=file_id, part_no=part_no)
 
         try:
             log.debug("Uploading file part number %i for %s", part_no, str(file_id))
-            response = await self._client.put(url, content=content)
+            response = await self._client.put(
+                url,
+                content=PartBody(content),
+                headers={"Content-Length": str(len(content))},
+            )
         except exceptions.REQUEST_FAILURES as exc:
             response = exceptions.handle_request_error(exc, url=url)
 
         if response.status_code != 200:
-            self._handle_bad_status_codes(
-                status_code=response.status_code, response=response, file_id=file_id
-            )
+            raise _s3_part_error(response)
 
     async def complete_file_upload(  # noqa: PLR0913
         self,
@@ -405,6 +446,25 @@ class UploadClient:
                 file_alias=file_alias,
                 file_id=file_id,
             )
+
+
+def _s3_part_error(response: httpx2.Response) -> Exception:
+    """Translate S3's answer to a failed part upload into an error.
+
+    A presigned URL is answered by S3, not by the Upload API: its error is an XML body
+    with a code and a message. A missing multipart upload gets the same error as when
+    the Upload API reports it.
+    """
+    body = response.text
+    code = _S3_ERROR_CODE.search(body)
+    message = _S3_ERROR_MESSAGE.search(body)
+    if code and code.group(1) == "NoSuchUpload":
+        return exceptions.S3UploadMissingError()
+    return exceptions.S3PartUploadError(
+        status_code=response.status_code,
+        code=code.group(1) if code else None,
+        message=message.group(1) if message else None,
+    )
 
 
 def _handle_400(*, exception_id: str, work_package_id: UUID4):

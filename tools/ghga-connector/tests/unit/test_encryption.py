@@ -19,6 +19,7 @@ import base64
 import hashlib
 import io
 import os
+from collections import deque
 from pathlib import Path
 
 import crypt4gh.keys
@@ -26,7 +27,11 @@ import crypt4gh.lib
 import pytest
 
 from ghga_connector import exceptions
-from ghga_connector.constants import MAX_ALIGNED_PART_SIZE, MIN_ALIGNED_PART_SIZE
+from ghga_connector.constants import (
+    ENVELOPE_SIZE,
+    MAX_ALIGNED_PART_SIZE,
+    MIN_ALIGNED_PART_SIZE,
+)
 from ghga_connector.core.crypt.encryption import Crypt4GHEncryptor
 from ghga_connector.core.uploading.structs import CoreFileInfo
 from ghga_connector.core.utils import get_private_key
@@ -55,11 +60,16 @@ def patch_ghga_pubkey(monkeypatch):
     )
 
 
-def make_encryptor(private_key, file_size: int) -> Crypt4GHEncryptor:
-    """Create a Crypt4GHEncryptor with part_size set to half the file size, if possible."""
-    # Keep part_size within the min and max aligned boundaries
-    part_size = max(MIN_ALIGNED_PART_SIZE, file_size // 2)
-    part_size = min(part_size, MAX_ALIGNED_PART_SIZE)
+def make_encryptor(
+    private_key, file_size: int, part_size: int | None = None
+) -> Crypt4GHEncryptor:
+    """Create a Crypt4GHEncryptor with the given part_size, else with part_size set
+    to half the file size, if possible.
+    """
+    if part_size is None:
+        # Keep part_size within the min and max aligned boundaries
+        part_size = max(MIN_ALIGNED_PART_SIZE, file_size // 2)
+        part_size = min(part_size, MAX_ALIGNED_PART_SIZE)
     return Crypt4GHEncryptor(
         part_size=part_size,
         my_private_key=private_key,
@@ -114,16 +124,6 @@ def test_process_file_unencrypted_checksum_matches_input(private_key):
     )
 
 
-def test_process_file_encrypted_checksum_count_matches_part_count(private_key):
-    """Make sure the number of encrypted checksum entries equals the number of yielded parts."""
-    file_data = os.urandom(4 * MIN_ALIGNED_PART_SIZE)
-    encryptor = make_encryptor(private_key, file_size=len(file_data))
-    parts = run_process_file(encryptor, file_data)
-    assert len(parts) > 1
-    assert len(encryptor.checksums.encrypted_parts_md5) == len(parts)
-    assert len(encryptor.checksums.encrypted_parts_sha256) == len(parts)
-
-
 def test_process_file_yields_sequential_part_numbers(private_key):
     """Regression test: process_file must yield sequential S3 part numbers (1, 2, 3, …).
 
@@ -162,12 +162,7 @@ def test_process_file_yields_sequential_part_numbers(private_key):
     part_size = 2 * CIPHER_SEGMENT_SIZE  # 131 128 bytes
     file_size = part_size + 1  # 131 129 bytes
 
-    encryptor = Crypt4GHEncryptor(
-        part_size=part_size,
-        my_private_key=private_key,
-        file_size=file_size,
-        storage_alias=TEST_STORAGE_ALIAS1,
-    )
+    encryptor = make_encryptor(private_key, file_size=file_size, part_size=part_size)
     yielded_part_numbers = [
         pn for pn, _ in run_process_file(encryptor, b"x" * file_size)
     ]
@@ -178,3 +173,127 @@ def test_process_file_yields_sequential_part_numbers(private_key):
         f"(expected {expected}).\nGaps in PartNumbers cause multipart-upload failures "
         "or silent data corruption."
     )
+
+
+# A part of exactly two cipher segments, as the regression test above uses
+SMALL_PART_SIZE = 2 * CIPHER_SEGMENT_SIZE
+
+
+def decrypt_parts(private_key, parts: list[tuple[int, bytearray]]) -> bytes:
+    """Join the parts and decrypt them with crypt4gh as the data hub would."""
+    decrypted = io.BytesIO()
+    crypt4gh.lib.decrypt(
+        [(0, private_key.get_secret_value(), None)],
+        io.BytesIO(b"".join(part for _, part in parts)),
+        decrypted,
+    )
+    return decrypted.getvalue()
+
+
+class ShortReads(io.BytesIO):
+    """A file that never returns more than a few bytes per read."""
+
+    def readinto(self, buffer) -> int:
+        """Read at most 1000 bytes."""
+        return super().readinto(memoryview(buffer)[:1000])
+
+
+@pytest.mark.parametrize(
+    "file_size",
+    [
+        1,
+        SEGMENT_SIZE - 1,
+        SEGMENT_SIZE,
+        SEGMENT_SIZE + 1,
+        # the envelope pushes the second segment across the end of the first part
+        2 * SEGMENT_SIZE,
+        # exactly one part: the envelope and two segments fill it
+        SMALL_PART_SIZE - ENVELOPE_SIZE - 2 * (CIPHER_SEGMENT_SIZE - SEGMENT_SIZE),
+        5 * SMALL_PART_SIZE + 12345,
+    ],
+)
+@pytest.mark.parametrize("file_class", [io.BytesIO, ShortReads])
+def test_process_file_decrypts_to_input(private_key, file_size: int, file_class):
+    """Make sure the joined parts decrypt to the input, that every part but the last
+    is full, and that the parts and the plaintext checksum add up.
+    """
+    file_data = os.urandom(file_size)
+    encryptor = make_encryptor(
+        private_key, file_size=file_size, part_size=SMALL_PART_SIZE
+    )
+    parts = list(encryptor.process_file(file=file_class(file_data)))
+
+    assert decrypt_parts(private_key, parts) == file_data
+    total = CoreFileInfo(
+        alias="x", path=Path("/dev/null"), decrypted_size=file_size
+    ).encrypted_size
+    sizes = [len(part) for _, part in parts]
+    assert sum(sizes) == total
+    assert sizes[:-1] == [SMALL_PART_SIZE] * (len(sizes) - 1)
+    assert len(sizes) == -(-total // SMALL_PART_SIZE)
+    assert [number for number, _ in parts] == list(range(1, len(parts) + 1))
+    assert (
+        encryptor.checksums.decrypted_sha256.hexdigest()
+        == hashlib.sha256(file_data).hexdigest()
+    )
+
+
+def test_process_file_raises_when_file_is_longer_than_announced(private_key):
+    """Make sure a file that grew after its size was taken fails the size check."""
+    file_data = os.urandom(3 * SEGMENT_SIZE)
+    encryptor = make_encryptor(
+        private_key, file_size=len(file_data) - 10, part_size=SMALL_PART_SIZE
+    )
+    with pytest.raises(exceptions.CiphertextSizeMismatch):
+        run_process_file(encryptor, file_data)
+
+
+# The envelope and six segments fill exactly three parts of SMALL_PART_SIZE
+THREE_PARTS_FILE_SIZE = (
+    3 * SMALL_PART_SIZE - ENVELOPE_SIZE - 6 * (CIPHER_SEGMENT_SIZE - SEGMENT_SIZE)
+)
+
+
+@pytest.mark.parametrize("in_flight", [1, 3])
+@pytest.mark.parametrize("part_size", [SMALL_PART_SIZE, SMALL_PART_SIZE + 7])
+@pytest.mark.parametrize(
+    "file_size", [1, THREE_PARTS_FILE_SIZE, 5 * SMALL_PART_SIZE + 12345]
+)
+def test_process_file_reuses_parts_given_back(
+    private_key, in_flight: int, part_size: int, file_size: int
+):
+    """Make sure parts given back are reused for the next parts without touching a
+    part still in flight, that the last part comes at its exact size, and that no
+    buffer is kept once the file needs no more.
+
+    A part is read only when it is given back, as the upload does, so a buffer
+    reused too early would garble the output.
+    """
+    file_data = os.urandom(file_size)
+    encryptor = make_encryptor(private_key, file_size=file_size, part_size=part_size)
+    yielded: list[bytearray] = []
+    held: deque[tuple[int, bytearray]] = deque()
+    sent: list[tuple[int, bytes]] = []
+
+    def send_oldest() -> None:
+        number, part = held.popleft()
+        sent.append((number, bytes(part)))
+        encryptor.give_back(part)
+
+    file = io.BytesIO(file_data)
+    for number, part in encryptor.process_file(file=file):  # type: ignore[arg-type]
+        yielded.append(part)
+        held.append((number, part))
+        if len(held) == in_flight:
+            send_oldest()
+    while held:
+        send_oldest()
+
+    assert decrypt_parts(private_key, sent) == file_data  # type: ignore[arg-type]
+    total = encryptor.expected_ciphertext_size
+    sizes = [len(part) for _, part in sent]
+    assert sizes[:-1] == [part_size] * (len(sizes) - 1)
+    assert sizes[-1] == total - part_size * (len(sizes) - 1)
+    full_parts = [part for part in yielded if len(part) == part_size]
+    assert len({id(part) for part in full_parts}) == min(in_flight, len(full_parts))
+    assert encryptor._free.empty()

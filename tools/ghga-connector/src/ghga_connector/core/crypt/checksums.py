@@ -18,13 +18,26 @@
 import hashlib
 
 
+def md5_hex(data: bytes | bytearray) -> str:
+    """Return the MD5 of `data` as a hex digest."""
+    return hashlib.md5(data, usedforsecurity=False).hexdigest()
+
+
+def sha256_hex(data: bytes | bytearray) -> str:
+    """Return the SHA-256 of `data` as a hex digest."""
+    return hashlib.sha256(data).hexdigest()
+
+
 class Checksums:
-    """Container for checksum calculation"""
+    """Container for checksum calculation
+
+    The plaintext SHA-256 grows as the file is read. The hashes of the encrypted parts
+    are set per part number, in any order, and read back in part order.
+    """
 
     def __init__(self):
         self.decrypted_sha256 = hashlib.sha256()
-        self.encrypted_parts_md5: list[str] = []
-        self.encrypted_parts_sha256: list[str] = []
+        self._parts: dict[int, tuple[str, str]] = {}
 
     def __str__(self) -> str:
         """Return multiline representation of checksum hashes"""
@@ -34,16 +47,28 @@ class Checksums:
             + f"Encrypted SHA256: {self.encrypted_parts_sha256}"
         )
 
-    def update_decrypted_sha256(self, part: bytes):
+    def update_decrypted_sha256(self, part: bytes | bytearray | memoryview):
         """Update checksum for unencrypted file"""
         self.decrypted_sha256.update(part)
 
-    def update_encrypted(self, part: bytes):
-        """Update encrypted part checksums"""
-        self.encrypted_parts_md5.append(
-            hashlib.md5(part, usedforsecurity=False).hexdigest()
-        )
-        self.encrypted_parts_sha256.append(hashlib.sha256(part).hexdigest())
+    def set_part(self, part_number: int, *, md5: str, sha256: str) -> None:
+        """Record the MD5 and SHA-256 hex digests of an encrypted part."""
+        self._parts[part_number] = (md5, sha256)
+
+    @property
+    def part_numbers(self) -> list[int]:
+        """The numbers of the parts with hashes, in ascending order."""
+        return sorted(self._parts)
+
+    @property
+    def encrypted_parts_md5(self) -> list[str]:
+        """The MD5 of each encrypted part, in part order."""
+        return [self._parts[number][0] for number in self.part_numbers]
+
+    @property
+    def encrypted_parts_sha256(self) -> list[str]:
+        """The SHA-256 of each encrypted part, in part order."""
+        return [self._parts[number][1] for number in self.part_numbers]
 
     def get_encrypted_checksum_for_s3(self) -> str:
         """Formulate the expected encrypted checksum str (etag) stored by S3."""

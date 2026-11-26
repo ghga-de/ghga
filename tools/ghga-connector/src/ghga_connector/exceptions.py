@@ -120,8 +120,10 @@ class _FileUploadError(RuntimeError):
         # Make sure we only use one period at the end of the error message
         reason = reason.rstrip(". \n")
 
-        # Make first character of 'reason' lowercase
-        reason = reason[0].lower() + reason[1:]
+        # Make first character of 'reason' lowercase, unless it starts an acronym
+        #  such as S3
+        if not reason[1:2].isupper() and not reason[1:2].isdigit():
+            reason = reason[0].lower() + reason[1:]
 
         # Calculate whether to show the file ID and if so format it
         file_id_portion = f" ({file_id=})" if file_id else ""
@@ -486,12 +488,35 @@ class S3StorageError(RuntimeError):
 
 
 class S3UploadMissingError(RuntimeError):
-    """Raised when the Upload API indicates that the S3 instance does not have record
-    of a multipart upload with the ID that is stored in the Upload API's database.
+    """Raised when S3 has no record of the multipart upload that the Upload API's
+    database expects, as S3 itself or the Upload API reports.
     """
 
     def __init__(self):
-        msg = "According to the Upload API, the expected multipart upload wasn't found in S3"
+        msg = "The expected multipart upload wasn't found in S3"
+        super().__init__(msg)
+
+
+class S3PartUploadError(RuntimeError):
+    """Raised when S3 refuses a part upload for another reason than a missing upload."""
+
+    def __init__(self, *, status_code: int, code: str | None, message: str | None):
+        detail = f"{code}: {message}" if code else f"status code {status_code}"
+        super().__init__(f"S3 refused the part upload ({detail})")
+
+
+class TooManyOpenUploadsError(RuntimeError):
+    """Raised when the Upload API refuses a new upload because the box already holds
+    the most open uploads it accepts.
+
+    Unlike other 429 answers it is not retried: only an upload that ends frees room.
+    """
+
+    def __init__(self, *, file_alias: str | None):
+        msg = (
+            "The upload box holds the most open uploads it accepts, so the upload for"
+            + f" {file_alias} cannot start until another one ends."
+        )
         super().__init__(msg)
 
 

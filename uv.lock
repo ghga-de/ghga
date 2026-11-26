@@ -1377,11 +1377,12 @@ provides-extras = ["pydantic"]
 
 [[package]]
 name = "ghga-connector"
-version = "4.0.3"
+version = "4.1.0"
 source = { editable = "tools/ghga-connector" }
 dependencies = [
     { name = "async-lru" },
     { name = "crypt4gh" },
+    { name = "cryptography" },
     { name = "ghga-service-commons", extra = ["crypt", "transports"] },
     { name = "hexkit", extra = ["s3"] },
     { name = "httpx2" },
@@ -1394,6 +1395,7 @@ dependencies = [
 requires-dist = [
     { name = "async-lru", specifier = ">=2.1.0,<3" },
     { name = "crypt4gh", specifier = ">=1.8.6,<2" },
+    { name = "cryptography", specifier = ">=47" },
     { name = "ghga-service-commons", extras = ["crypt", "transports"], editable = "libs/ghga-service-commons" },
     { name = "hexkit", extras = ["s3"], editable = "libs/hexkit" },
     { name = "httpx2", specifier = ">=2.9.1,<3" },

@@ -57,10 +57,12 @@ class TaskHandler:
                 self.cancel_tasks()
                 raise exception
         self._tasks.discard(task)
-        log.debug(
-            "Finished task. Remaining: %i",
-            len([task for task in asyncio.all_tasks() if not task.done()]),
-        )
+        # Counting scans every task on the loop, so skip it unless the count is logged
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                "Finished task. Remaining: %i",
+                len([task for task in asyncio.all_tasks() if not task.done()]),
+            )
 
     async def gather(self):
         """Await all remaining tasks."""

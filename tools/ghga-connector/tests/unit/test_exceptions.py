@@ -53,3 +53,27 @@ def test_connection_failed_reason_is_never_blank(
         exceptions.raise_if_connection_failed(request_error=request_error, url=url)
 
     assert expected_reason in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    "exception, reason",
+    [
+        (
+            exceptions.S3PartUploadError(
+                status_code=403, code="AccessDenied", message="Access Denied"
+            ),
+            "because S3 refused the part upload (AccessDenied: Access Denied).",
+        ),
+        (
+            RuntimeError("The connection was reset."),
+            "because the connection was reset.",
+        ),
+    ],
+)
+def test_file_upload_error_keeps_an_acronym_capitalized(
+    exception: BaseException, reason: str
+):
+    """Ensure the reason starts in lowercase unless its first word is an acronym."""
+    error = exceptions.UploadFileError(file_alias="f1", exception=exception)
+
+    assert str(error).endswith(reason)
