@@ -68,6 +68,8 @@ This is performed with the following steps:
    Please see [this section](#metadata) for further details.
 5. **Publish Metadata**: To publish all metadata artifacts of all submissions to the running system so that they are available on the GHGA website, the `ghga-datasteward-kit load` command can be used.
 
+The kit trusts the submission store and the event store it reads, so keep their directories writable by central data stewards only.
+
 ## Details per Command
 
 An overview of all commands is provided using:

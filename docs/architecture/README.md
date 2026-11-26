@@ -60,4 +60,5 @@ It runs as a pre-commit hook and as `just docs-check`.
 | [0008](ac-0008-metadata-and-file-journeys.md) | Metadata and file journeys | current | backend, data, events |
 | [0009](ac-0009-kafka-cascade-map.md) | Kafka cascades map | current | events |
 | [0010](ac-0010-db-migrations.md) | MongoDB migrations in services | current | backend, data, deploy |
+| [0011](ac-0011-production-security-boundaries.md) | Production security boundaries | current | security, deploy |
 <!-- ac-index:end -->

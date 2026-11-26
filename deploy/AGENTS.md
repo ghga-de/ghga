@@ -6,6 +6,7 @@ The repo-wide rules are in the root [AGENTS.md](../AGENTS.md), and [docs/agent-i
 ## Where to read
 
 [README.md](README.md) is required reading: it is how the chart system works.
+Before changing what a chart exposes, or a security switch such as `kafkaUser` or `authorizationPolicy`, read [AC-0011](../docs/architecture/ac-0011-production-security-boundaries.md), which says what production enables and the charts leave off.
 
 ## Generated charts
 
