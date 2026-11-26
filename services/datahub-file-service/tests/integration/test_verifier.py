@@ -92,7 +92,7 @@ async def verifier_fixture(
 
 
 @asynccontextmanager
-async def _succeeding_interrogator(*, config):
+async def _succeeding_interrogator(*, config, claimant_id):
     """Drop-in for prepare_interrogator that simulates a successful interrogation,
     reported to Central the way the real one reports it.
     """
@@ -108,7 +108,7 @@ async def _succeeding_interrogator(*, config):
 
 
 @asynccontextmanager
-async def _failing_interrogator(*, config):
+async def _failing_interrogator(*, config, claimant_id):
     """Drop-in for prepare_interrogator that simulates a failed interrogation."""
     mock = AsyncMock()
     mock.interrogate_new_files.side_effect = RuntimeError("Simulated failure")

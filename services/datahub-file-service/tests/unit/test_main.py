@@ -42,7 +42,7 @@ async def test_wait_after_a_round(concluded_a_file: bool, waits: bool):
     ]
 
     @asynccontextmanager
-    async def prepare_mock_interrogator(*, config):
+    async def prepare_mock_interrogator(*, config, claimant_id):
         yield interrogator
 
     sleep = AsyncMock()

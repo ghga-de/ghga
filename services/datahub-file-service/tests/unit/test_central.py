@@ -98,14 +98,18 @@ async def configured_central_client(
     async with get_configured_httpx_client(
         config=config, make_base_transport=lambda _: central_api.as_transport()
     ) as httpx_client:
-        yield CentralClient(config=config, httpx_client=httpx_client)
+        yield CentralClient(
+            config=config, httpx_client=httpx_client, claimant_id=uuid4()
+        )
 
 
 async def test_central_api_unavailable(config: Config):
     """Ensure a ConnectionFailedError gets raised if the central api is unavailable"""
     # Use an unmocked client so the requests actually fail to connect
     async with get_configured_httpx_client(config=config) as httpx_client:
-        central_client = CentralClient(config=config, httpx_client=httpx_client)
+        central_client = CentralClient(
+            config=config, httpx_client=httpx_client, claimant_id=uuid4()
+        )
 
         # Test the different public methods exposed by the CentralClient
         with pytest.raises(ConnectionFailedError):
