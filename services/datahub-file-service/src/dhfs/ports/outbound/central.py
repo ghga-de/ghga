@@ -17,6 +17,8 @@
 
 from abc import ABC, abstractmethod
 
+from pydantic import UUID4
+
 from dhfs.core.models import FileUpload, InterrogationReport
 
 __all__ = ["CentralClientPort"]
@@ -52,6 +54,61 @@ class CentralClientPort(ABC):
         def __init__(self, *, url: str, status_code: int):
             msg = f"The call to {url} failed with a status code of {status_code}."
             super().__init__(msg)
+
+    class RenewalRefusedError(RuntimeError):
+        """Raised when GHGA Central refuses to renew the lease on a file (HTTP 409)"""
+
+        def __init__(self, *, file_id: UUID4):
+            msg = (
+                f"GHGA Central refused to renew the lease on file {file_id}: this"
+                + " instance no longer holds the lease, the file is no longer waiting"
+                + " for interrogation, or the claim has been held for too long."
+            )
+            super().__init__(msg)
+
+    @abstractmethod
+    async def validate_version(self) -> None:
+        """Check that the central API accepts this DHFS version and its auth token.
+
+        Raises:
+        - CentralAPIError if the request to the central API fails.
+        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
+        """
+        ...
+
+    @abstractmethod
+    async def claim_file(self) -> FileUpload | None:
+        """Lease the next waiting file to this DHFS instance.
+
+        Returns the file, or None if no file is waiting.
+
+        Raises:
+        - CentralAPIError if the request to the central API fails.
+        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
+        - ResponseFormatError if response body parsing fails.
+        """
+        ...
+
+    @abstractmethod
+    async def renew_lease(self, *, file_id: UUID4) -> None:
+        """Extend this DHFS instance's lease on a file it has claimed.
+
+        Raises:
+        - RenewalRefusedError if this instance must stop working on the file.
+        - CentralAPIError if the request to the central API fails.
+        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
+        """
+        ...
+
+    @abstractmethod
+    async def release_file(self, *, file_id: UUID4) -> None:
+        """Hand a claimed file back to GHGA Central before its lease expires.
+
+        Raises:
+        - CentralAPIError if the request to the central API fails.
+        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
+        """
+        ...
 
     @abstractmethod
     async def fetch_new_uploads(self) -> list[FileUpload]:
