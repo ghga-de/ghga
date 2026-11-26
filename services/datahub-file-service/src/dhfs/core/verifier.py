@@ -22,7 +22,7 @@ from collections.abc import Awaitable, Callable, Generator
 from contextlib import suppress
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import crypt4gh.header
 import crypt4gh.lib
@@ -85,7 +85,10 @@ async def run_dhfs_verification(config: Config, *, file_size: int):
 
     # Ping the Central API to make sure DHFS version is outdated
     async with get_configured_httpx_client(config=config) as httpx_client:
-        central_client = CentralClient(config=config, httpx_client=httpx_client)
+        # Verify claims no file, so any claimant ID will do
+        central_client = CentralClient(
+            config=config, httpx_client=httpx_client, claimant_id=uuid4()
+        )
         log.debug("Checking if DHFS version is accepted by Central.")
         _ = await central_client.fetch_new_uploads()
     log.info("Verified that DFHS version is accepted by Central.")
@@ -124,7 +127,9 @@ async def run_dhfs_verification(config: Config, *, file_size: int):
         patch("dhfs.core.interrogator.uuid4", return_value=INTERROGATION_OBJECT_ID),
     ):
         log.info("Performing DHFS file processing.")
-        async with prepare_interrogator(config=config) as interrogator:
+        async with prepare_interrogator(
+            config=config, claimant_id=uuid4()
+        ) as interrogator:
             for step in ("_check_file_is_in_inbox", "interrogate_file"):
                 setattr(interrogator, step, _escalate(getattr(interrogator, step)))
             try:

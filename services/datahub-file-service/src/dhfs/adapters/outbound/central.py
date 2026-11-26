@@ -21,7 +21,7 @@ from json import JSONDecodeError
 
 import httpx2
 from jwcrypto.jwk import JWK
-from pydantic import Field, HttpUrl, SecretStr, ValidationError
+from pydantic import UUID4, Field, HttpUrl, SecretStr, ValidationError
 from pydantic_settings import BaseSettings
 from tenacity import RetryError
 
@@ -75,9 +75,15 @@ class CentralClient(CentralClientPort):
         *,
         config: CentralClientConfig,
         httpx_client: httpx2.AsyncClient,
+        claimant_id: UUID4,
     ) -> None:
-        """Initialize the CentralClient instance"""
+        """Initialize the CentralClient instance.
+
+        `claimant_id` is tied to each claim, renewal, and release, so FIS can
+        tell the difference between multiple instances of a given Data Hub.
+        """
         self._httpx_client = httpx_client
+        self._claimant_id = claimant_id
         self._storage_alias = config.storage_alias
         self._central_public_key = config.central_api_crypt4gh_public_key
         self._base_url = str(config.central_api_url).rstrip("/")

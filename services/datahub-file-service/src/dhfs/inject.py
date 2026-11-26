@@ -17,6 +17,9 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from uuid import uuid4
+
+from pydantic import UUID4
 
 from dhfs.adapters.outbound.central import CentralClient
 from dhfs.adapters.outbound.http import get_configured_httpx_client
@@ -30,14 +33,20 @@ from hexkit.providers.s3 import S3ObjectStorage
 
 
 @asynccontextmanager
-async def prepare_interrogator(*, config: Config) -> AsyncGenerator[InterrogatorPort]:
-    """Produces a configured InterrogatorPort-compatible instance"""
+async def prepare_interrogator(
+    *, config: Config, claimant_id: UUID4
+) -> AsyncGenerator[InterrogatorPort]:
+    """Produces a configured InterrogatorPort-compatible instance that claims files
+    as `claimant_id`
+    """
     object_storage = S3ObjectStorage(config=config)
     async with get_configured_httpx_client(config=config) as httpx_client:
         s3_client = S3Client(
             config=config, object_storage=object_storage, httpx_client=httpx_client
         )
-        central_client = CentralClient(config=config, httpx_client=httpx_client)
+        central_client = CentralClient(
+            config=config, httpx_client=httpx_client, claimant_id=claimant_id
+        )
         interrogator = Interrogator(
             config=config, central_client=central_client, s3_client=s3_client
         )
@@ -57,5 +66,8 @@ async def prepare_interrogation_bucket_cleaner(
         s3_client = S3Client(
             config=config, object_storage=object_storage, httpx_client=httpx_client
         )
-        central_client = CentralClient(config=config, httpx_client=httpx_client)
+        # The cleaner never claims a file, so any claimant ID will do
+        central_client = CentralClient(
+            config=config, httpx_client=httpx_client, claimant_id=uuid4()
+        )
         yield S3Cleaner(central_client=central_client, s3_client=s3_client)

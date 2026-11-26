@@ -16,6 +16,7 @@
 
 import logging
 from asyncio import sleep
+from uuid import uuid4
 
 from dhfs import __version__
 from dhfs.config import Config
@@ -45,7 +46,15 @@ async def run_interrogator(forever: bool = True):
     config = Config()
     _configure_logging(config=config)
     log.info("DHFS version %s starting.", __version__)
-    async with prepare_interrogator(config=config) as interrogator:
+    claimant_id = uuid4()
+    log.info(
+        "Claiming files with claimant ID %s.",
+        claimant_id,
+        extra={"claimant_id": claimant_id},
+    )
+    async with prepare_interrogator(
+        config=config, claimant_id=claimant_id
+    ) as interrogator:
         if forever:
             while True:
                 concluded_a_file = False
