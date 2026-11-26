@@ -29,7 +29,6 @@ from auth_service.auth_adapter.deps import get_user_token_dao
 from auth_service.auth_adapter.rest.headers import get_bearer_token
 from auth_service.claims_repository.deps import get_claim_dao
 from auth_service.user_registry.deps import get_user_dao
-from ghga_service_commons.api.mock_router import MockRouter
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from tests.fixtures.constants import ID_OF_JOHN, SOME_USER_ID
 
@@ -37,6 +36,7 @@ from ...fixtures.utils import (
     MockClaimDao,
     MockUserDao,
     MockUserTokenDao,
+    OidcProviderMock,
     get_claims_from_token,
     headers_for_session,
     mock_userinfo,
@@ -100,13 +100,15 @@ def assert_has_authorization_header(response, session):
     assert internal_token
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"id", "name", "email", "title", "roles", "exp", "iat"}
+    expected_claims = {"id", "name", "email", "roles", "exp", "iat"}
+    if session.user_title is not None:
+        expected_claims.add("title")
 
     assert set(claims) == expected_claims
     assert claims["id"] == str(session.user_id)
     assert claims["name"] == session.user_name
     assert claims["email"] == session.user_email
-    assert claims["title"] == session.user_title
+    assert claims.get("title") == session.user_title
     assert claims["roles"] == session.roles
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
@@ -189,6 +191,32 @@ async def test_basic_auth(client_with_basic_auth: ClientWithBasicAuth):
     assert response.status_code == status.HTTP_200_OK
     assert not response.text
     assert response.headers["Authorization"] == ""
+
+
+async def test_health(bare_client: BareClient):
+    """Test the health endpoint when basic authentication is not configured."""
+    response = await bare_client.get("/health")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    response = await bare_client.head("/health")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+async def test_health_without_basic_auth(client_with_basic_auth: ClientWithBasicAuth):
+    """Test that the health endpoint is excluded from basic authentication."""
+    client = client_with_basic_auth.bare_client
+
+    response = await client.get("/health")
+    # 204 as a precaution, see the docstring of the route
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    response = await client.head("/health")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    response = await client.post("/health")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 async def test_allowed_paths(client_with_basic_auth: ClientWithBasicAuth):
@@ -307,9 +335,11 @@ async def test_post_user_with_session_and_invalid_csrf(
     assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
 
 
-async def test_post_user_with_session(bare_client: BareClient, mock_router: MockRouter):
+async def test_post_user_with_session(
+    bare_client: BareClient, oidc_provider: OidcProviderMock
+):
     """Test user registration with session and valid CSRF token."""
-    mock_userinfo(mock_router, USER_INFO)
+    mock_userinfo(oidc_provider, USER_INFO)
 
     app = bare_client.app
     user_dao = MockUserDao(ext_id="not.john@aai.org")
@@ -332,13 +362,13 @@ async def test_post_user_with_session(bare_client: BareClient, mock_router: Mock
 
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"id", "name", "email", "title", "exp", "iat", "roles"}
+    expected_claims = {"id", "name", "email", "exp", "iat", "roles"}
 
     assert set(claims) == expected_claims
     assert claims["id"] == "john@aai.org"
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
-    assert claims["title"] is None
+    assert "title" not in claims
     assert claims["roles"] == []
 
     iat = claims["iat"]
@@ -380,10 +410,10 @@ async def test_put_user_with_session_and_invalid_csrf(
 
 async def test_put_unregistered_user_with_session(
     bare_client: BareClient,
-    mock_router: MockRouter,
+    oidc_provider: OidcProviderMock,
 ):
     """Test updating an unregistered user with session."""
-    mock_userinfo(mock_router, USER_INFO)
+    mock_userinfo(oidc_provider, USER_INFO)
 
     app = bare_client.app
     user_dao = MockUserDao(ext_id="not.john@aai.org")
@@ -399,10 +429,10 @@ async def test_put_unregistered_user_with_session(
 
 
 async def test_put_registered_user_with_session(
-    bare_client: BareClient, mock_router: MockRouter
+    bare_client: BareClient, oidc_provider: OidcProviderMock
 ):
     """Test updating a registered user with session."""
-    mock_userinfo(mock_router, USER_INFO)
+    mock_userinfo(oidc_provider, USER_INFO)
 
     app = bare_client.app
     user_dao = MockUserDao()
@@ -429,13 +459,13 @@ async def test_put_registered_user_with_session(
 
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"id", "name", "email", "title", "exp", "iat", "roles"}
+    expected_claims = {"id", "name", "email", "exp", "iat", "roles"}
 
     assert set(claims) == expected_claims
     assert claims["id"] == str(ID_OF_JOHN)
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
-    assert claims["title"] is None
+    assert "title" not in claims
     assert claims["roles"] == []
 
     iat = claims["iat"]

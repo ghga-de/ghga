@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
@@ -206,6 +207,32 @@ describe('VerificationDialog', () => {
     expect(mockNotificationService.showError).toHaveBeenCalledWith(
       'The verification request has expired. IVA has been reverted to unverified.',
     );
+  });
+
+  it('should leave the message to the interceptor when the account is disabled', async () => {
+    const error = new HttpErrorResponse({
+      status: 403,
+      error: { detail: 'User account is disabled' },
+    });
+    ivaService.validateCodeForIva.mockReturnValue(throwError(() => error));
+
+    const result = await component.submitVerificationCode('iva-123', 'ABC123');
+
+    expect(result).toBe(false);
+    expect(mockNotificationService.showError).not.toHaveBeenCalled();
+  });
+
+  it('should leave the message to the interceptor when the session has ended', async () => {
+    const error = new HttpErrorResponse({
+      status: 401,
+      error: { detail: 'Session has ended' },
+    });
+    ivaService.validateCodeForIva.mockReturnValue(throwError(() => error));
+
+    const result = await component.submitVerificationCode('iva-123', 'ABC123');
+
+    expect(result).toBe(false);
+    expect(mockNotificationService.showError).not.toHaveBeenCalled();
   });
 
   it('should show rate limit error for status 429', async () => {

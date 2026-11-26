@@ -52,6 +52,15 @@ export const AccessGrantStateLabel: Record<AccessGrantStatus, string> = {
   [AccessGrantStatus.expired]: 'expired',
 };
 
+/**
+ * An SMS with a verification code for confirming the approval of an access request
+ */
+export interface VerificationSms {
+  phone: string;
+  text: string;
+  code: string;
+}
+
 export interface AccessRequest {
   id: string;
   user_id: string;

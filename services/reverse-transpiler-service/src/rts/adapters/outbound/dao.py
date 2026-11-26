@@ -45,7 +45,7 @@ class GridFSDaoFactory(GridFSDaoFactoryPort):
     @asynccontextmanager
     async def construct(
         cls, *, config: MongoDbConfig
-    ) -> AsyncGenerator["GridFSDaoFactory"]:
+    ) -> AsyncGenerator[GridFSDaoFactory]:
         """Instantiate a GridFSDaoFactory with a configured MongoDB client"""
         async with ConfiguredMongoClient(config=config) as client:
             db = client[config.db_name]

@@ -1,0 +1,15 @@
+authorizationPolicy:
+  trustDomain: prod.example
+  callers:
+    other-ns: null
+    multi: null
+    added:
+      - methods: ["GET"]
+  identities:
+    other-ns: null
+    multi: null
+    caller:
+      serviceAccount: caller-prod
+    added:
+      serviceAccount: added
+  extraRules: []

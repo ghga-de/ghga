@@ -17,6 +17,7 @@
 
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
+from hexkit.opentelemetry import configure_opentelemetry
 from wkvs.config import Config
 from wkvs.inject import prepare_rest_app
 
@@ -25,6 +26,7 @@ async def run_rest_app():
     """Run the HTTP REST API."""
     config = Config()
     configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)

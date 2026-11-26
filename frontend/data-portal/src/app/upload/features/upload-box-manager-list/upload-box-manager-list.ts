@@ -6,6 +6,7 @@
 
 import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, viewChild } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
@@ -17,11 +18,18 @@ import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
 import { Notifier } from '@app/shared/services/notification';
 import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
 import {
+  fileStateCountsOf,
   ResearchDataUploadBox,
   UploadBoxState,
   UploadBoxStateClass,
 } from '@app/upload/models/box';
+import { FileUploadStateCounts } from '@app/upload/models/file-upload';
 import { UploadBoxService } from '@app/upload/services/upload-box';
+import { debounceTime } from 'rxjs';
+import { UploadBoxFileStates } from '../upload-box-file-states/upload-box-file-states';
+
+/** Milliseconds the rows on the current page must stay unchanged to count */
+const PAGE_ROWS_DELAY = 100;
 
 /** Sort order for upload box states: locked first, then open, then archived */
 const STATE_SORT_ORDER: Record<UploadBoxState, number> = {
@@ -34,6 +42,42 @@ const STATE_SORT_ORDER: Record<UploadBoxState, number> = {
 interface UploadBoxRow extends ResearchDataUploadBox {
   stateClass: string;
   storageLabel: string;
+  /** The number of files per state, undefined if the counts are not loaded */
+  fileStateCounts: FileUploadStateCounts | undefined;
+  /** The position in the priority order, starting at 1, undefined if archived or not loaded */
+  priority: number | undefined;
+}
+
+/**
+ * Compare two rows in the default order: by state (locked, open, archived),
+ * then by last change, the latest first.
+ * @param a - the first row
+ * @param b - the second row
+ * @returns a negative number if `a` comes first, a positive one if `b` does
+ */
+function compareByDefault(a: UploadBoxRow, b: UploadBoxRow): number {
+  const stateCompare = STATE_SORT_ORDER[a.state] - STATE_SORT_ORDER[b.state];
+  if (stateCompare !== 0) return stateCompare;
+  return b.last_changed.localeCompare(a.last_changed);
+}
+
+/**
+ * Compare two rows by their position in the priority order. Rows without one
+ * come last in both directions.
+ * @param a - the first row
+ * @param b - the second row
+ * @param direction - the sort direction
+ * @returns a negative number if `a` comes first, a positive one if `b` does
+ */
+function compareByPriority(
+  a: UploadBoxRow,
+  b: UploadBoxRow,
+  direction: 'asc' | 'desc',
+): number {
+  if (a.priority === b.priority) return 0;
+  if (a.priority === undefined) return 1;
+  if (b.priority === undefined) return -1;
+  return direction === 'asc' ? a.priority - b.priority : b.priority - a.priority;
 }
 
 /**
@@ -52,6 +96,7 @@ interface UploadBoxRow extends ResearchDataUploadBox {
     ParseBytes,
     Capitalise,
     DatePipe,
+    UploadBoxFileStates,
   ],
   providers: [providePaginatorIntl('Upload boxes per page')],
   templateUrl: './upload-box-manager-list.html',
@@ -66,23 +111,52 @@ export class UploadBoxManagerList {
   uploadBoxesAreLoading = this.#uploadBoxResource.isLoading;
   uploadBoxesError = this.#uploadBoxResource.error;
 
+  /** Whether file state counts are loading, which matters for rows without them */
+  fileStateCountsLoading = this.#uploadBoxService.fileStateCounts.isLoading;
+
+  /** The error if the priority order failed to load */
+  priorityError = this.#uploadBoxService.boxPriority.error;
+
   /**
    * The upload boxes to display, each annotated with derived display values
    * (state CSS class and human-readable storage label). Deriving these in a
    * computed keeps the mappings out of the template and change detection, and
    * lets the labels react when the storage labels finish loading.
+   * The priority positions come from all boxes, so filtering keeps them.
    */
-  #rows = computed<UploadBoxRow[]>(() =>
-    this.uploadBoxes().map((box) => ({
+  #rows = computed<UploadBoxRow[]>(() => {
+    const countsByBox = this.#uploadBoxService.fileStateCountsByBox();
+    const positions = new Map(
+      this.#uploadBoxService
+        .prioritizedUploadBoxes()
+        ?.map((box, index) => [box.id, index + 1] as const),
+    );
+    return this.uploadBoxes().map((box) => ({
       ...box,
       stateClass: UploadBoxStateClass[box.state],
       storageLabel: this.#uploadBoxService.getStorageLocationLabel(box.storage_alias),
-    })),
-  );
+      fileStateCounts: fileStateCountsOf(box, countsByBox),
+      priority: positions.get(box.id),
+    }));
+  });
 
   dataSource = new MatTableDataSource<UploadBoxRow>([]);
 
   #updateDataSourceEffect = effect(() => (this.dataSource.data = this.#rows()));
+
+  /**
+   * The rows on the current page, after filtering, sorting and paginating. The
+   * delay lets the paginator attach before the first page counts, and lets a
+   * quick succession of page or sort changes load the file states only once.
+   * Paged by the RS, the page would be its response and this would not be needed.
+   */
+  #pageRows = toSignal(this.dataSource.connect().pipe(debounceTime(PAGE_ROWS_DELAY)), {
+    initialValue: [],
+  });
+
+  #loadFileStateCountsEffect = effect(() =>
+    this.#uploadBoxService.showFileStateCountsOf(this.#pageRows()),
+  );
 
   #uploadBoxErrorEffect = effect(() => {
     if (this.uploadBoxesError()) {
@@ -129,11 +203,9 @@ export class UploadBoxManagerList {
     this.dataSource.sortData = (data, s) => {
       const { active, direction } = s;
       return [...data].sort((a, b) => {
-        if (!direction) {
-          // Default / no-sort: state order (locked→open→archived), then last_changed descending
-          const stateCompare = STATE_SORT_ORDER[a.state] - STATE_SORT_ORDER[b.state];
-          if (stateCompare !== 0) return stateCompare;
-          return b.last_changed.localeCompare(a.last_changed);
+        if (!direction) return compareByDefault(a, b);
+        if (active === 'priority') {
+          return compareByPriority(a, b, direction) || compareByDefault(a, b);
         }
         const valA = this.dataSource.sortingDataAccessor(a, active);
         const valB = this.dataSource.sortingDataAccessor(b, active);

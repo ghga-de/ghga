@@ -78,6 +78,12 @@
       "title": "Otel Trace Sampling Rate",
       "type": "number"
     },
+    "enable_otel_metrics": {
+      "default": false,
+      "description": "Also export metrics via OTLP. Requires `enable_opentelemetry` and a collector with a metrics pipeline.",
+      "title": "Enable Otel Metrics",
+      "type": "boolean"
+    },
     "auth_topic": {
       "description": "The name of the topic containing auth-related events.",
       "examples": [
@@ -597,17 +603,26 @@
       "title": "Max. session duration",
       "type": "integer"
     },
+    "session_check_interval_seconds": {
+      "default": 60,
+      "description": "Seconds after which a session is checked again against the user account, i.e. its status, roles and TOTP token",
+      "minimum": 0,
+      "title": "Session check interval",
+      "type": "integer"
+    },
     "auth_key": {
       "anyOf": [
         {
-          "type": "string"
+          "format": "password",
+          "type": "string",
+          "writeOnly": true
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "internal public key for the auth service (key pair for auth adapter)",
+      "description": "internal key: the public key for the users, claims and access APIs, the private key (full key pair) for the auth adapter",
       "title": "Auth Key"
     },
     "auth_algs": {
@@ -841,7 +856,9 @@
     "basic_auth_credentials": {
       "anyOf": [
         {
-          "type": "string"
+          "format": "password",
+          "type": "string",
+          "writeOnly": true
         },
         {
           "type": "null"
@@ -897,16 +914,6 @@
       },
       "title": "Provide APIs",
       "type": "array"
-    },
-    "run_consumer": {
-      "default": false,
-      "description": "Whether the service should run as an event consumer",
-      "examples": [
-        "false",
-        "true"
-      ],
-      "title": "Run Consumer",
-      "type": "boolean"
     },
     "add_as_data_stewards": {
       "default": [],

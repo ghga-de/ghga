@@ -46,6 +46,7 @@ class SessionStorePort[T: BaseSession](ABC):
         """Save an existing user session back to the store.
 
         Pass additional data used for updating the session as keyword arguments.
+        A session that is no longer in the store must not be saved again.
         """
         ...
 
@@ -74,6 +75,11 @@ class SessionStorePort[T: BaseSession](ABC):
     @abstractmethod
     async def sweep(self) -> None:
         """Remove all invalid sessions from the store."""
+        ...
+
+    @abstractmethod
+    def is_check_due(self, session: T) -> bool:
+        """Check whether the session must be checked against the user account."""
         ...
 
     @abstractmethod

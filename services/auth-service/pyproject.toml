@@ -9,12 +9,12 @@ readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -25,18 +25,19 @@ description = "Authentication adapter and services used for the GHGA data portal
 license = "Apache-2.0"
 dependencies = [
     "ghga-event-schemas~=13.0.0",
-    "ghga-service-commons[api,auth]>=8,<9",
-    "hexkit[mongodb,akafka,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=9, <11",
+    "ghga-service-commons[api,auth]>=9.1,<10",
+    "hexkit[mongodb,akafka,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=9, <12",
     "pynacl>=1.6,<2",
     "pyotp>=2.9,<3",
     "phonenumbers>=9,<10",
+    "typer>=0.25",
 ]
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
-auth-service = "auth_service.__main__:run"
+auth-service = "auth_service.__main__:cli"
 
 [tool.setuptools.packages.find]
 where = [

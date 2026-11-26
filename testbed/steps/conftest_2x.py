@@ -17,11 +17,14 @@
 """Shared test used for steps with prefix test_3*"""
 
 import subprocess
+import time
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 from fixtures import Config, JointFixture, Response, StateStorage  # noqa: RUF100
 from fixtures.file import FileBatch, subset_file_batch_by_scope
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest_bdd import (  # noqa: RUF100
     given,
     then,
@@ -29,6 +32,108 @@ from pytest_bdd import (  # noqa: RUF100
 )
 
 from steps.utils import has_reached, parse
+
+
+def _session_headers(fixtures: JointFixture, full_name: str) -> dict[str, str]:
+    """Return the request headers of the given logged-in user."""
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session, f"No session found for {full_name}"
+    return fixtures.auth.headers(session=session)
+
+
+def _read_stable_box(
+    fixtures: JointFixture, storage_name: str, full_name: str = "Data Steward"
+) -> dict[str, Any]:
+    """Read the upload box back from RS once its version has stopped advancing.
+
+    RS learns about uploads, deletions and state changes in UCS from events, so a
+    version read right after a change is often already out of date, which gets the
+    next update of the box rejected. The box read is stored as the box's state.
+    """
+    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
+    assert rdub, f"No upload box in state for {storage_name} storage"
+    url = f"{fixtures.config.rs_url}/upload-boxes/{rdub['id']}"
+    headers = _session_headers(fixtures, full_name)
+
+    box: dict[str, Any] = {}
+    version = None
+    for _ in range(30):
+        box = fixtures.http.get(url, headers=headers).json()
+        if box.get("version") == version:
+            break
+        version = box.get("version")
+        time.sleep(1)
+    assert version is not None, f"Could not read the {storage_name} upload box"
+
+    fixtures.state.set_state(f"rdub_{storage_name}", box)
+    return box
+
+
+# Upload access, shared by the storage boxes (200, 201) and the priority boxes (204).
+# `box_name` is the name the box has in the state: a storage name, or a name that a
+# feature gave to a box of its own.
+
+
+def _grant_upload_access(
+    fixtures: JointFixture, full_name: str, user_name: str, box_name: str
+) -> Response:
+    """Grant the user access to the named upload box for a year."""
+    _, name = fixtures.auth.split_title(user_name)
+    registered_users = fixtures.state.get_state("registered users") or {}
+    user_id = registered_users.get(fixtures.auth.get_sub(name))
+    iva = fixtures.state.get_state("Phone iva")
+    assert user_id and iva and iva["id"], f"No verified user {user_name} in state"
+    rdub = fixtures.state.get_state(f"rdub_{box_name}")
+    assert rdub, f"No {box_name} upload box in state"
+
+    valid_from = now_as_utc()
+    payload = {
+        "valid_from": valid_from.isoformat(),
+        "valid_until": valid_from.replace(year=valid_from.year + 1).isoformat(),
+        "user_id": user_id,
+        "iva_id": iva["id"],
+        "box_id": rdub["id"],
+    }
+    return fixtures.http.post(
+        f"{fixtures.config.rs_url}/upload-grants",
+        headers=_session_headers(fixtures, full_name),
+        json=payload,
+    )
+
+
+def _create_upload_work_package(
+    fixtures: JointFixture, full_name: str, box_name: str
+) -> Response:
+    """Create an upload work package for the named upload box, which must be open."""
+    rdub = fixtures.state.get_state(f"rdub_{box_name}")
+    assert rdub, f"No {box_name} upload box in state"
+    rdub_state = rdub.get("state")
+    assert rdub_state == "open", (
+        f"Expected an open {box_name} upload box, got {rdub_state}"
+    )
+    data = {
+        "type": "upload",
+        "research_data_upload_box_id": rdub["id"],
+        "user_public_crypt4gh_key": fixtures.config.user_public_crypt4gh_key,
+    }
+    return fixtures.http.post(
+        f"{fixtures.config.wps_url}/work-packages",
+        headers=_session_headers(fixtures, full_name),
+        json=data,
+    )
+
+
+def _store_upload_token(
+    fixtures: JointFixture, response: Response, box_name: str
+) -> None:
+    """Check the upload token of a new work package and store it in the state."""
+    data = response.json()
+    assert set(data) == {"id", "token", "expires"}, data
+    id_, token = data["id"], data["token"]
+    assert 20 <= len(id_) < 40 and 80 < len(token) < 120
+    fixtures.state.set_state(f"upload token for {box_name}", f"{id_}:{token}")
 
 
 @when(
@@ -323,3 +428,48 @@ def check_upload_box(fixtures: JointFixture, response: Response, storage_name: s
         raise AssertionError(f"ID '{rdub.get('id')}' is not a valid UUID v4 {e}") from e
 
     fixtures.state.set_state(f"rdub_{storage_name}", rdub)
+
+
+# Upload box priority list, which RS keeps in step with the boxes (200, 203, 204)
+
+
+def _priority_box_ids(
+    fixtures: JointFixture, full_name: str = "Data Steward"
+) -> list[str]:
+    """Read the upload box priority list and return its box IDs, highest first."""
+    url = f"{fixtures.config.rs_url}/upload-box-priority"
+    response = fixtures.http.get(url, headers=_session_headers(fixtures, full_name))
+    assert response.status_code == 200, f"{response.status_code}: {response.text}"
+    return [
+        entry["research_data_upload_box_id"] for entry in response.json()["entries"]
+    ]
+
+
+def _box_id_in_state(fixtures: JointFixture, box_name: str) -> str:
+    """Get the ID of the upload box of the given storage, or of the extra box."""
+    if box_name == "extra":
+        box_id = fixtures.state.get_state("extra_rdub_id")
+    else:
+        box_id = (fixtures.state.get_state(f"rdub_{box_name}") or {}).get("id")
+    assert box_id, f"No {box_name} upload box in state"
+    return box_id
+
+
+@then(parse('the "{box_name}" upload box is last in the priority list'))
+def check_box_last_in_priority_list(box_name: str, fixtures: JointFixture):
+    """Check that RS added a new box to the end of the priority list."""
+    box_id = _box_id_in_state(fixtures, box_name)
+    box_ids = _priority_box_ids(fixtures)
+    assert box_ids and box_ids[-1] == box_id, (
+        f"Expected the {box_name} upload box {box_id} at the end of {box_ids}"
+    )
+
+
+@then(parse('the "{box_name}" upload box is no longer in the priority list'))
+def check_box_not_in_priority_list(box_name: str, fixtures: JointFixture):
+    """Check that RS removed a deleted or archived box from the priority list."""
+    box_id = _box_id_in_state(fixtures, box_name)
+    box_ids = _priority_box_ids(fixtures)
+    assert box_id not in box_ids, (
+        f"Expected the {box_name} upload box {box_id} to be gone from {box_ids}"
+    )

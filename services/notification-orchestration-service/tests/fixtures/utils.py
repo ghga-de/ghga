@@ -32,7 +32,10 @@ ACCESS_REQUEST_ID = uuid4()
 
 
 def make_access_request(
-    user_id: UUID4, status: str = "pending", request_id: UUID4 | None = None
+    user_id: UUID4,
+    status: str = "pending",
+    request_id: UUID4 | None = None,
+    contact_email: str | None = None,
 ) -> AccessRequestDetails:
     """Succinctly create the payload for an access request event."""
     start = now_utc_ms_prec()
@@ -43,6 +46,7 @@ def make_access_request(
         dataset_id=DATASET_ID,
         dataset_title="A Great Dataset",
         dataset_description="Some Dataset",
+        contact_email=contact_email,
         dac_alias="Some DAC",
         dac_email="dac@some.org",
         status=status,

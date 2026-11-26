@@ -433,6 +433,18 @@ The service requires the following configuration parameters:
   []
   ```
 
+- <a id="properties/enable_opentelemetry"></a>**`enable_opentelemetry`** *(boolean)*: If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled.
+  Default: `false`.
+- <a id="properties/otel_trace_sampling_rate"></a>**`otel_trace_sampling_rate`** *(number)*: Determines which proportion of spans should be sampled.
+  A value of 1.0 means all and is equivalent to the previous behaviour.
+  Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False.
+  Minimum: `0`.
+  Maximum: `1`.
+  Default: `1.0`.
+- <a id="properties/enable_otel_metrics"></a>**`enable_otel_metrics`** *(boolean)*: Also export metrics via OTLP.
+  Requires `enable_opentelemetry` and a collector with a metrics pipeline.
+  Default: `false`.
+
 #### Definitions
 
 - <a id="%24defs/FieldLabel"></a>**`FieldLabel`** *(object)*: Contains the field name and corresponding user-friendly name.
@@ -474,7 +486,7 @@ Typical sequence of events is as follows:
    3. Apply any filters supplied in the search parameters.
    4. Extract the facets.
    5. Keep only selected fields if some have been specified.
-   6. Transform the results structure into {facets, hits, hit count}.
+   6. Transform the results structure into {facets, items, total_count}.
 
 4. Once retrieved in the Aggregator, the results are passed back to the QueryHandler where they are shoved into a QueryResults Pydantic model for validation before finally being sent back to the API.
 

@@ -26,7 +26,7 @@ import pytest
 import pytest_asyncio
 from pymongo import MongoClient
 from pymongo.errors import ExecutionTimeout, OperationFailure
-from testcontainers.mongodb import MongoDbContainer
+from testcontainers.community.mongodb import MongoDbContainer
 
 from hexkit.custom_types import PytestScope
 from hexkit.providers.mongodb.config import MongoDbConfig

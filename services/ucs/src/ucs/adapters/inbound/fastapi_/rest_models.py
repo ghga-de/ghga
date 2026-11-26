@@ -90,7 +90,7 @@ class BoxUpdateRequest(BaseModel):
     model_config = ConfigDict(title="Box Update Request")
 
     @model_validator(mode="after")
-    def enforce_size_state_exclusivity(self) -> "BoxUpdateRequest":
+    def enforce_size_state_exclusivity(self) -> BoxUpdateRequest:
         """Ensure that one and only one of 'state' or 'max_size' is provided."""
         if self.state is None and self.max_size is None:
             raise ValueError("At least one of 'state' or 'max_size' must be provided.")
@@ -130,7 +130,7 @@ class FileUploadCreationRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def encrypted_size_exceeds_decrypted_size(self) -> "FileUploadCreationRequest":
+    def encrypted_size_exceeds_decrypted_size(self) -> FileUploadCreationRequest:
         """Ensure encrypted_size is larger than decrypted_size."""
         if self.encrypted_size <= self.decrypted_size:
             raise ValueError(
@@ -184,6 +184,7 @@ WorkType = Literal[
     "archive",
     "resize",
     "view",
+    "view_stats",
     "upload",
     "close",
     "delete",
@@ -217,6 +218,15 @@ class ViewFileBoxWorkOrder(BaseWorkOrderToken[Literal["view"]]):
     """WOT schema authorizing a user to view a FileUploadBox and its FileUploads"""
 
     box_id: UUID4
+
+
+class ViewFileBoxStatsWorkOrder(BaseWorkOrderToken[Literal["view_stats"]]):
+    """WOT schema authorizing the RS to view the file state counts of FileUploadBoxes.
+
+    The token names no box, since the RS asks for the counts of all its boxes at once.
+    The work type is 'view_stats' rather than 'view' so that a ViewFileBoxWorkOrder,
+    whose box_id would be ignored, can never validate as this token.
+    """
 
 
 class CreateFileWorkOrder(BaseWorkOrderToken[Literal["create"]]):
@@ -286,6 +296,15 @@ class RequeueAllFailedResponse(BaseModel):
         ),
     )
     model_config = ConfigDict(title="Requeue All Failed Response")
+
+
+class FileStateCountsRequest(BaseModel):
+    """Request body for counting the FileUploads per state in FileUploadBoxes."""
+
+    box_ids: list[UUID4] = Field(
+        ..., description="The IDs of the FileUploadBoxes whose FileUploads are counted"
+    )
+    model_config = ConfigDict(title="File State Counts Request")
 
 
 class BoxUploadsPage(BaseModel):

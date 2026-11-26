@@ -7,8 +7,14 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { uploadBoxes } from '@app/../mocks/data';
+import {
+  uploadBoxes,
+  uploadBoxFileStateCounts,
+  uploadBoxPriority,
+} from '@app/../mocks/data';
 import { Notifier } from '@app/shared/services/notification';
+import { FileStateCountsByBox, ResearchDataUploadBox } from '@app/upload/models/box';
+import { prioritizeBoxes } from '@app/upload/models/box-priority';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { render, RenderResult, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
@@ -26,6 +32,15 @@ class MockUploadBoxService {
     error: this.#error,
   };
   filteredUploadBoxes = () => this.boxRetrievalResults.value().boxes;
+  fileStateCounts = { isLoading: signal(false) };
+  fileStateCountsByBox = signal<FileStateCountsByBox | undefined>(
+    uploadBoxFileStateCounts,
+  );
+  showFileStateCountsOf = vitest.fn();
+  boxPriority = { error: signal<Error | undefined>(undefined) };
+  prioritizedUploadBoxes = signal<ResearchDataUploadBox[] | undefined>(
+    prioritizeBoxes(uploadBoxes.boxes, uploadBoxPriority),
+  );
   getStorageLocationLabel = (storageAlias: string) =>
     ({ TUE01: 'Tübingen 1', HD02: 'Heidelberg 2', TUE03: 'Tübingen 3' })[
       storageAlias
@@ -49,6 +64,29 @@ class UploadBoxDetailsStubComponent {}
 const notifyMock = {
   showError: vitest.fn(),
 };
+
+/**
+ * Get the text in the Prio column of a row.
+ * @param row - a row of the table body
+ * @returns the position of the box, empty for a box without one
+ */
+function prioOf(row: HTMLElement): string {
+  const column = screen
+    .getAllByRole('columnheader')
+    .findIndex((header) => header.textContent?.includes('Prio'));
+  return within(row).getAllByRole('cell')[column].textContent?.trim() ?? '';
+}
+
+/**
+ * Get the text in the Prio column of the table body, from top to bottom.
+ * @returns the position of each box, empty for boxes without one
+ */
+function prioColumn(): string[] {
+  return screen
+    .getAllByRole('row')
+    .filter((row) => !row.closest('thead'))
+    .map(prioOf);
+}
 
 describe('UploadBoxManagerList', () => {
   let result: RenderResult<UploadBoxManagerList>;
@@ -83,6 +121,84 @@ describe('UploadBoxManagerList', () => {
     expect(screen.getByText('Tübingen 1')).toBeVisible();
     expect(screen.getAllByText('Heidelberg 2')).toHaveLength(3);
     expect(screen.queryByText('TUE01')).not.toBeInTheDocument();
+  });
+
+  it('should show the file states of each upload box', () => {
+    const row = screen.getByRole('row', { name: /Upload Box of John/ });
+    expect(
+      within(row).getByRole('img', { name: '2 ready, 1 in progress, 1 failed' }),
+    ).toBeVisible();
+  });
+
+  it('should load the file state counts of the boxes on the page', async () => {
+    // All boxes fit on one page; the service picks the ones that need counts
+    const boxIds = uploadBoxes.boxes.map((box) => box.id).sort();
+    await vitest.waitFor(() => {
+      const boxes = uploadBoxService.showFileStateCountsOf.mock.lastCall?.[0] ?? [];
+      expect(boxes.map((box: { id: string }) => box.id).sort()).toEqual(boxIds);
+    });
+  });
+
+  it('should count all files of an archived box as archived', async () => {
+    uploadBoxService.fileStateCountsByBox.set(undefined);
+    await result.fixture.whenStable();
+
+    const row = screen.getByRole('row', { name: /Upload Box of Joan/ });
+    expect(within(row).getByRole('img', { name: '28 archived' })).toBeVisible();
+  });
+
+  it('should show placeholders while the file state counts load', async () => {
+    uploadBoxService.fileStateCountsByBox.set(undefined);
+    uploadBoxService.fileStateCounts.isLoading.set(true);
+    await result.fixture.whenStable();
+
+    const row = screen.getByRole('row', { name: /Upload Box of John/ });
+    expect(within(row).getByRole('img', { name: 'Loading file states' })).toBeVisible();
+    expect(screen.queryByRole('img', { name: /ready/ })).not.toBeInTheDocument();
+  });
+
+  it('should show the file counts without bars if the counts failed', async () => {
+    uploadBoxService.fileStateCountsByBox.set(undefined);
+    await result.fixture.whenStable();
+
+    const row = screen.getByRole('row', { name: /Upload Box of John/ });
+    expect(within(row).queryByRole('img')).not.toBeInTheDocument();
+    expect(within(row).getByText('4')).toBeVisible();
+  });
+
+  it('should show the position of each box that is not archived', () => {
+    const positionOf = (title: RegExp) =>
+      prioOf(screen.getByRole('row', { name: title }));
+    expect(positionOf(/Large Cohort/)).toBe('1');
+    expect(positionOf(/Upload Box of John/)).toBe('3');
+    // Joan's box is archived
+    expect(positionOf(/Upload Box of Joan/)).toBe('');
+  });
+
+  it('should sort by priority, archived boxes last', async () => {
+    const header = screen.getByRole('columnheader', { name: /Prio/ });
+    await userEvent.click(header);
+    await result.fixture.whenStable();
+    expect(prioColumn()).toEqual(['1', '2', '3', '4', '5', '6', '']);
+
+    await userEvent.click(header);
+    await result.fixture.whenStable();
+    expect(prioColumn()).toEqual(['6', '5', '4', '3', '2', '1', '']);
+  });
+
+  it('should leave the Prio column empty if the priority order fails', async () => {
+    expect(screen.queryByText(/error retrieving the priority order/)).toBeNull();
+
+    uploadBoxService.boxPriority.error.set(new Error('backend unavailable'));
+    uploadBoxService.prioritizedUploadBoxes.set(undefined);
+    await result.fixture.whenStable();
+
+    expect(
+      screen.getByText(/There was an error retrieving the priority order/),
+    ).toBeVisible();
+    expect(prioColumn()).toEqual(Array(uploadBoxes.boxes.length).fill(''));
+    // The boxes are still listed
+    expect(screen.getByText('Research Data Upload Box of John')).toBeVisible();
   });
 
   it('should navigate to the details of an upload box', async () => {

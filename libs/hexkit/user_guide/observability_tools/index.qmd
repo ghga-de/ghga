@@ -23,7 +23,7 @@ Understanding what a distributed system is doing requires more than each service
 
 - **[Correlation IDs](correlation_ids.qmd)** attach a unique identifier to each request chain at its origin and propagate it automatically across service boundaries, through Kafka event headers and the outbox mechanism.
 - **[Configurable Logging](logging.qmd)** turns Python's standard logging output into structured JSON lines that carry the service name, instance ID, and the current correlation ID, ready for consumption by a log aggregation system.
-- **[OpenTelemetry Tracing](opentelemetry.qmd)** records the operations of a request chain as distributed traces — including timing and causal structure — and propagates the trace context across Kafka events.
+- **[OpenTelemetry Tracing and Metrics](opentelemetry.qmd)** records the operations of a request chain as distributed traces — including timing and causal structure — and propagates the trace context across Kafka events; with metrics enabled, it also exports counters, histograms and gauges.
 
 Together they make it possible to filter the aggregated logs of an entire deployment down to the trail of one original request, and to inspect that request's journey through the system as a distributed trace.
 
@@ -31,4 +31,4 @@ Together they make it possible to filter the aggregated logs of an entire deploy
 
 - [Correlation IDs](correlation_ids.qmd)
 - [Configurable Logging](logging.qmd)
-- [OpenTelemetry Tracing](opentelemetry.qmd)
+- [OpenTelemetry Tracing and Metrics](opentelemetry.qmd)

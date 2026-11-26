@@ -10,7 +10,7 @@ This repository contains two services for the management, authentication and aut
 
 These two services are described in the following sections.
 The setting `provide_apis` can be used to determine which of the services will be started and which APIs these services should provide.
-The setting `run_consumer` should be set for the service instance that runs as an event consumer.
+The claims repository also consumes dataset events, in an instance of its own started with the `consume-events` command.
 
 ### Auth Adapter
 
@@ -47,11 +47,17 @@ Therefore, these are also specified as response headers.
 The Auth Service provides two APIs, the (public) `users` API for the user registry, and the (internal) `claims` API for the claims repository.
 The setting `provide_apis` can be used to specify which of the two APIs should be provided.
 For testing purposes, both APIs can be provided at the same time, but this is not recommended in production.
-If no API is specified, then only a health endpoint is provided.
+At least one API must be specified.
 
 ## Usage
 
-The executable `auth-service` starts the service and takes no command.
+The executable `auth-service` takes one of these commands, and fails without one:
+
+- `run-rest` runs the REST APIs set in `provide_apis`
+- `consume-events` runs the claims repository's consumer of dataset events
+- `publish-events` publishes the user changes not yet published, or with `--all` every user's current state, for instance to fill a new consumer
+- `migrate-db` runs the database migrations
+
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
@@ -73,6 +79,9 @@ The service requires the following configuration parameters:
   Minimum: `0`.
   Maximum: `1`.
   Default: `1.0`.
+- <a id="properties/enable_otel_metrics"></a>**`enable_otel_metrics`** *(boolean)*: Also export metrics via OTLP.
+  Requires `enable_opentelemetry` and a collector with a metrics pipeline.
+  Default: `false`.
 - <a id="properties/auth_topic"></a>**`auth_topic`** *(string, required)*: The name of the topic containing auth-related events.
 
   Examples:
@@ -513,10 +522,13 @@ The service requires the following configuration parameters:
   Default: `3600`.
 - <a id="properties/session_max_lifetime_seconds"></a>**`session_max_lifetime_seconds`** *(integer)*: Maximum lifetime of a session in seconds.
   Default: `43200`.
-- <a id="properties/auth_key"></a>**`auth_key`**: internal public key for the auth service (key pair for auth adapter).
+- <a id="properties/session_check_interval_seconds"></a>**`session_check_interval_seconds`** *(integer)*: Seconds after which a session is checked again against the user account, i.e. its status, roles and TOTP token.
+  Minimum: `0`.
+  Default: `60`.
+- <a id="properties/auth_key"></a>**`auth_key`**: internal key: the public key for the users, claims and access APIs, the private key (full key pair) for the auth adapter.
   Default: `null`.
   - **Any of**
-    - <a id="properties/auth_key/anyOf/0"></a>*string*
+    - <a id="properties/auth_key/anyOf/0"></a>*string, format: password*
     - <a id="properties/auth_key/anyOf/1"></a>*null*
 - <a id="properties/auth_algs"></a>**`auth_algs`** *(array)*: A list of all algorithms used for signing GHGA internal tokens.
   Default: `["ES256"]`.
@@ -665,7 +677,7 @@ The service requires the following configuration parameters:
 - <a id="properties/basic_auth_credentials"></a>**`basic_auth_credentials`**: credentials for basic authentication, separated by whitespace.
   Default: `null`.
   - **Any of**
-    - <a id="properties/basic_auth_credentials/anyOf/0"></a>*string*
+    - <a id="properties/basic_auth_credentials/anyOf/0"></a>*string, format: password*
     - <a id="properties/basic_auth_credentials/anyOf/1"></a>*null*
 - <a id="properties/basic_auth_realm"></a>**`basic_auth_realm`** *(string)*: realm for basic authentication.
   Default: `"GHGA Data Portal"`.
@@ -691,19 +703,6 @@ The service requires the following configuration parameters:
 
   ```json
   "[\"claims\", \"access\"]"
-  ```
-
-- <a id="properties/run_consumer"></a>**`run_consumer`** *(boolean)*: Whether the service should run as an event consumer.
-  Default: `false`.
-
-  Examples:
-
-  ```json
-  "false"
-  ```
-
-  ```json
-  "true"
   ```
 
 - <a id="properties/add_as_data_stewards"></a>**`add_as_data_stewards`** *(array)*: A list of of data stewards to seed the claims repository with.

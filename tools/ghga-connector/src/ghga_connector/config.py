@@ -25,7 +25,7 @@ from pydantic import Field, NonNegativeInt, PositiveInt
 
 from ghga_connector import exceptions
 from ghga_connector.constants import DEFAULT_PART_SIZE, MAX_WAIT_TIME
-from ghga_service_commons.transports import CompositeConfig
+from ghga_service_commons.transports import TransportConfig
 from hexkit.config import config_from_yaml
 from hexkit.utils import set_context_var
 
@@ -84,7 +84,7 @@ def get_crypt4gh_public_key(storage_alias: str) -> str:
 
 
 @config_from_yaml(prefix="ghga_connector")
-class Config(CompositeConfig):
+class Config(TransportConfig):
     """Global Config Parameters"""
 
     client_num_retries: NonNegativeInt = Field(

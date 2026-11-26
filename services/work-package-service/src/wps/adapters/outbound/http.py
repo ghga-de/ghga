@@ -67,7 +67,7 @@ class AccessCheckAdapter(AccessCheckPort):
         *,
         config: AccessCheckConfig,
         transport: httpx2.AsyncBaseTransport | None = None,
-    ) -> AsyncGenerator["AccessCheckAdapter"]:
+    ) -> AsyncGenerator[AccessCheckAdapter]:
         """Setup AccessGrantsAdapter with the given config.
 
         `transport` replaces the transport that actually performs the requests.

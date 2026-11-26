@@ -2,8 +2,7 @@
 <div mat-dialog-content>
   <p class="mb-5 max-w-md">
     We sent a verification code to your IVA
-    <strong>{{ address() }}</strong
-    >. Please enter it here:
+    <strong>{{ address() }}</strong>. Please enter it here:
   </p>
   <form novalidate defaultButton="submit-code" (submit)="onSubmit($event)">
     <mat-form-field class="w-full sm:w-auto">

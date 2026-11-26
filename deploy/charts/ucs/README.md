@@ -25,6 +25,7 @@ for the full set of configurable values.
 | `config.enable_opentelemetry` | If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled. | `false` |
 | `config.db_version_collection` | The name of the collection containing DB version information for this service | `null` |
 | `config.migration_wait_sec` | The number of seconds to wait before checking the DB version again | `null` |
+| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.file_deletion_request_topic` | The name of the topic to receive events informing about files to delete. | `null` |
 | `config.file_deletion_request_type` | The type used for events indicating that a request to delete a file has been received. | `null` |
 | `config.file_internally_registered_topic` | Name of the topic used for events indicating that a file has been registered for download. | `null` |
@@ -33,6 +34,7 @@ for the full set of configurable values.
 | `config.interrogation_success_type` | The type used for events informing about successful file validations. | `null` |
 | `config.interrogation_failure_type` | The type used for events informing about failed file validations. | `null` |
 | `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
+| `config.enable_otel_metrics` | Also export metrics via OTLP. Requires `enable_opentelemetry` and a collector with a metrics pipeline. | `false` |
 | `config.log_level` | The minimum log level to capture. | `"INFO"` |
 | `config.service_name` | NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"ucs"` |
 | `config.service_instance_id` | A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id. | `null` |
@@ -52,7 +54,6 @@ for the full set of configurable values.
 | `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
 | `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
 | `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
-| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.file_upload_topic` | Topic containing published FileUpload outbox events | `null` |
 | `config.file_upload_box_topic` | Topic containing published FileUploadBox outbox events | `null` |
 | `config.wps_auth_config` |  | `null` |
@@ -72,6 +73,8 @@ for the full set of configurable values.
 | `config.max_concurrent_uploads_per_box` | Maximum number of in-progress FileUploads allowed per box at any one time. When a new upload would exceed this count, the request is rejected with 429 Too Many Requests. | `5` |
 | `config.multipart_upload_ttl_hours` | Number of hours after which an in-progress FileUpload with no activity is considered stale and will be aborted by the cleanup job. | `72` |
 | `config.cleanup_interval_minutes` | How often (in minutes) the cleanup job runs. | `60` |
+| `config.orphaned_object_min_age_hours` | Minimum age in hours before the cleanup job deletes an inbox object that has no matching FileUpload. Applies even when safeguards are ignored. Age is measured from the object's LastModified time, which some S3 backends, including AWS, set to when a multipart upload was initiated rather than completed. | `6` |
+| `config.max_orphaned_objects` | If the cleanup job finds more orphaned inbox objects than this for one storage alias, it deletes no orphaned objects and aborts no orphaned multipart uploads for that alias, unless run with --ignore-safeguards. | `100` |
 
 ## Parameters
 
@@ -100,7 +103,9 @@ for the full set of configurable values.
 | `image.pullSecrets` | Extra pull secrets for just this image reference | `[]` |
 | `replicaCount` | Deployment replica count; ignored when autoscaling.enabled | `1` |
 | `revisionHistoryLimit` | Number of old ReplicaSets Kubernetes keeps around for rollback | `1` |
-| `shareProcessNamespace` | Share the pod's process namespace across containers; forced true whenever vaultAgent.enabled (the agent sends signals to the app's PID) | `false` |
+| `shareProcessNamespace` | Share the pod's process namespace across containers, e.g. so a secrets sidecar can signal the app to reload | `false` |
+| `secretEnvFiles.enabled` | Source every file in `dir` into the shell before the command runs, so secrets a sidecar writes there reach the environment; needs commandStyle=shell | `false` |
+| `secretEnvFiles.dir` | Directory whose files are sourced when enabled | `"/vault/secrets"` |
 | `podSecurityContext.fsGroup` | Group ID Kubernetes chowns mounted volumes to | `1000` |
 | `initContainers` | Extra init containers to run before the main container (the migration init container below is prepended to this list when enabled) | `[]` |
 | `migrationInitContainer.enabled` | Run a dedicated init container for DB migrations before the main container starts | `false` |
@@ -113,7 +118,7 @@ for the full set of configurable values.
 | `migrationInitContainer.volumeMounts` | Extra volume mounts for just the migration init container (on top of the shared volumeMounts every container gets) | `[]` |
 | `hostAliases` | Extra `/etc/hosts` entries for the pod | `[]` |
 | `podLabels` | Labels applied only to the Pod template (Deployment/CronJob/Job pod spec), distinct from `labels`/`commonLabels` on the parent resource | `{}` |
-| `podAnnotations` | Annotations applied only to the Pod template; combined with any Vault Agent annotations when vaultAgent.enabled | `{}` |
+| `podAnnotations` | Annotations applied only to the Pod template, e.g. the Vault Agent injection annotations the platform renders per release | `{}` |
 | `podAffinityPreset` | Pod-affinity preset name (e.g. "soft"/"hard"), from the vendored `common` library chart; empty disables it | `""` |
 | `podAntiAffinityPreset` | Pod-anti-affinity preset name (vendored `common` library chart convention); "soft" spreads replicas across nodes when possible | `"soft"` |
 | `nodeAffinityPreset.type` | Node-affinity preset type ("soft"/"hard"), from the vendored `common` library chart; empty disables it | `""` |
@@ -178,20 +183,21 @@ for the full set of configurable values.
 | `kafkaUser.clusterNamespace` |  | `"strimzi"` |
 | `kafkaUser.caCertSecretName` | Secret holding the Kafka cluster's CA cert, mounted alongside the user's own TLS secret | `"kafka-cluster-ca-cert"` |
 | `mongodb.dbName` | Database name; combined with dbNamePrefix and injected into config.yaml as db_name. NOTE: mongodb.dbName is the fallback used when the top-level dbName (set per-member, not defaulted here) is empty | `"upload-controller"` |
-| `mongodb.service.namespace` | Together with mongodb.service.name and cluster.name, forms the Vault KV path this chart reads a dynamic MongoDB credential from | `"mongodb"` |
-| `mongodb.service.name` |  | `"mongodb"` |
 | `apiBasePath` | Public API path prefix; combined with apiBasePathPrefix (set by an aliasing umbrella) and injected into config.yaml as api_root_path | `"/ucs/"` |
 | `serviceName` | Logical service name; combined with serviceNamePrefix and injected into config.yaml as service_name | `"ucs-consumer"` |
 | `serviceInstanceId.fromPodName` | Inject a <CONFIG_PREFIX>_SERVICE_INSTANCE_ID env var sourced from the Kubernetes Downward API (metadata.name), overriding config.service_instance_id per-pod. Env vars beat the YAML config file in hexkit config_from_yaml priority order, so this makes the value genuinely unique per replica instead of the static per-member string every service currently hardcodes in its own chart-values.yaml config block (which collides across replicas once replicaCount > 1, contradicting hexkit KafkaConfig.service_instance_id's own "uniquely identifies this instance" contract). | `false` |
+| `otelExcludedUrls` | Comma-separated regexes of URLs that OpenTelemetry neither traces nor counts in its HTTP metrics, set as OTEL_PYTHON_EXCLUDED_URLS (read by the FastAPI and httpx instrumentations). Defaults to the health probes; empty turns it off. Skipped when envVars set OTEL_PYTHON_EXCLUDED_URLS themselves. | `"/health$"` |
+| `otelResource.podName` | Add the pod name as k8s.pod.name to the OpenTelemetry resource of traces and metrics, via OTEL_RESOURCE_ATTRIBUTES and the Kubernetes Downward API. Skipped when envVars already set OTEL_RESOURCE_ATTRIBUTES. | `true` |
 | `configMap.enabled` | Render the ConfigMap holding config.yaml and mount it into the container | `true` |
 | `configMap.mountPath` |  | `"/etc/config.yaml"` |
 | `configMap.subPath` |  | `"config.yaml"` |
 | `configMap.envVar.enabled` | Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath | `true` |
-| `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"ucs"` |
+| `configPrefix` | Prefix for the generated CONFIG_YAML and SERVICE_INSTANCE_ID env vars; create_charts.py derives this automatically from the package name | `"ucs"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
-| `environment.name` | Identifies which environment this release belongs to; part of the Vault secret path for the "service" secrets bundle | `"default"` |
-| `cluster.name` | Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials | `"default"` |
+| `concurrencyPolicy` | Fallback concurrencyPolicy for any `cronjobs` entry that doesn't set its own. `Forbid` skips a run while the previous one is still active, so hung runs cannot pile up; `Allow` runs them side by side; `Replace` kills the active run | `"Forbid"` |
+| `activeDeadlineSeconds` | Fallback activeDeadlineSeconds for any `cronjobs` entry that doesn't set its own: Kubernetes kills a run still active after this many seconds. null means no limit; set it per cronjob, since run times differ too much for a shared value | `null` |
+| `startingDeadlineSeconds` | Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit | `null` |
 | `httpRoute.enabled` | Render an HTTPRoute (Gateway API, ADR-0032) routing to this service | `false` |
 | `httpRoute.port` |  | `8080` |
 | `httpRoute.rewritePath` | strip the base path before forwarding. Services that reconstruct their own public URLs (an OIDC discovery document, for example) need the full path instead and rely on api_root_path to route - set this to false for them. | `true` |
@@ -200,45 +206,12 @@ for the full set of configurable values.
 | `probe.hostname` | Public hostname the blackbox exporter probes (combined with the API base path and healthEndpoint below to build the target URL) | `"default.ghga.dev"` |
 | `healthEndpoint` | Path appended to the probe target URL (after the API base path) | `"/health"` |
 | `destinationRule.enabled` | Render an Istio DestinationRule for this service | `false` |
+| `authorizationPolicy.enabled` | Render an Istio ALLOW AuthorizationPolicy for this workload, bound to its Service for the waypoint | `false` |
+| `authorizationPolicy.denyAll` | Render the policy with no rules, denying all traffic to the workload; overrides callers. Required to enable the policy without callers | `false` |
+| `authorizationPolicy.trustDomain` | Istio trust domain the callers' principals are built in | `"cluster.local"` |
+| `authorizationPolicy.callers.rs` |  | `[{"methods": ["POST"], "paths": ["/boxes", "/rpc/boxes/file-state-counts", "/rpc/boxes/{*}/requeue", "/rpc/boxes/{*}/uploads/{*}/requeue"]}, {"methods": ["PATCH"], "paths": ["/boxes/{*}"]}, {"methods": ["GET"], "paths": ["/boxes/{*}/uploads"]}, {"methods": ["DELETE"], "paths": ["/boxes/{*}", "/boxes/{*}/uploads/{*}"]}]` |
+| `authorizationPolicy.identities` | Who each caller is, keyed like callers: serviceAccount (and namespace if it differs) or principals. Required for every caller | `{}` |
+| `authorizationPolicy.extraRules` | Raw Istio rules added as they are, such as the ingress gateway; each needs from unless it sets allowAnySource: true. Templated | `[]` |
 | `networkPolicy.enabled` | Render a NetworkPolicy restricting ingress traffic to the pod | `false` |
 | `networkPolicy.ingress` | Only allow traffic from namespaces labeled `ghga-ingress: allow`, on the Service's own ports | `[{"from": [{"namespaceSelector": {"matchLabels": {"ghga-ingress": "allow"}}}]}]` |
 | `strimziApiVersion` | apiVersion used for the rendered Strimzi KafkaUser resource | `"kafka.strimzi.io/v1"` |
-| `vaultAgent.enabled` | Inject a Vault Agent sidecar (via pod annotations) that populates secrets/env vars from Vault before/alongside the main container | `false` |
-| `vaultAgent.annotations.vault.hashicorp.com/tls-skip-verify` |  | `"false"` |
-| `vaultAgent.annotations.vault.hashicorp.com/agent-inject` |  | `"true"` |
-| `vaultAgent.annotations.vault.hashicorp.com/agent-init-first` |  | `"true"` |
-| `vaultAgent.annotations.vault.hashicorp.com/agent-cache-enable` |  | `"true"` |
-| `vaultAgent.annotations.vault.hashicorp.com/agent-pre-populate-only` |  | `"false"` |
-| `vaultAgent.annotations.vault.hashicorp.com/agent-run-as-same-user` |  | `"true"` |
-| `vaultAgent.role` | Vault auth role to assume; defaults to the release name when empty | `""` |
-| `vaultAgent.rolePrefix` | Prefix prepended to the resolved role name above | `""` |
-| `vaultAgent.caCert` | Path to a custom CA cert for Vault TLS verification | `""` |
-| `vaultAgent.tlsSecret` | Kubernetes secret providing the Vault Agent's TLS material | `""` |
-| `vaultAgent.service` | Override the Vault service address the agent talks to | `""` |
-| `vaultAgent.tlsServerName` | TLS server name override for the Vault connection | `""` |
-| `vaultAgent.pgrepPattern` | Process name the Agent's "kill -TERM" hook searches for to restart the app on secret rotation | `"python"` |
-| `vaultAgent.secrets.generic` | Arbitrary Vault KV paths to inject as individual env vars, keyed by name; each entry needs path/parameterName (and optionally dataKey) | `{}` |
-| `vaultAgent.secrets.mongodb.enabled` | Inject a MongoDB connection string built from a Vault-issued dynamic credential | `false` |
-| `vaultAgent.secrets.mongodb.secretPath` | Vault KV path to read the credential from; computed from mongodb.service.{namespace,name} + cluster.name when empty | `""` |
-| `vaultAgent.secrets.mongodb.connectionString` | Connection-string template; {{username}}/{{password}} are substituted by Vault's own templating, not Helm's | `"mongodb://{{username}}:{{password}}@mongodb:27017/admin"` |
-| `vaultAgent.secrets.service.enabled` | Inject every key/value pair from one Vault secret as env vars | `false` |
-| `vaultAgent.secrets.service.secretPath` | Vault KV path to read from; computed from pathPrefix + environment.name + the release name when empty | `""` |
-| `vaultAgent.secrets.service.pathPrefix` |  | `"operational-secrets/data/unique/apps/archive"` |
-| `vaultAgent.secrets.crypt4ghInternalPub.enabled` | Inject GHGA's shared internal Crypt4GH public key | `false` |
-| `vaultAgent.secrets.crypt4ghInternalPub.secretPath` |  | `"operational-secrets/data/shared/managed-keys/crypt4gh-internal"` |
-| `vaultAgent.secrets.crypt4ghInternalPub.mountPath` | Where to write the key when renderToFile is true | `"/keys/crypt4gh-internal/crypt4gh.pub"` |
-| `vaultAgent.secrets.crypt4ghInternalPub.dataKey` | Field name to read within the Vault secret | `"crypt4gh.pub"` |
-| `vaultAgent.secrets.crypt4ghInternalPub.renderToFile` | true: write to mountPath as a file. false: inject as an env var named parameterName instead | `true` |
-| `vaultAgent.secrets.crypt4ghInternalPub.parameterName` |  | `"CRYPT4GH_PUBLIC_KEY"` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.enabled` | Inject GHGA's shared internal Crypt4GH private key (same fields as crypt4ghInternalPub above) | `false` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.secretPath` |  | `"operational-secrets/data/shared/managed-keys/crypt4gh-internal"` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.mountPath` |  | `"/keys/crypt4gh-internal/crypt4gh.sec"` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.dataKey` |  | `"crypt4gh.sec"` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.renderToFile` |  | `true` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.parameterName` |  | `"CRYPT4GH_PRIVATE_KEY"` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.enabled` | Inject GHGA's shared external-facing Crypt4GH private key (same fields as crypt4ghInternalPub above) | `false` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.secretPath` |  | `"operational-secrets/data/shared/managed-keys/crypt4gh-external"` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.mountPath` |  | `"/keys/crypt4gh-external/crypt4gh.sec"` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.dataKey` |  | `"crypt4gh.sec"` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.renderToFile` |  | `true` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.parameterName` |  | `"CRYPT4GH_PRIVATE_KEY"` |

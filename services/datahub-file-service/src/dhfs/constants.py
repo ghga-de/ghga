@@ -27,6 +27,8 @@ __all__ = [
     "NONCE_LENGTH",
     "SEGMENT_OVERHEAD",
     "SQUASHED_LOGGERS",
+    "TAG_LENGTH",
+    "UPLOAD_CHUNK_SIZE",
 ]
 
 AUTH_TOKEN_VALID_SECONDS = 60
@@ -36,10 +38,15 @@ NONCE_LENGTH = 12
 
 # Bytes encryption adds to every Crypt4GH segment (nonce + Poly1305 auth tag).
 SEGMENT_OVERHEAD = crypt4gh.lib.CIPHER_DIFF
+TAG_LENGTH = SEGMENT_OVERHEAD - NONCE_LENGTH
 ENCRYPTION_SECRET_LENGTH = 32
 DOWNLOAD_URL_LIFESPAN = 300  # five minutes
 DOWNLOAD_URL_CACHE_TIME = DOWNLOAD_URL_LIFESPAN - 5
 URL_CACHE_SIZE = 250
+
+# Number of bytes to read at once from a file part when streaming the httpx2.put request
+# This does not change the overall amount of bytes sent
+UPLOAD_CHUNK_SIZE = 1024**2
 SQUASHED_LOGGERS = [
     "httpx2",
     "crypt4gh",

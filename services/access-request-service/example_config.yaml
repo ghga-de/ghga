@@ -23,10 +23,12 @@ cors_exposed_headers: null
 dataset_change_topic: metadata_datasets
 dataset_deletion_type: dataset_deleted
 dataset_upsertion_type: dataset_created
-db_name: access-requests
+db_name: access-request
 db_version_collection: arsDbVersions
 docs_url: /docs
 download_access_url: http://127.0.0.1:8080/download-access
+enable_opentelemetry: false
+enable_otel_metrics: false
 generate_correlation_id: true
 host: 127.0.0.1
 kafka_compression_type: null
@@ -49,9 +51,12 @@ migration_max_wait_sec: null
 migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
+notification_topic: notifications
 openapi_url: /openapi.json
+otel_trace_sampling_rate: 1.0
 port: 8080
 service_instance_id: '1'
 service_name: ars
+sms_notification_type: sms_notification
 timeout_keep_alive: 90
 workers: 1

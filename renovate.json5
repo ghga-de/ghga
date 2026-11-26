@@ -47,20 +47,21 @@ when you look at this issue.",
       automerge: false,
     },
     {
-      // The platform baseline is Python 3.13 (ADR-0026): .python-version, uv.lock's
+      // The platform baseline is Python 3.14 (ADR-0026): .python-version, uv.lock's
       // requires-python and every component suite run on it, and CI never builds a
-      // release image on anything else — so a 3.14 base would ship an interpreter no
+      // release image on anything else — so a 3.15 base would ship an interpreter no
       // test covers. Moving the baseline is one deliberate change (.python-version,
       // uv.lock, the members' requires-python) that lifts this bound with it. Patch
-      // bumps of the 3.13 base — the CVE fixes this config exists for — still flow.
+      // bumps of the 3.14 base — the CVE fixes this config exists for — still flow.
       matchDepNames: ["dhi.io/python"],
-      allowedVersions: "/^3\\.13\\./",
+      allowedVersions: "/^3\\.14\\./",
     },
     {
-      // Node is held at the LTS line that CI, node:24-alpine and the devcontainer run;
-      // docs/dependencies.md says when to lift it. Patch bumps still flow.
+      // Node stays on the LTS line that CI, the data-portal Dockerfile and the
+      // devcontainer run. When the next even line enters LTS, move all three, this
+      // bound and @types/node in one change. Patch bumps still flow.
       matchDepNames: ["dhi.io/node"],
-      allowedVersions: "/^24\\./",
+      allowedVersions: "/^26\\./",
     },
     {
       groupName: "Chainguard MinIO images",

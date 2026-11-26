@@ -372,7 +372,7 @@ The service requires the following configuration parameters:
   "*.*:*"
   ```
 
-- <a id="properties/db_version_collection_suffix"></a>**`db_version_collection_suffix`** *(string)*: Collections whose name ends with this suffix hold a service's migration records and are skipped when deleting with the `*` collection wildcard, since a service restarting without them would migrate its current data again.
+- <a id="properties/db_version_collection_suffix"></a>**`db_version_collection_suffix`** *(string)*: Collections whose name ends with this suffix hold a service's migration records and are skipped when deleting with the `*` collection wildcard, since the next migration run without them would migrate the service's current data again.
   Deleting such a collection by its name still works.
   An empty string turns the protection off.
   Default: `"DbVersions"`.
@@ -564,6 +564,18 @@ The service requires the following configuration parameters:
   ```json
   []
   ```
+
+- <a id="properties/enable_opentelemetry"></a>**`enable_opentelemetry`** *(boolean)*: If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled.
+  Default: `false`.
+- <a id="properties/otel_trace_sampling_rate"></a>**`otel_trace_sampling_rate`** *(number)*: Determines which proportion of spans should be sampled.
+  A value of 1.0 means all and is equivalent to the previous behaviour.
+  Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False.
+  Minimum: `0`.
+  Maximum: `1`.
+  Default: `1.0`.
+- <a id="properties/enable_otel_metrics"></a>**`enable_otel_metrics`** *(boolean)*: Also export metrics via OTLP.
+  Requires `enable_opentelemetry` and a collector with a metrics pipeline.
+  Default: `false`.
 
 #### Definitions
 

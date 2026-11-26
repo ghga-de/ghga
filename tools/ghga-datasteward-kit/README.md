@@ -27,15 +27,10 @@ To move to another release, clone that tag afresh.
 
 ## Step by Step Guide
 
-It is important to outline that some commands can only be used by Central Data Stewards while other commands address Local Data Stewards.
+The kit covers the metadata path only.
+Files are uploaded with the [GHGA Connector](../ghga-connector) into an upload box and mapped to metadata in the data portal, neither of which involves this kit.
 
-The workflow for both the Local and Central Data Stewards is outlined in the following paragraphs:
-
-### Local Data Steward
-
-In v1.1 of the Archive, Local Data Stewards are responsible for (A) preparing the metadata of a submission and (B) for encrypting and uploading the corresponding files to the Data Hub's S3-compatible Object Storage.
-
-#### A. Metadata Preparation
+### Metadata Preparation
 
 The data steward kit has no functionality to help with metadata preparation, however, it is still described here for completeness of the workflow.
 
@@ -53,41 +48,25 @@ Validation of the metadata can be achieved using the [GHGA Metadata Validator](h
 
 Once your spreadsheet or JSON file have passed validation, you may send the metadata to the Central Data Steward.
 
-#### B. File Encryption and Upload
-
-This is achieved using the data steward kit, using the following steps:
-
-1. **Generate credentials**: The kit interacts with services at GHGA central.
-   To authenticate yourself against these services you need to create a set of credentials using the `ghga-datasteward-kit generate-credentials` command.
-   Please see [this section](#generate-credentials) for further details.
-
-2. **Encrypt and Upload**: File encryption and upload to the S3-compatible object storage is done in one go.
-   This is achieved using either the `ghga-datasteward-kit files upload` for uploading a single file or the `ghga-datasteward-kit files batch-upload` for uploading multiple files at once.
-   There also exist legacy versions of these subcommands for compatibility reasons, where the command is prefixed with `legacy-`.
-   Please see [this section](#files-batch-upload) for further details.
-   This will output one summary JSON per uploaded file.
-   The encryption secret is automatically transferred to GHGA central for the normal upload path.
-   For the legacy version of the commands, the encryption secret is present in the summary JSON and will be exchanged for a secret during ingest.
-
-Once the upload of all files of a submission has completed, please notify the GHGA Central Data Steward and provide the summary JSONs obtained in step 2.
-
 ### Central Data Steward
 
-The Central Data Steward is responsible for ingesting the metadata and the upload summary files into the running system.
+The Central Data Steward is responsible for ingesting the metadata into the running system.
 This is performed with the following steps:
 
-1. **Generate credentials**: As for the local data stewards, central data stewards need to have credentials for authentication with GHGA Central Services.
+1. **Generate credentials**: Central data stewards need credentials for authentication with GHGA Central Services.
    To create these credentials the `ghga-datasteward-kit generate-credentials` command is used.
    Please see [this section](#generate-credentials) for further details.
 2. **Transpile Metadata Spreadsheet**: If the Local Data Steward provided a metadata spreadsheet, this spreadsheet has to be first transpiled to the JSON format using the `ghga-datasteward-kit metadata transpile` command.
    Please see [this section](#metadata) for further details.
 3. **Include in Submission Registry**: The submission JSON is included in a submission registry on the local file system using the `ghga-datasteward-kit metadata submit` command.
    Please see [this section](#metadata) for further details.
+   If the submission was accessioned with flat accessions, before study PIDs, and only gained files since, use the `ghga-datasteward-kit metadata amend` command instead, so that the accessions already assigned are kept.
+   Please see [this section](#metadata-amend) for further details.
+   If the study was promised a flat accession before its metadata arrived, use the `ghga-datasteward-kit metadata submit-legacy` command instead, so that the study gets that accession.
+   Please see [this section](#metadata-submit-legacy) for further details.
 4. **Produce Metadata Artifacts**: A transformation workflow is run on all submissions in the submission registry to produce multiple query-specific metadata artifacts using the `ghga-datasteward-kit metadata transform` command.
    Please see [this section](#metadata) for further details.
 5. **Publish Metadata**: To publish all metadata artifacts of all submissions to the running system so that they are available on the GHGA website, the `ghga-datasteward-kit load` command can be used.
-6. **Make Files Downloadable**: To make files downloadable, the file summary JSONs provided by the Local Data Steward (see [file encryption and upload](#b-file-encryption-and-upload)) need to be ingested into the running system using the `ghga-datasteward-kit files ingest-upload-metadata` command.
-   Please see [this section](#files-ingest-upload-metadata) for further details.
 
 ## Details per Command
 
@@ -99,64 +78,6 @@ ghga-datasteward-kit --help
 
 The following paragraphs provide additional help for using the different commands.
 
-### files (batch-)upload
-
-*To be performed by Local Data Stewards.*
-
-This command facilitates encrypting files using Crypt4GH and uploading the encrypted content to a (remote) S3-compatible object storage.
-This process consists of multiple steps:
-
-1. Generate a unique file/object id for S3
-2. Create SHA256 checksum for the unencrypted file
-3. Encrypt and upload file in chunks, generate checksums for encrypted parts.
-   Verify successful transfer using content MD5 on the part level
-4. Compute content MD5 of the assembled object locally and compare with S3
-5. Decrypt local parts, generate SHA256 checksum and compare with checksum calculated in step 2
-6. Write file/upload information to output file
-
-The user needs to provide a config yaml containing information as described in the [S3 upload config](./s3_upload_config.md).
-
-An overview of important information about each the upload is written to a file called \<alias\>.json in the output directory.
-
-It contains the following information:
-
-1. The file alias
-2. A unique identifier for the file
-3. An identifier of the storage bucket the file was uploaded to (Added in v4.4.0)
-4. The local file path
-5. A SHA256 checksum over the unencrypted content
-6. MD5 checksums over all encrypted file parts
-7. SHA256 checksums over all encrypted file parts
-8. The file encryption/decryption secret id or the actual textual representation of the secret, if the legacy command was used (Secret ID since v1.0.0)
-9. An alias for the storage node the file was uploaded to (Added in v3.0.0)
-
-Attention: Keep this output file in a safe, private location.
-If this file is lost, the uploaded file content becomes inaccessible.
-
-#### About concurrency
-
-In addition to the already existing batch upload command that allows for parallel processing and transfer on the file level, v4.3.0 added an asynchronous task handler for upload and download parallelization on the file part level.
-
-Moving from directly downloading the uploaded file to using content MD5 for validation purposes, there is no clear preference in which mode of parallelism should be used, as no benchmarking has been done yet with the current changes.
-
-By default, part level parallelism is set by the `client_max_parallel_transfers` to a value of 10.
-If you want to disable it, the value has to be explicitly set to 1.
-
-### files ingest-upload-metadata
-
-*To be performed by Central Data Stewards only.*
-
-Upload all file summary JSONs (produced using the [files (batch-)upload](#files-batch-upload) command) from the given directory to the running system and make the corresponding files available for download.
-
-This command requires a configuration file as described in the [ingest config](./ingest_config.md).
-
-#### Ingest version compatibility
-
-| Datasteward Kit Version | File Ingest Service Version |
-| :---------------------: | :-------------------------: |
-| >=4.5.0 | >=5.0.0 |
-| >=4.4.0, <4.5.0  | >=4.0.0, <5 |
-
 ### metadata
 
 *To be performed by Central Data Stewards only.*
@@ -164,6 +85,90 @@ This command requires a configuration file as described in the [ingest config](.
 The metadata label groups metadata related commands.
 
 Some of them require a configuration file as described in the [metadata config](./metadata_config.md).
+
+The production accession store from before study PIDs is a flat list of accessions.
+Convert it once with `ghga-datasteward-kit metadata migrate-accession-store --config-path <config>` before the next `metadata submit`; the original is kept next to it as `<store>.bak`.
+A later release removes the command once the production store is converted.
+
+#### metadata submit-legacy
+
+Submits metadata as a new submission with flat accessions, for a study that was promised a flat accession before its metadata arrived.
+A flat accession is `GHGA`, one letter and 14 digits, such as `GHGAS12345678901234`, the scheme used before study PIDs.
+
+Make sure to only use this command for flat-accessioned studies, and *do not* use `metadata submit`, because the latter will generate a new study PID using the current structured PID scheme instead of the flat format.
+
+```text
+ghga-datasteward-kit metadata submit-legacy \
+  --submission-title <title> \
+  --submission-description <description> \
+  --study-accession <flat accession> \
+  --metadata-path <metadata JSON> \
+  --config-path <metadata config YAML>
+```
+
+The study gets the accession specified in `--study-accession`.
+Every other resource gets a new flat accession.
+The submission is stored as completed, and the command prints `Submission <id> submitted.` as its last line.
+Make note of the ID, since `metadata amend` asks for it when the submission gains files.
+
+Before minting or writing anything, the command refuses any of the following:
+
+- a study accession that is not a flat study accession, `GHGAS` and 14 digits (`StudyAccessionNotFlatError`);
+- a study accession that a submission in the submission store already has as its study accession (`StudyAccessionInUseError`, naming that submission);
+- metadata that fails validation against the model, or uses an alias twice within one class; the same alias in two classes is allowed, since a flat accession does not contain the alias;
+- metadata with resources of a class that has no flat prefix (`AccessionGenerationError`).
+
+A study accession already listed under `legacy` in the accession store is accepted, since it may have been entered there by hand.
+Once the submission is written, the command adds the study accession to `legacy` if it is not there yet.
+A run that is refused for its metadata, or cannot write the submission, stores no submission, so it can be repeated once the cause is corrected.
+
+If the command fails after that, while publishing the source event, it prints no ID, and a rerun is refused because the stored submission holds the study accession.
+The refusal names that submission; `grep -l <study accession> <submission_store_dir>/*.json` finds it as well.
+Run `metadata amend --submission-id <id>` with the same metadata path to publish its source event; it keeps every accession and asks nothing.
+
+#### metadata amend
+
+Adds to a completed submission accessioned with flat accessions, keeping its existing accessions.
+A flat accession is `GHGA`, one letter and 14 digits, such as `GHGAF12345678901234`, the scheme used before study PIDs.
+
+Use this, not a second `metadata submit`, whenever such a submission gains files.
+A second `submit` creates a new submission with a fresh set of accessions, which breaks every reference to the files already ingested from that submission.
+In the legacy upload path the file accession is also the file's storage ID, and the identifiers derived from it cannot be recovered.
+
+The command refuses a submission whose study has a study PID (`AccessionNotLegacyError`), one without a study accession, and one that is not completed, before anything is validated or minted.
+
+```text
+ghga-datasteward-kit metadata amend \
+  --submission-id <id> \
+  --metadata-path <metadata JSON> \
+  --config-path <metadata config YAML>
+```
+
+The command replaces the whole content of the submission.
+Aliases that already have an accession keep it, and each new alias gets a new flat accession, such as `GHGAF` and 14 digits for a file, registered under `legacy` in the accession store so that it is never given out twice.
+The study keeps its accession even under a new alias.
+Before minting anything, the command validates the metadata against the model and rejects an alias used twice within one class; the same alias in two classes is allowed, since a flat accession does not contain the alias.
+
+The command reports what it will do to the files before writing anything: the dropped, new and kept files of the five file classes, each with its count and up to 20 aliases.
+It asks for confirmation when the amendment would drop files, or when it would keep none at all, since both usually mean the wrong submission or the wrong aliases.
+That question cannot be skipped, by design: a dropped file is removed from the running system on the next `load`.
+Once the submission is written, the command prints `Submission <id> amended.`; it does not list the accessions it minted.
+
+Such an amendment can only be applied from a terminal.
+There is no `--yes`, and the prompt cannot be answered through a pipe either: when stdin is not a terminal the command refuses and changes nothing, rather than reading an answer nobody typed.
+An amendment that drops no file and keeps at least one is not affected, so adding files stays scriptable.
+
+**Only files are reported.**
+Every other class follows the same alias matching without appearing in the report or raising the prompt:
+
+- Renaming or removing the alias of a dataset, sample, experiment or individual drops its accession, and the next `load` removes that resource from the running system.
+- A field changed on a resource that already has an accession is not an accession change: it is written through, keeps its accession, and the next `load` updates that resource.
+
+Nothing in the tool restricts an amendment to added files; that is a rule for the people using it.
+Compare the metadata with the submitted version before amending when the change is more than added files.
+
+The submission's own record in the submission store is what makes this work: its `accession_map` is the only place an alias is tied to an accession.
+Keep that store backed up.
 
 ### load
 

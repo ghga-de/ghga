@@ -18,7 +18,6 @@
 
 import signal
 import subprocess
-import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -39,6 +38,12 @@ from .conftest import (
     when,
     write_upload_tsv,
 )
+from .conftest_2x import (
+    _create_upload_work_package,
+    _read_stable_box,
+    _session_headers,
+    _store_upload_token,
+)
 from .utils import has_reached
 
 scenarios("../features/201_user_file_upload.feature")
@@ -50,23 +55,7 @@ scenarios("../features/201_user_file_upload.feature")
 )
 def create_work_package(full_name: str, fixtures: JointFixture, storage_name: str):
     """Create an upload work package for the specified storage scope."""
-    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
-    rdub_state = rdub.get("state")
-    assert rdub_state == "open", (
-        f"Expected active upload box for {storage_name}, got {rdub_state}"
-    )
-    data = {
-        "type": "upload",
-        "research_data_upload_box_id": rdub["id"],
-        "user_public_crypt4gh_key": fixtures.config.user_public_crypt4gh_key,
-    }
-    url = f"{fixtures.config.wps_url}/work-packages"
-
-    session = fixtures.auth.get_saved_session(
-        name=full_name, state_store=fixtures.state
-    )
-    headers = fixtures.auth.headers(session=session)
-    return fixtures.http.post(url, headers=headers, json=data)
+    return _create_upload_work_package(fixtures, full_name, storage_name)
 
 
 def _as_list(payload):
@@ -85,12 +74,7 @@ def _as_list(payload):
 @then(parse('the response contains an upload token for "{storage_name}" storage'))
 def check_upload_token(fixtures: JointFixture, response: Response, storage_name: str):
     """Check that the response contains an upload token and save it in the state."""
-    data = response.json()
-    assert set(data) == {"id", "token", "expires"}
-    id_, token = data["id"], data["token"]
-    assert 20 <= len(id_) < 40 and 80 < len(token) < 120
-    id_and_token = f"{id_}:{token}"
-    fixtures.state.set_state(f"upload token for {storage_name}", id_and_token)
+    _store_upload_token(fixtures, response, storage_name)
 
 
 @given("no upload work packages have been created yet")
@@ -167,35 +151,10 @@ def check_uploaded_files_in_storage(
 def lock_upload_box(full_name: str, storage_name: str, fixtures: JointFixture):
     """Lock the data upload box for the specified storage scope."""
     assert storage_name in ["primary", "secondary"], f"Unknown storage: {storage_name}"
-    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
-    rdub_id = rdub["id"]
-    session = fixtures.auth.get_saved_session(
-        name=full_name, state_store=fixtures.state
-    )
-    assert session, f"No session found for {full_name}"
-    assert session.user_id, f"user_id is missing for {full_name}"
-
-    url = f"{fixtures.config.rs_url}/upload-boxes/{rdub_id}"
-    headers = fixtures.auth.headers(session=session)
-
-    # The box version is a counter that advances oncevery upload and delete,
-    # it can diverge from the uploaded-file count (see the interrupted-upload scenario).
-    # Read the live version from the server instead of assuming version.
-    # The registry learns about uploads from events, so wait until its view has
-    # caught up (the version stops advancing) before locking — otherwise the
-    # lock is rejected with an out-of-date file upload box version.
-    version = None
-    for _ in range(30):
-        box = fixtures.http.get(url, headers=headers).json()
-        if box["version"] == version:
-            break
-        version = box["version"]
-        time.sleep(1)
-    assert version is not None
-    rdub["version"] = version
-    fixtures.state.set_state(f"rdub_{storage_name}", rdub)
-
-    data = {"version": version, "state": "locked"}
+    box = _read_stable_box(fixtures, storage_name, full_name)
+    url = f"{fixtures.config.rs_url}/upload-boxes/{box['id']}"
+    headers = _session_headers(fixtures, full_name)
+    data = {"version": box["version"], "state": "locked"}
     return fixtures.http.patch(url, headers=headers, json=data)
 
 

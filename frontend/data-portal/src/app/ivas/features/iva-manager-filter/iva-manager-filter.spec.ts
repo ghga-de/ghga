@@ -61,7 +61,9 @@ describe('IvaManagerFilter', () => {
   });
 
   it('should set the filter after typing a name', async () => {
-    const textbox = screen.getByRole('textbox', { name: 'Name or email of user' });
+    const textbox = screen.getByRole('textbox', {
+      name: 'Name or LS Login email of user',
+    });
 
     await userEvent.type(textbox, 'Doe');
     await fixture.whenStable();
@@ -112,7 +114,9 @@ describe('IvaManagerFilter', () => {
   });
 
   it('should clear the filter with the remove buttons', async () => {
-    const name = screen.getByRole('textbox', { name: 'Name or email of user' });
+    const name = screen.getByRole('textbox', {
+      name: 'Name or LS Login email of user',
+    });
     const until = screen.getByRole('textbox', { name: 'Last modified until' });
     await userEvent.type(name, 'Doe');
     await userEvent.type(until, '2/28/2025');

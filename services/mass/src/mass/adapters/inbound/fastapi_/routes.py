@@ -78,18 +78,33 @@ async def search(  # noqa: PLR0913
         Query(description="Values(s) that shall be used for filtering results"),
     ] = None,
     skip: Annotated[
-        int, Query(description="The number of results to skip for pagination")
+        int,
+        Query(
+            ge=0,
+            le=2**63 - 1,  # MongoDB cannot encode larger ints
+            description="The number of results to skip for pagination",
+        ),
     ] = 0,
     limit: Annotated[
-        int | None, Query(description="Limit the results to this number")
-    ] = None,
-    order_by: Annotated[
-        list[str] | None,
-        Query(description="Field(s) that shall be used for sorting results"),
-    ] = None,
+        int,
+        Query(
+            ge=0,
+            le=1000,
+            description="The maximum number of results to return,"
+            + " where 0 returns only the facets and the total count",
+        ),
+    ] = 100,
     sort: Annotated[
-        list[models.SortOrder] | None,
-        Query(description="Sort order(s) that shall be used when sorting results"),
+        str | None,
+        Query(
+            description="A comma-separated list of field names defining the sort"
+            + " order, where field names prefixed with '-' indicate descending order"
+            + " (e.g. 'type,-title'). The reserved name 'relevance' sorts by how well"
+            + " the results match the query, best first."
+            + " Defaults to sorting by relevance if a query is given."
+            + " If 'id_' is not referenced, it is appended as an ascending"
+            + " tiebreaker to guarantee a stable order."
+        ),
     ] = None,
 ) -> models.QueryResults | None:
     """Perform search query"""
@@ -103,17 +118,6 @@ async def search(  # noqa: PLR0913
     except ValueError as err:
         detail = "Number of fields to filter by must match number of values"
         raise HTTPException(status_code=422, detail=detail) from err
-    if order_by and len(set(order_by)) < len(order_by):
-        detail = "Fields to order by must be unique"
-        raise HTTPException(status_code=422, detail=detail)
-    try:
-        sorting_parameters = [
-            models.SortingParameter(field=field, order=order)
-            for field, order in zip(order_by or [], sort or [], strict=True)
-        ]
-    except ValueError as err:
-        detail = "Number of fields to order by must match number of sort options"
-        raise HTTPException(status_code=422, detail=detail) from err
     try:
         results = await query_handler.handle_query(
             class_name=class_name,
@@ -121,7 +125,7 @@ async def search(  # noqa: PLR0913
             filters=filters,
             skip=skip,
             limit=limit,
-            sorting_parameters=sorting_parameters,
+            sort=[spec.strip() for spec in sort.split(",")] if sort else None,
         )
     except query_handler.ClassNotConfiguredError as err:
         raise HTTPException(
@@ -129,6 +133,8 @@ async def search(  # noqa: PLR0913
             detail="The specified class name is invalid."
             + " See /search-options for a list of valid class names.",
         ) from err
+    except query_handler.SortError as err:
+        raise HTTPException(status_code=422, detail=str(err)) from err
     except (query_handler.SearchError, query_handler.ValidationError) as err:
         log.error(err, exc_info=True)
         raise HTTPException(

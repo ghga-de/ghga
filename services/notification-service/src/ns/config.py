@@ -17,6 +17,7 @@
 
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
 from ns.adapters.inbound.event_sub import EventSubTranslatorConfig
@@ -29,6 +30,7 @@ SERVICE_NAME = "ns"
 
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
+    OpenTelemetryConfig,
     KafkaConfig,
     EventSubTranslatorConfig,
     SmtpClientConfig,

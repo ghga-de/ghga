@@ -63,6 +63,9 @@ Metadata stored on documents:
 - `__metadata__.published` (bool): Whether the most recent change has been published to Kafka.
 - `__metadata__.correlation_id` (UUID): Correlation ID captured from context when the change was made; reused on (re)publish for tracing.
 - `__metadata__.last_event_id` (UUID | None): Event ID of the last emitted outbox event.
+- `__metadata__.write_id` (UUID): Random ID of the latest write.
+  A write is marked as published only while the document still carries its write ID, so a publish that finishes after a newer write neither reverts that write nor marks it as published.
+  Such a publish then repeats with the current state, so that the last event on the topic shows the newest state.
 
 When data is either added or modified deleted, the Outbox Publisher feeds the data into the Factory's `dto_to_event()` method to obtain the desired representation for an event.
 This might match the original data, or it might remove fields, e.g. to avoid transmitting superfluous information.
@@ -79,19 +82,76 @@ Republishing events:
 Correlation & Event IDs:
 
 - The current correlation ID is captured and stored on each write.
+  A write raises a `CorrelationIdContextError` if no correlation ID is set in the context.
 - During (re)publish, the stored correlation ID is re-applied to the context so downstream consumers see a consistent trace.
 - Event IDs are generated every time the data is (re)published, and the ID is stored after the event is published.
   This is different from the Persistent Publisher in that the latter will reuse the same event ID.
+
+### One DAO per collection
+
+A collection served by an Outbox Publisher must be read and written only through Outbox Publishers created with the same `dto_model`, `dto_to_event` and `event_topic`.
+Several instances of that DAO, such as the replicas of a service, may write the collection at the same time.
+The rule applies to the collection in its database, so it binds every service and process that opens the same database, not only the one that created the DAO.
+Collections with the same name in different databases are independent.
+This includes the usual case of a service that consumes the outbox events and keeps a copy of the resources in its own database: the copy is a different collection, so that service may use any DAO for it, such as a plain `MongoDbDao`.
+Opening the outbox collection with another DAO, such as a plain `MongoDbDao`, or writing it directly is not supported, because such access bypasses the outbox:
+
+- A write publishes no event, so consumers miss the change.
+- A write replaces or omits `__metadata__`, so an unpublished change drops out of `publish_pending()`, and a concurrent publish can no longer tell by the write ID that it was overtaken.
+- An upsert brings a deleted resource back, and a delete removes its stub, so `republish()` can no longer send the deletion.
+- A read does not know deletion stubs, so it fails to validate a stub or returns it as a resource.
+
+Migrations that change documents before the service starts are the exception; they must keep `__metadata__` intact.
+
+### Publishing a batch
+
+The batch operations publish one event per resource they wrote, after their write, as the single-resource methods do.
+`insert_many` treats a tombstoned ID as taken, as `insert` does, and `upsert_many` recreates a tombstoned resource, as `upsert` does.
+`update_many` leaves tombstones alone and reports their IDs as missing, as `update` does, and `delete_many` tombstones only the resources that are not deleted yet.
+When some tombstones cannot be written, `delete_many` raises a `BatchOperationError` that maps each of those IDs to `DbTimeoutError` if its write timed out, or to another `DaoError`.
+
+A batch publishes its events one after another, each the way a single write does: it sends the event, then marks the write as published by its write ID, or publishes the current state again if a newer write replaced it.
+A bulk write reports only how many documents it matched, not which: `update_many` looks up the missing IDs when fewer matched than it sent, and `delete_many` looks up the live IDs before its write.
+The lookup of `delete_many` sends every ID in one filter, so past a few hundred thousand IDs it raises `DaoError`, as the [MongoDB guide](mongodb.qmd#batch-operations) explains for the provider's own `delete_many`.
+A resource that another writer creates or deletes around these lookups can get the batch's event although the batch did not write it, followed by its stored state, so the last event on the topic is still right.
+
+A batch raises at its first failed publish, as a single write does, although its write is stored.
+The resources not published keep `__metadata__.published == False`, so `publish_pending()` sends them later.
+When the write failed for some IDs, the batch logs the failed publish as a warning and raises its `BatchOperationError` instead, since that error names the writes that were lost.
+A batch with a write concern error publishes nothing, as a single write: its error names every resource the write concern left unconfirmed, and `publish_pending()` sends them later.
+A send already retries by itself when a connection drops or a partition moves to another broker, until the producer's request timeout of 40 s runs out.
+
+Each resource costs one send and one mark write.
+On a local broker and database, publishing 10,000 resources took 29 s, against 0.2 s for their write; the sends alone took 10 s of that.
+Publishing could be faster, at costs that kept these options out so far:
+
+- **Sending concurrently.**
+  One gather over all sends is slower than sending one by one, since aiokafka wakes every waiting send whenever it drains a batch: 10,000 gathered sends took 19 s, against 10 s one by one.
+  Gathering in chunks of 1,000 took 1.7 s, with the costs listed below.
+- **Marking in one bulk write.**
+  A bulk write reports only how many documents it matched, not which, so it cannot tell which writes a newer write replaced and whose current state needs publishing again.
+  Finding those takes one more lookup after the marks, and a write can still replace a document between the two.
+
+Concurrent sends cost:
+
+- **Timeouts**: sends queue in aiokafka until their turn, and too many at once wait past the request timeout; in one run, 9,668 of 20,000 gathered sends timed out.
+- **CPU**: concurrent sends keep the event loop busy the whole time, so a service's requests and consumer heartbeats wait meanwhile.
+  The chunks used 1.7 s of CPU in 1.7 s and one gather 19 s in 19 s, against 5 s in 10 s one by one.
+- **Memory**: every send in flight holds its payload and future.
+  The traced peak was 0.3 MiB one by one, 5.5 MiB for chunks of 1,000, and 55 MiB for one gather of 10,000 small events.
 
 ### Usage example
 
 The following shows a contrived example of how to use the Outbox Publisher:
 
 ```python
-from pydantic import BaseModel
 from uuid import UUID
 
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory, MongoKafkaConfig
+from pydantic import BaseModel
+
+from hexkit.correlation import set_new_correlation_id
+from hexkit.providers.mongokafka import MongoKafkaConfig, MongoKafkaDaoPublisherFactory
+
 
 # Define a model
 class User(BaseModel):
@@ -121,17 +181,20 @@ async with MongoKafkaDaoPublisherFactory.construct(config=config) as factory:
         autopublish=True,
     )
 
-    # Create or update data -> publishes a CHANGE event
-    await user_dao.upsert(
-        User(
-            user_id=UUID("2e3975db-2c80-49f1-9f6b-cbb0174ca8f3"),
-            name="Jane",
-            email="jane@example.com",
+    # Writes need a correlation ID in the context. A service usually sets it
+    # per request or gets it from the consumed event; here, set a new one.
+    async with set_new_correlation_id():
+        # Create or update data -> publishes a CHANGE event
+        await user_dao.upsert(
+            User(
+                user_id=UUID("2e3975db-2c80-49f1-9f6b-cbb0174ca8f3"),
+                name="Jane",
+                email="jane@example.com",
+            )
         )
-    )
 
-    # Delete data -> publishes a DELETE tombstone
-    await user_dao.delete(UUID("2e3975db-2c80-49f1-9f6b-cbb0174ca8f3"))
+        # Delete data -> publishes a DELETE tombstone
+        await user_dao.delete(UUID("2e3975db-2c80-49f1-9f6b-cbb0174ca8f3"))
 
     # Operational controls
     await user_dao.publish_pending()  # Drain any unpublished changes
@@ -239,28 +302,127 @@ There are three parameters unique to the Persistent Publisher: `compacted_topics
 ### Usage example in service 'abc'
 
 ```python
-from hexkit.providers.mongokafka import PersistentKafkaPublisher
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
 from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.providers.mongokafka import MongoKafkaConfig
+from hexkit.providers.mongokafka import MongoKafkaConfig, PersistentKafkaPublisher
 
 # Normally, topics would be defined in configuration. This is only for conciseness:
 COMPACTED_TOPICS = {"users"}
 TOPICS_NOT_STORED = {"notifications"}
 
+
 @asynccontextmanager
 async def get_persistent_publisher(
-    config: MongoKafkaConfig, dao_factory: MongoDbDaoFactory | None = None
-) -> AsyncGenerator[PersistentKafkaPublisher]:
+    config: MongoKafkaConfig,
+) -> AsyncGenerator[PersistentKafkaPublisher, None]:
     """Construct and return a PersistentKafkaPublisher."""
     async with (
-        MongoDbDaoFactory.construct(config=config) as _dao_factory,
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
         PersistentKafkaPublisher.construct(
             config=config,
-            dao_factory=_dao_factory,
+            dao_factory=dao_factory,
             compacted_topics=COMPACTED_TOPICS,
-            topics_not_stored=TOPICS_NOT_STORED
+            topics_not_stored=TOPICS_NOT_STORED,
             collection_name="abcPersistedEvents",
         ) as persistent_publisher,
     ):
         yield persistent_publisher
 ```
+
+## MongoDB + Kafka Test Utils
+
+Integration tests of the Outbox Publisher and the Persistent Publisher need a MongoDB and a Kafka container at the same time.
+`hexkit.providers.mongokafka.testutils` combines the [MongoDB fixtures](mongodb.qmd#mongodb-test-utils) and the [Kafka fixtures](kafka/test_utils.qmd) so that a test gets one `MongoKafkaConfig` for both containers.
+There is no separate extra for it; install the extras of both fixtures, which the `test` extra also includes:
+
+```sh
+pip install hexkit[test-mongodb,test-akafka]
+```
+
+### Fixtures
+
+The module provides two fixtures:
+
+- `mongo_kafka_fixture` (fixture name `mongo_kafka`) is function-scoped and yields a [`MongoKafkaFixture`](#the-mongokafkafixture).
+- `mongo_kafka_config_fixture` (fixture name `mongo_kafka_config`) is session-scoped and yields only the combined `MongoKafkaConfig`, for use in session-scoped fixtures of your own.
+
+Neither starts a container.
+`mongo_kafka` builds on the fixtures named `mongodb` and `kafka`, and `mongo_kafka_config` on those named `mongodb_container` and `kafka_container`.
+Import all of them into the test module or its `conftest.py`, hence the `# noqa: F401` comments.
+
+This test checks that the `users` DAO from the [usage example](#usage-example) publishes a change event on insert.
+The DAO's writes raise a `CorrelationIdContextError` without a [correlation ID](../observability_tools/correlation_ids.qmd) in the context, so the test sets one with `set_new_correlation_id()`:
+
+```python
+from uuid import uuid4
+
+import pytest
+
+from hexkit.correlation import set_new_correlation_id
+from hexkit.providers.akafka.testutils import (
+    ExpectedEvent,
+    kafka_container_fixture,  # noqa: F401
+    kafka_fixture,  # noqa: F401
+)
+from hexkit.providers.mongodb.testutils import (
+    mongodb_container_fixture,  # noqa: F401
+    mongodb_fixture,  # noqa: F401
+)
+from hexkit.providers.mongokafka import (
+    CHANGE_EVENT_TYPE,
+    MongoKafkaDaoPublisherFactory,
+)
+from hexkit.providers.mongokafka.testutils import (
+    MongoKafkaFixture,
+    mongo_kafka_fixture,  # noqa: F401
+)
+
+
+@pytest.mark.asyncio()
+async def test_user_outbox(mongo_kafka: MongoKafkaFixture):
+    user = User(user_id=uuid4(), name="Jane", email="jane@example.com")
+
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=mongo_kafka.config
+    ) as factory:
+        user_dao = await factory.get_dao(
+            name="users",
+            dto_model=User,
+            id_field="user_id",
+            dto_to_event=user_to_event,
+            event_topic="users.outbox",
+        )
+        async with (
+            set_new_correlation_id(),
+            mongo_kafka.kafka.expect_events(
+                events=[
+                    ExpectedEvent(
+                        payload=user_to_event(user),
+                        type_=CHANGE_EVENT_TYPE,
+                        key=str(user.user_id),
+                    )
+                ],
+                in_topic="users.outbox",
+            ),
+        ):
+            await user_dao.insert(user)
+```
+
+`mongo_kafka` does no cleanup of its own: the `mongodb` and `kafka` fixtures do it.
+With `mongodb_fixture` and `kafka_fixture`, as above, each test starts with no collections and empty topics.
+To keep state between tests, import `persistent_mongodb_fixture` and `persistent_kafka_fixture` instead.
+
+Unlike the MongoDB and Kafka fixtures, these two have no factory functions, so their scopes and names are fixed.
+If you rename the MongoDB or Kafka fixtures with their factory functions, `mongo_kafka` and `mongo_kafka_config` no longer find them.
+
+### The MongoKafkaFixture
+
+A `MongoKafkaFixture` is a named tuple with three fields:
+
+- `mongodb`: the `MongoDbFixture`, whose `client` lets a test inspect stored documents, including their `__metadata__`.
+- `kafka`: the [`KafkaFixture`](kafka/test_utils.qmd#the-kafkafixture), for publishing test events and asserting on published ones.
+- `config`: the `MongoKafkaConfig` that combines the configs of both fixtures, to pass to `MongoKafkaDaoPublisherFactory.construct()` or `PersistentKafkaPublisher.construct()`.
+
+The Persistent Publisher also needs a DAO factory; pass it `mongo_kafka.mongodb.dao_factory`.

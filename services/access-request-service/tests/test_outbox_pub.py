@@ -33,7 +33,7 @@ from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 from hexkit.utils import now_utc_ms_prec
-from tests.test_repository import AccessGrantsDummy
+from tests.test_repository import AccessGrantsDummy, SmsNotifierDummy
 
 pytestmark = pytest.mark.asyncio()
 
@@ -91,6 +91,7 @@ async def test_upsert(config, kafka: KafkaFixture, mongodb: MongoDbFixture):
         assert event.key == event.payload["id"] == str(access_request.id)
         assert event.payload["status"] == "pending"
         assert event.payload["ticket_id"] is None
+        assert event.payload["contact_email"] == "me@john-doe.name"
 
         # Perform an update to the request
         access_request_update = access_request.model_copy(
@@ -142,6 +143,7 @@ async def test_delete(config, kafka: KafkaFixture, mongodb: MongoDbFixture):
             access_request_dao=request_dao,
             dataset_dao=dataset_dao,
             access_grants=AccessGrantsDummy(),
+            sms_notifier=SmsNotifierDummy(),
         )
         async with kafka.record_events(
             in_topic=config.access_request_topic

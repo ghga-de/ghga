@@ -14,6 +14,7 @@ audit_record_topic: "audit-records"
 audit_record_type: "audit_record_created"
 file_upload_box_topic: "file-upload-boxes"
 research_data_upload_box_topic: "research-data-upload-boxes"
+upload_box_priority_topic: "upload-box-priority"
 accession_map_topic: file-accession-mappings
 study_topic: "studies"
 resource_change_topic: "searchable-resources"

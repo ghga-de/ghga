@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-06-30
+amended: 2026-10-15
 tags: [build]
 related: [ADR-0027]
 ---
@@ -36,7 +37,9 @@ Published libraries supported a broad Python range, while services target 3.13.
 - Internal libraries are consumed **from source** through `[tool.uv.sources]` (`hexkit = { workspace = true }`).
   There is **one `uv.lock`**, so every package has exactly one resolved version across the repo.
 - The workspace baseline is **Python 3.13**.
+  **Amended 2026-10-15:** the baseline is **Python 3.14**.
 - The published libraries and CLIs share one `requires-python` floor, currently 3.11, and are tested standalone across 3.11 to 3.14 against dependencies resolved from PyPI ([ADR-0027](adr-0027-versioning-and-release-by-tag.md)).
+  **Amended 2026-10-15:** the tested range reaches 3.15, and the floor stays 3.11 until 3.11 reaches end of life in October 2027, when it moves to 3.12.
 
 ### Consequences
 

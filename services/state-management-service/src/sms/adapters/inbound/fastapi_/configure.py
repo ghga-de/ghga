@@ -17,6 +17,7 @@
 
 from typing import Any
 
+import fastapi
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
@@ -38,7 +39,9 @@ def get_openapi_schema(api: FastAPI) -> dict[str, Any]:
 
 def get_configured_app(*, config: ApiConfigBase) -> FastAPI:
     """Create and configure a REST API application."""
-    app = FastAPI()
+    # The OpenTelemetry setup replaces `fastapi.FastAPI` after this module bound
+    # `FastAPI`, so look the class up here to get the instrumented one.
+    app = fastapi.FastAPI()
     app.include_router(router)
 
     configure_app(app, config=config)

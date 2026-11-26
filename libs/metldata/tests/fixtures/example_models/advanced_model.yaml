@@ -9,6 +9,19 @@ imports:
 default_range: string
 
 classes:
+  Study:
+    description: >-
+      A Study is the scope of a submission.
+    slots:
+      - alias
+      - description
+    slot_usage:
+      alias:
+        required: true
+        identifier: true
+      description:
+        required: true
+
   File:
     description: >-
       A file is an object that contains information generated from a process, either an
@@ -90,11 +103,19 @@ classes:
       A submission can be considered as a set of inter-related (and inter-connected)
       entities that represent a data submission to GHGA.
     slots:
+      - studies
       - files
       - datasets
       - samples
       - experiments
     slot_usage:
+      studies:
+        required: true
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+        minimum_cardinality: 1
+        maximum_cardinality: 1
       files:
         required: true
         multivalued: true
@@ -122,6 +143,11 @@ slots:
 
   description:
     description: Description of an entity.
+
+  studies:
+    description: >-
+      The study associated with an entity.
+    range: Study
 
   files:
     description: >-

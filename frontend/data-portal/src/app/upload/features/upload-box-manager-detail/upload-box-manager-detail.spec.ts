@@ -22,6 +22,7 @@ import {
 import { UploadGrant } from '@app/upload/models/grant';
 import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
+import { toMarkup } from '@app/shared/utils/html';
 import { screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
 import { UploadBoxMapping } from '../upload-box-mapping/upload-box-mapping';
@@ -276,6 +277,9 @@ describe('UploadBoxManagerDetail', () => {
       uploadBoxService.setBoxGrants(uploadGrants);
       await fixture.whenStable();
       expect(screen.getAllByText('John Doe (doe@home.org)')).toHaveLength(3);
+      expect(
+        screen.getByRole('columnheader', { name: 'Grantee (LS Login email)' }),
+      ).toBeVisible();
     });
 
     it('should mark a grant as active while today is within its validity period', async () => {
@@ -441,7 +445,7 @@ describe('UploadBoxManagerDetail', () => {
       await fixture.whenStable();
 
       const { message } = mockDialog.open.mock.calls[0][1].data;
-      expect(message).toContain('<strong>&lt;i&gt;x&lt;/i&gt;.bam</strong>');
+      expect(toMarkup(message)).toContain('<strong>&lt;i&gt;x&lt;/i&gt;.bam</strong>');
     });
 
     it('should ask for confirmation and delete on confirm for a re-encrypted file', async () => {
@@ -524,6 +528,28 @@ describe('UploadBoxManagerDetail', () => {
       expect(component.canDeleteFile(failedFile)).toBe(false);
     });
 
+    it('should not offer a retry for a file that failed before re-encryption', () => {
+      expect(component.canRequeueFileFn({ ...failedFile, state: 'failed' })).toBe(
+        false,
+      );
+    });
+
+    it('should offer no retry in an archived box', async () => {
+      const archived = {
+        ...lockedBox,
+        id: 'archived-box',
+        state: UploadBoxState.archived,
+      };
+      uploadBoxService.setSingleBox(archived);
+      fixture.componentRef.setInput('id', archived.id);
+      await fixture.whenStable();
+
+      expect(component.canRequeueFileFn(failedFile)).toBe(false);
+      expect(
+        screen.queryByRole('button', { name: /retry failed re-encryptions/i }),
+      ).not.toBeInTheDocument();
+    });
+
     it('should requeue a file after confirmation', async () => {
       component.requeueFile(failedFile);
       await fixture.whenStable();
@@ -545,7 +571,7 @@ describe('UploadBoxManagerDetail', () => {
       await fixture.whenStable();
 
       const { message } = mockDialog.open.mock.calls[0][1].data;
-      expect(message).toContain('<strong>a&amp;b.bam</strong>');
+      expect(toMarkup(message)).toContain('<strong>a&amp;b.bam</strong>');
     });
 
     it('should not requeue a file when the confirmation is cancelled', async () => {

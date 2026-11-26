@@ -25,7 +25,7 @@ from dataclasses import dataclass
 import pytest
 from pydantic import RedisDsn, Secret
 from redis import Redis
-from testcontainers.redis import RedisContainer
+from testcontainers.community.redis import RedisContainer
 
 from hexkit.custom_types import PytestScope
 from hexkit.providers.redis.config import RedisConfig

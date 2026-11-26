@@ -25,6 +25,7 @@ import pytest
 from fastapi import FastAPI, status
 from httpx2 import Response
 
+from auth_service.auth_adapter.core.session_store import SessionState
 from auth_service.auth_adapter.deps import (
     SESSION_COOKIE,
     get_session_store,
@@ -33,7 +34,6 @@ from auth_service.auth_adapter.deps import (
 from auth_service.claims_repository.deps import get_claim_dao
 from auth_service.user_registry.deps import get_iva_dao, get_user_dao
 from auth_service.user_registry.models.users import UserStatus
-from ghga_service_commons.api.mock_router import MockRouter
 from tests.fixtures.constants import ID_OF_JAMES, ID_OF_JOHN
 
 from ...fixtures.utils import (
@@ -43,6 +43,7 @@ from ...fixtures.utils import (
     MockIvaDao,
     MockUserDao,
     MockUserTokenDao,
+    OidcProviderMock,
     create_access_token,
     headers_for_session,
     mock_userinfo,
@@ -65,6 +66,22 @@ LOGOUT_PATH = AUTH_PATH + "/rpc/logout"
 def expected_set_cookie(session_id: str) -> str:
     """Get the expected Set-Cookie header for the auth session cookie."""
     return f"session={session_id}; HttpOnly; Path=/; SameSite=lax; Secure"
+
+
+def assert_cookie_deleted(response: Response) -> None:
+    """Assert that the response tells the client to delete the session cookie."""
+    cookie = response.headers.get("Set-Cookie")
+    assert cookie
+    assert "expires=" in cookie
+    assert "Max-Age=0" in cookie
+    cookie = ";".join(
+        filter(
+            lambda part: not part.startswith(" expires=") and part != " Max-Age=0",
+            cookie.split(";"),
+        )
+    )
+    assert cookie == expected_set_cookie('""')
+    assert SESSION_COOKIE not in response.cookies
 
 
 def setup_daos(
@@ -113,19 +130,7 @@ async def test_logout(bare_client: BareClient):
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not await store.get_session(session.session_id)
 
-    cookie = response.headers.get("Set-Cookie")
-    assert cookie
-    assert "expires=" in cookie
-    assert "Max-Age=0" in cookie
-    cookie = ";".join(
-        filter(
-            lambda part: not part.startswith(" expires=") and part != " Max-Age=0",
-            cookie.split(";"),
-        )
-    )
-    assert cookie == expected_set_cookie('""')
-
-    assert SESSION_COOKIE not in response.cookies
+    assert_cookie_deleted(response)
     assert "X-Session" not in response.headers
 
 
@@ -161,10 +166,10 @@ async def test_logout_with_invalid_csrf_token(bare_client: BareClient):
 
 
 async def test_login_with_unregistered_user(
-    bare_client: BareClient, mock_router: MockRouter
+    bare_client: BareClient, oidc_provider: OidcProviderMock
 ):
     """Test that a login request can create a new session for an unregistered user."""
-    mock_userinfo(mock_router, USER_INFO)
+    mock_userinfo(oidc_provider, USER_INFO)
 
     setup_daos(bare_client.app, ext_id="not.john@aai.org")
 
@@ -191,11 +196,11 @@ async def test_login_with_unregistered_user(
 
 
 async def test_login_with_invalid_userinfo(
-    bare_client: BareClient, mock_router: MockRouter
+    bare_client: BareClient, oidc_provider: OidcProviderMock
 ):
     """Test that a login request fails when user info cannot be retrieved."""
     bad_user_info = {**USER_INFO, "sub": "not.john@aai.org"}
-    mock_userinfo(mock_router, bad_user_info)
+    mock_userinfo(oidc_provider, bad_user_info)
 
     setup_daos(bare_client.app, ext_id="not.john@aai.org")
 
@@ -211,10 +216,10 @@ async def test_login_with_invalid_userinfo(
 
 
 async def test_login_with_registered_user(
-    bare_client: BareClient, mock_router: MockRouter
+    bare_client: BareClient, oidc_provider: OidcProviderMock
 ):
     """Test that a login request can create a new session for a registered user."""
-    mock_userinfo(mock_router, USER_INFO)
+    mock_userinfo(oidc_provider, USER_INFO)
 
     setup_daos(bare_client.app)
 
@@ -242,11 +247,11 @@ async def test_login_with_registered_user(
 
 
 async def test_login_with_registered_user_and_name_change(
-    bare_client: BareClient, mock_router: MockRouter
+    bare_client: BareClient, oidc_provider: OidcProviderMock
 ):
     """Test a login request for a user when the name was changed."""
     changed_user_info = {**USER_INFO, "name": "John Doe Jr."}
-    mock_userinfo(mock_router, changed_user_info)
+    mock_userinfo(oidc_provider, changed_user_info)
 
     setup_daos(bare_client.app)
 
@@ -274,10 +279,10 @@ async def test_login_with_registered_user_and_name_change(
 
 
 async def test_login_with_registered_user_with_title(
-    bare_client: BareClient, mock_router: MockRouter
+    bare_client: BareClient, oidc_provider: OidcProviderMock
 ):
     """Test a login request for a user when a title was entered."""
-    mock_userinfo(mock_router, USER_INFO)
+    mock_userinfo(oidc_provider, USER_INFO)
 
     setup_daos(bare_client.app, title="Dr.")
 
@@ -306,17 +311,91 @@ async def test_login_with_registered_user_with_title(
 
 
 async def test_login_with_deactivated_user(
-    bare_client: BareClient, mock_router: MockRouter
+    bare_client: BareClient, oidc_provider: OidcProviderMock
 ):
     """Test that a login request for a registered deactivated user fails."""
-    mock_userinfo(mock_router, USER_INFO)
+    mock_userinfo(oidc_provider, USER_INFO)
 
     setup_daos(bare_client.app, status=UserStatus.INACTIVE)
 
     auth = f"Bearer {create_access_token()}"
     response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == {"detail": "User account is disabled"}
+
+    # no session is left behind, and no cookie is set
+    store = bare_client.app.dependency_overrides[get_session_store]()
+    assert await store.get_size() == 0
+    assert "Set-Cookie" not in response.headers
+    assert "X-Session" not in response.headers
+
+
+async def test_login_with_stale_cookie_and_deactivated_user(
+    bare_client: BareClient, oidc_provider: OidcProviderMock
+):
+    """Test that a failed login clears a cookie that points to no session."""
+    mock_userinfo(oidc_provider, USER_INFO)
+
+    setup_daos(bare_client.app, status=UserStatus.INACTIVE)
+
+    auth = f"Bearer {create_access_token()}"
+    headers = {"Authorization": auth, "Cookie": f"{SESSION_COOKIE}=expired"}
+    response = await bare_client.post(LOGIN_PATH, headers=headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {"detail": "User account is disabled"}
+
+    store = bare_client.app.dependency_overrides[get_session_store]()
+    assert await store.get_size() == 0
+    assert_cookie_deleted(response)
+
+
+async def test_login_with_cookie_and_deactivated_user(bare_client: BareClient):
+    """Test that a login request with a session of a deactivated user ends it."""
+    setup_daos(bare_client.app, status=UserStatus.INACTIVE)
+
+    store = bare_client.app.dependency_overrides[get_session_store]()
+    session = await store.create_session(
+        ext_id="john@aai.org",
+        user_id=str(ID_OF_JOHN),
+        user_name="John Doe",
+        user_email="john@home.org",
+    )
+    assert await store.get_session(session.session_id)
+    headers = headers_for_session(session)
+    response = await bare_client.post(LOGIN_PATH, headers=headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {"detail": "User account is disabled"}
+
+    # the session has been removed, and the client is told to delete the cookie
+    assert not await store.get_session(session.session_id)
+    assert_cookie_deleted(response)
+    assert "X-Session" not in response.headers
+
+
+async def test_login_with_cookie_and_deleted_user(bare_client: BareClient):
+    """Test that a login request with a session of a deleted user ends it."""
+    # the user DAO knows only James, so John counts as deleted
+    setup_daos(bare_client.app, id_=ID_OF_JAMES)
+
+    store = bare_client.app.dependency_overrides[get_session_store]()
+    session = await store.create_session(
+        ext_id="john@aai.org",
+        user_id=str(ID_OF_JOHN),
+        user_name="John Doe",
+        user_email="john@home.org",
+        roles=["data_steward"],
+    )
+    session.state = SessionState.AUTHENTICATED
+    await store.save_session(session)
+    headers = headers_for_session(session)
+    response = await bare_client.post(LOGIN_PATH, headers=headers)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "User account has been deleted"}
+
+    # the session has been removed, and the client is told to delete the cookie
+    assert not await store.get_session(session.session_id)
+    assert_cookie_deleted(response)
+    assert "X-Session" not in response.headers
 
 
 async def test_login_without_access_token(bare_client: BareClient):

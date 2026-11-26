@@ -19,12 +19,14 @@ from pydantic import Field
 
 from ars.adapters.inbound.event_sub import EventSubTranslatorConfig
 from ars.adapters.outbound.daos import AccessRequestDaoConfig
+from ars.adapters.outbound.event_pub import SmsNotifierConfig
 from ars.adapters.outbound.http import AccessGrantsConfig
 from ars.core.repository import AccessRequestConfig
 from ghga_service_commons.api import ApiConfigBase
 from ghga_service_commons.auth.ghga import AuthConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
 
@@ -33,6 +35,7 @@ SERVICE_NAME = "ars"
 
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
+    OpenTelemetryConfig,
     ApiConfigBase,
     AuthConfig,
     LoggingConfig,
@@ -41,6 +44,7 @@ class Config(
     EventSubTranslatorConfig,
     AccessRequestDaoConfig,
     AccessGrantsConfig,
+    SmsNotifierConfig,
     AccessRequestConfig,
 ):
     """Config parameters and their defaults."""

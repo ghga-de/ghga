@@ -13,16 +13,44 @@
 
   // Copilot finds the root `AGENTS.md` by itself, but the nested ones only with this.
   "chat.useNestedAgentsMdFiles": true,
+  // Lets chat agents open and inspect pages in the integrated browser, such as the demo's
+  // data portal.
+  "workbench.browser.enableChatTools": true,
+
+  // The fixes the trailing-whitespace and end-of-file-fixer hooks make, applied on save.
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
 
   // Markdown is one sentence per line (ADR-0044), so long lines are read soft-wrapped.
+  // Trailing spaces stay, as the hook keeps them as hard line breaks.
   "[markdown]": {
-    "editor.wordWrap": "on"
+    "editor.wordWrap": "on",
+    "files.trimTrailingWhitespace": false
   },
+
+  // Ruff is the Python formatter and linter (mirrors `just fmt`).
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+
+  // Some YAML files, such as the metldata test models and the front end's pnpm-lock.yaml,
+  // exceed the default outline limit of 5000 items.
+  "yaml.maxItemsComputed": 15000,
 
   "search.exclude": {
     ".legacy_repos/**": true,
     ".migration-work/**": true,
-    "**/.venv/**": true
+    "**/.venv/**": true,
+    // symlinks to skills under .agents/skills or a library's src: searching through
+    // them would show every hit twice and bypass the .gitignore patterns, which
+    // match the real path only
+    "**/.claude/skills/**": true,
+    ".agents/skills/hexkit/**": true
   },
   "files.exclude": {
     ".migration-work": true

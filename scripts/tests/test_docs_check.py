@@ -1,4 +1,4 @@
-"""Tests for docs_check.py: the ADR rules, the epic shape, references and the indexes."""
+"""Tests for docs_check.py: ADR, epic and concept rules, references and the indexes."""
 
 import subprocess
 import sys
@@ -32,6 +32,11 @@ def _adr(number: str, title: str = "A decision", fields: str = "", body: str = B
     return f"---\n{meta}---\n\n# ADR-{number} — {title}\n{body}"
 
 
+def _concept(number: str, title: str = "A concept", fields: str = "") -> str:
+    meta = fields or "status: current\ndate: 2026-10-23\ntags: [backend]\n"
+    return f"---\n{meta}---\n\n# AC-{number} — {title}\n\nText.\n"
+
+
 def _epic(title: str, code_name: str, kind: str = "Implementation Epic"):
     return f"# {title} ({code_name})\n**Epic Type:** {kind}\n"
 
@@ -58,7 +63,7 @@ def _epic_lists(repo: Path) -> tuple[str, str]:
 
 @pytest.fixture
 def repo(tmp_path):
-    """A git repo with two valid ADRs, two valid epics, no skills, and empty indexes."""
+    """A git repo with two valid ADRs, epics and concepts, no skills, empty indexes."""
     adrs = tmp_path / "docs/adrs"
     adrs.mkdir(parents=True)
     (adrs / "adr-template.md").write_text("# ADR-NNNN — {Title}\n" + BODY)
@@ -77,6 +82,13 @@ def repo(tmp_path):
     (epics / "epic-0002-wood-ant/images").mkdir()
     (epics / "epic-0002-wood-ant/images/j.png").write_bytes(b"x")
     (epics / "README.md").write_text(_epic_index())
+    concepts = tmp_path / "docs/architecture"
+    concepts.mkdir()
+    (concepts / "ac-0000-overview.md").write_text(_concept("0000", "Overview"))
+    (concepts / "ac-0001-first.md").write_text(_concept("0001", "First"))
+    (concepts / "README.md").write_text(
+        "# Concepts\n\n<!-- ac-index:start -->\n<!-- ac-index:end -->\n"
+    )
     (tmp_path / "docs/agent-skills.md").write_text(
         "# Skills\n\n<!-- skill-index:start -->\nNone at the moment.\n"
         "<!-- skill-index:end -->\n"
@@ -102,6 +114,7 @@ def test_valid_set_regenerates_indexes_once(repo, capsys):
     assert out.splitlines() == [
         "docs/README.md: regenerated the index; stage the file",
         "docs/epics/README.md: regenerated the index; stage the file",
+        "docs/architecture/README.md: regenerated the index; stage the file",
     ]
     readme = (repo / "docs/README.md").read_text()
     assert "| [0001](adrs/adr-0001-first.md) | First | accepted | docs |" in readme
@@ -112,6 +125,9 @@ def test_valid_set_regenerates_indexes_once(repo, capsys):
         "1. [Blob Fish](./epic-0001-blob-fish.md): Catalog\n"
         "2. [Wood Ant](./epic-0002-wood-ant/README.md): Identity\n",
     )
+    concepts = (repo / "docs/architecture/README.md").read_text()
+    assert "| [0000](ac-0000-overview.md) | Overview | current | backend |" in concepts
+    assert "| [0001](ac-0001-first.md) | First | current | backend |" in concepts
     assert _run(repo, capsys) == (0, "")
 
 
@@ -311,6 +327,10 @@ def test_epic_links(repo, capsys):
             "status: accepted\ndate: 2026-09-15\ntags: [docs]\nrelated: [ADR-0001]\n",
             "names the ADR itself",
         ),
+        (
+            "status: accepted\ndate: 2026-09-15\ntags: [docs]\nrelated: [AC-0001]\n",
+            "value 'AC-0001' is not ADR-NNNN",
+        ),
     ],
 )
 def test_frontmatter_rules(repo, fields, expected):
@@ -368,6 +388,80 @@ def test_superseded_status_needs_superseded_by(repo):
     )
     assert docs_check.load_adrs(repo)[1] == [
         "adr-0001-first.md: status superseded needs superseded-by"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("fields", "expected"),
+    [
+        ("status: accepted\ndate: 2026-10-23\ntags: [docs]\n", "status 'accepted'"),
+        ("status: current\ndate: TBD\ntags: [docs]\n", "date must be"),
+        ("status: current\ndate: 2026-10-23\n", "missing field 'tags'"),
+        (
+            "status: current\ndate: 2026-10-23\ntags: [docs]\nsupersedes: [AC-0000]\n",
+            "unknown field 'supersedes'",
+        ),
+        (
+            "status: current\ndate: 2026-10-23\ntags: [docs]\nrelated: [AC-0009]\n",
+            "related names AC-0009, which does not exist",
+        ),
+        (
+            "status: current\ndate: 2026-10-23\ntags: [docs]\nrelated: [AC-0001]\n",
+            "names the AC itself",
+        ),
+        (
+            "status: current\ndate: 2026-10-23\ntags: [docs]\nrelated: [epic-0001]\n",
+            "is not ADR-NNNN or AC-NNNN",
+        ),
+    ],
+)
+def test_concept_frontmatter_rules(repo, fields, expected):
+    path = repo / "docs/architecture/ac-0001-first.md"
+    path.write_text(_concept("0001", "First", fields))
+    _, problems = docs_check.load_concepts(repo, {"0001"})
+    assert any(expected in p for p in problems), problems
+
+
+def test_concept_may_relate_to_adrs_and_concepts(repo):
+    fields = "status: outdated\ndate: 2026-10-23\ntags: [docs]\n"
+    fields += "related: [ADR-0002, AC-0000]\n"
+    path = repo / "docs/architecture/ac-0001-first.md"
+    path.write_text(_concept("0001", "First", fields))
+    assert docs_check.load_concepts(repo, {"0001", "0002"})[1] == []
+
+
+def test_concept_file_name_title_and_duplicates(repo):
+    concepts = repo / "docs/architecture"
+    (concepts / "ac003_old_name.md").write_text(_concept("0003"))
+    (concepts / "ac-0001-again.md").write_text(_concept("0001"))
+    (concepts / "ac-0004-wrong-number.md").write_text(_concept("0005"))
+    (concepts / "ac-0006-no-frontmatter.md").write_text("# AC-0006 — Bare\n")
+    _, problems = docs_check.load_concepts(repo, set())
+    assert "ac003_old_name.md: file name is not ac-NNNN-kebab-case.md" in problems
+    assert any("number 0001 is taken" in p for p in problems)
+    assert any("ac-0004-wrong-number.md: first line" in p for p in problems)
+    assert "ac-0006-no-frontmatter.md: no YAML frontmatter" in problems
+
+
+def test_concept_references(repo, capsys):
+    (repo / "notes.md").write_text(
+        "AC-0001 is fine, AC-0007 is gone, AC-12 is short.\n"
+        "[ok](docs/architecture/ac-0000-overview.md) "
+        "[gone](../architecture/ac-0002-renamed.md)\n"
+    )
+    (repo / "docs/architecture/ac-0001-first.md").write_text(
+        _concept("0001") + "See [overview](ac-0000-overview.md), [x](ac-0000-old.md).\n"
+    )
+    code, out = _run(
+        repo, capsys, "--refs", "notes.md", "docs/architecture/ac-0001-first.md"
+    )
+    assert code == 1
+    assert out.splitlines() == [
+        "notes.md:1: AC-0007 does not exist",
+        "notes.md:1: 'AC-12' needs a four-digit number",
+        "notes.md:2: link to docs/architecture/ac-0002-renamed.md, which does not exist",
+        "docs/architecture/ac-0001-first.md:10: "
+        "link to docs/architecture/ac-0000-old.md, which does not exist",
     ]
 
 
@@ -538,7 +632,12 @@ def _skill_problems(repo: Path) -> tuple[list[str], list[str]]:
 
 def test_conforming_skills(agents):
     """A skill with name, description and its symlink reports nothing."""
-    _skill(agents, "", "adr", "name: adr\ndescription: Write an ADR.\npaths: [a/**]\n")
+    _skill(
+        agents,
+        "",
+        "adr",
+        "name: adr\ndescription: Write an ADR.\npaths: [a/**]\nargument-hint: <title>\n",
+    )
     assert _skill_problems(agents) == ([], [])
 
 
@@ -559,6 +658,11 @@ def test_conforming_skills(agents):
             "disable-model-invocation must be true or false",
         ),
         ("adr", "name: adr\ndescription: x\npaths: 3\n", "paths must be a glob"),
+        (
+            "adr",
+            "name: adr\ndescription: x\nargument-hint: [title]\n",
+            "argument-hint must be a string",
+        ),
         ("adr", "name: [adr\n", "frontmatter must be a YAML mapping"),
     ],
 )
@@ -619,6 +723,40 @@ def test_skill_symlink(agents):
         ".claude/skills/adr: missing; link it to ../../.agents/skills/adr",
         ".claude/skills/epic: must be a symlink to ../../.agents/skills/epic",
         ".claude/skills/gone: no skill at .agents/skills/gone",
+    ]
+
+
+def _packaged_skill(repo: Path, name: str = "kit") -> None:
+    """Write a skill shipped in a library's package and link it in at the root."""
+    path = repo / "libs/kit/src/kit/.agents/skills" / name / "SKILL.md"
+    path.parent.mkdir(parents=True)
+    path.write_text(f"---\nname: {name}\ndescription: Use {name}.\n---\n\n# Skill\n")
+    (repo / ".agents/skills").mkdir(parents=True, exist_ok=True)
+    (repo / ".agents/skills" / name).symlink_to(
+        f"../../libs/kit/src/kit/.agents/skills/{name}"
+    )
+    (repo / ".claude/skills").mkdir(parents=True, exist_ok=True)
+    (repo / ".claude/skills" / name).symlink_to(f"../../.agents/skills/{name}")
+
+
+def test_packaged_skill(agents):
+    """A skill shipped in a package is a root skill, linked in at the root."""
+    _packaged_skill(agents)
+    assert _skill_problems(agents) == ([], [])
+    _stage(agents)
+    skills, _, _ = docs_check.load_skills(agents, docs_check._tracked(agents))
+    assert [(s.name, s.base) for s in skills] == [("kit", ""), ("qa", "libs")]
+
+
+def test_packaged_skill_links(agents):
+    """The root link to the package comes first; one without a skill is reported."""
+    _packaged_skill(agents)
+    (agents / ".agents/skills/kit").unlink()
+    (agents / ".agents/skills/gone").symlink_to("../../libs/gone")
+    problems, _ = _skill_problems(agents)
+    assert problems == [
+        ".agents/skills/gone: links to no skill shipped in a package",
+        ".agents/skills/kit: missing; link it to ../../libs/kit/src/kit/.agents/skills/kit",
     ]
 
 

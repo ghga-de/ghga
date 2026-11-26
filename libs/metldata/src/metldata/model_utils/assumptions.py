@@ -22,7 +22,11 @@ from metldata.model_utils.anchors import (
     filter_anchor_points,
     get_anchors_points_by_target,
 )
-from metldata.model_utils.essentials import ROOT_CLASS, MetadataModel
+from metldata.model_utils.essentials import (
+    ROOT_CLASS,
+    STUDY_ANCHOR,
+    MetadataModel,
+)
 
 
 class MetadataModelAssumptionError(RuntimeError):
@@ -114,6 +118,61 @@ def check_anchor_points(model: MetadataModel, classes: list[str] | None = None) 
             raise MetadataModelAssumptionError(
                 f"The model is missing anchor points: {error}"
             ) from error
+
+
+def check_study_anchor(model: MetadataModel, study_class_name: str) -> None:
+    """Check that the study class is anchored on the root class under the slot named
+    in STUDY_ANCHOR, which the loader reads the study from.
+
+    Raises:
+        MetadataModelAssumptionError: if validation fails.
+    """
+    check_class_exists(model=model, class_name=study_class_name)
+    check_anchor_points(model=model, classes=[study_class_name])
+
+    root_slot = get_anchors_points_by_target(model=model)[study_class_name].root_slot
+    if root_slot != STUDY_ANCHOR:
+        raise MetadataModelAssumptionError(
+            f"The '{study_class_name}' class must be anchored on the slot"
+            + f" '{STUDY_ANCHOR}', not '{root_slot}'."
+        )
+
+
+def check_dataset_anchor(model: MetadataModel, dataset_class_name: str) -> None:
+    """Check that the dataset class is anchored on the root class, since the
+    accession registry mints dataset PIDs for its entities.
+
+    Raises:
+        MetadataModelAssumptionError: if validation fails.
+    """
+    check_class_exists(model=model, class_name=dataset_class_name)
+    check_anchor_points(model=model, classes=[dataset_class_name])
+
+
+def check_study_cardinality(model: MetadataModel) -> None:
+    """Check that the model holds exactly one study per submission: the root class's
+    STUDY_ANCHOR slot is required and has a minimum and a maximum cardinality of one.
+
+    Raises:
+        MetadataModelAssumptionError: if validation fails.
+    """
+    check_class_slot_exists(model=model, class_name=ROOT_CLASS, slot_name=STUDY_ANCHOR)
+
+    # the cardinality is usually set in the root class's slot_usage, which only the
+    # induced slot reflects
+    slot = model.schema_view.induced_slot(slot_name=STUDY_ANCHOR, class_name=ROOT_CLASS)
+    # minimum_cardinality only applies when the slot is present, so without
+    # required a submission that leaves the slot out holds no study
+    if (
+        not slot.required
+        or slot.minimum_cardinality != 1
+        or slot.maximum_cardinality != 1
+    ):
+        raise MetadataModelAssumptionError(
+            f"The slot '{STUDY_ANCHOR}' of the '{ROOT_CLASS}' class must be required"
+            + " and have a minimum_cardinality and a maximum_cardinality of 1, so"
+            + " that every submission holds exactly one study."
+        )
 
 
 def check_basic_model_assumption(model: MetadataModel) -> None:

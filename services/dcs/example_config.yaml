@@ -26,7 +26,7 @@ cors_allowed_headers: []
 cors_allowed_methods: []
 cors_allowed_origins: []
 cors_exposed_headers: null
-db_name: dev
+db_name: download-controller
 db_version_collection: dcsDbVersions
 docs_url: /docs
 download_bucket_cache_timeout: 7
@@ -35,6 +35,7 @@ download_served_type: download_served
 drs_server_uri: drs://localhost:8080/
 ekss_base_url: http://localhost:8000/ekss
 enable_opentelemetry: false
+enable_otel_metrics: false
 file_deleted_topic: file-downloads
 file_deleted_type: file_deleted
 file_deletion_request_topic: file-deletion-requests
@@ -66,6 +67,7 @@ log_level: INFO
 log_traceback: true
 migration_max_wait_sec: null
 migration_wait_sec: 10
+min_request_interval: 0.0
 mongo_dsn: '**********'
 mongo_timeout: null
 object_storages:
@@ -79,10 +81,9 @@ object_storages:
       s3_session_token: null
 openapi_url: /openapi.json
 otel_trace_sampling_rate: 1.0
-per_request_jitter: 0.0
+per_request_jitter: 0.05
 port: 8080
 presigned_url_expires_after: 30
-retry_after_applicable_for_num_requests: 1
 retry_after_max: 300
 retry_after_min: 5
 service_instance_id: '001'

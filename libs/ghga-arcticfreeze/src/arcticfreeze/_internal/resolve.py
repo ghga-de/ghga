@@ -20,69 +20,77 @@
 from collections.abc import Mapping, Sequence
 
 from arcticfreeze._internal._converters import Converter
-
-
-class ConverterNotFoundError(Exception):
-    """An exception indicating that a converter for a given type could not be found."""
-
-    def __init__(self, *, input_type: type):
-        super().__init__(
-            f"No converter was found freezing an object of type {input_type}."
-        )
+from arcticfreeze._internal.errors import ConverterNotFoundError
 
 
 def sort_and_deduplicate_converters(
     converters: Sequence[Converter],
 ) -> tuple[Sequence[Converter], Mapping[type, Converter]]:
-    """The provided sequence of converters is sorted (1) by decreasing priority and (2)
-    by the order in which they where originally defined. For each object type, only the
-    last converter in the sorted sequence is kept. The function returns a tuple of the
-    sorted sequence of converters and a mapping of sorted converters by object type.
+    """Deduplicate and sort the provided sequence of converters.
+
+    For each object type, only the converter defined last is kept, so a custom
+    converter replaces a standard one for the same type whatever their priorities.
+    The remaining converters are sorted by decreasing priority and, among equal
+    priorities, by the order in which they were defined; matching by superclass
+    follows this order. The function returns a tuple of the sorted sequence of
+    converters and a mapping of these converters by object type.
     """
-    sorted_converters = sorted(
-        converters, key=lambda converter: converter.priority, reverse=True
-    )
     converters_by_input_type = {
+        converter.input_type: converter for converter in converters
+    }
+    sorted_converters = tuple(
+        sorted(
+            converters_by_input_type.values(),
+            key=lambda converter: converter.priority,
+            reverse=True,
+        )
+    )
+    return sorted_converters, {
         converter.input_type: converter for converter in sorted_converters
     }
-    sorted_deduplicated_converters = tuple(converters_by_input_type.values())
-    return sorted_deduplicated_converters, converters_by_input_type
 
 
-def get_converter_by_type(
-    *,
-    input_type: type,
-    converters: Sequence[Converter],
-    by_superclass: bool = True,
-) -> Converter:
-    """Get the converter for the given object type.
+class ConverterResolver:
+    """Resolves the converter for an object type.
 
-    Args:
-        input_type:
-            The type of the object to be converted.
-        converters:
-            A sequence of converters, see the documentation of the `custom_freeze`
-            function for details.
-        by_superclass:
-            Consider superclasses for matching converter, see the documentation of the
-            `freeze` function for details.
-
-    Raises:
-        ConverterNotFoundError:
-            If no converter for the given object type could be found.
+    The converters are sorted and deduplicated once on construction, and each
+    resolved type is cached, so that freezing a large object does not repeat this
+    work for every node.
     """
-    converters, converters_by_input_type = sort_and_deduplicate_converters(converters)
 
-    # try to match by exact type:
-    try:
-        return converters_by_input_type[input_type]
-    except KeyError as error:
-        if not by_superclass:
-            raise ConverterNotFoundError(input_type=input_type) from error
+    def __init__(self, *, converters: Sequence[Converter], by_superclass: bool):
+        """Prepare the lookup.
 
-    # match by superclass:
-    for converter in converters:
-        if issubclass(input_type, converter.input_type):
-            return converter
+        Args:
+            converters:
+                A sequence of converters, see the documentation of the
+                `custom_freeze` function for details.
+            by_superclass:
+                Consider superclasses for matching converter, see the documentation
+                of the `freeze` function for details.
+        """
+        self._sorted_converters, converters_by_input_type = (
+            sort_and_deduplicate_converters(converters)
+        )
+        self._cache: dict[type, Converter] = dict(converters_by_input_type)
+        self._by_superclass = by_superclass
 
-    raise ConverterNotFoundError(input_type=input_type)
+    def resolve(self, input_type: type) -> Converter:
+        """Get the converter for the given object type.
+
+        Raises:
+            ConverterNotFoundError:
+                If no converter for the given object type could be found.
+        """
+        try:
+            return self._cache[input_type]
+        except KeyError as error:
+            if not self._by_superclass:
+                raise ConverterNotFoundError(input_type=input_type) from error
+
+        for converter in self._sorted_converters:
+            if issubclass(input_type, converter.input_type):
+                self._cache[input_type] = converter
+                return converter
+
+        raise ConverterNotFoundError(input_type=input_type)

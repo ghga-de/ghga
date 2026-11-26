@@ -35,11 +35,14 @@ image:
 replicaCount: 1
 revisionHistoryLimit: 1
 shareProcessNamespace: false
+secretEnvFiles:
+  enabled: false
+  dir: /vault/secrets
 podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
   executable: fis
@@ -148,6 +151,27 @@ _topics:
     kafkaUser:
       operations:
       - Read
+  uploadBoxPriority:
+    topic:
+      name: upload_box_priority_topic
+      value: upload-box-priority
+    kafkaUser:
+      operations:
+      - Read
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+      - Write
+  deadLetterQueueRetry:
+    topic:
+      name:
+      value: retry
+    kafkaUser:
+      operations:
+      - Read
 _consumerGroup:
   operations:
   - Read
@@ -162,13 +186,13 @@ kafkaUser:
   caCertSecretName: kafka-cluster-ca-cert
 mongodb:
   dbName: file-ingest
-  service:
-    namespace: mongodb
-    name: mongodb
 apiBasePath: /fis/
 serviceName: fis-rest
 serviceInstanceId:
   fromPodName: false
+otelExcludedUrls: /health$
+otelResource:
+  podName: true
 configMap:
   enabled: true
   mountPath: /etc/config.yaml
@@ -180,15 +204,18 @@ config:
   mongo_dsn:
   db_version_collection: "fisDbVersions"
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
   enable_opentelemetry: false
+  kafka_enable_dlq: true
+  kafka_max_retries: 3
+  kafka_retry_backoff: 2
   ekss_api_url: http://encryption-key-store:8080
 configPrefix: fis
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5
-environment:
-  name: default
-cluster:
-  name: default
+concurrencyPolicy: Forbid
+activeDeadlineSeconds:
+startingDeadlineSeconds:
 httpRoute:
   enabled: false
   port: 8080
@@ -200,6 +227,13 @@ probe:
 healthEndpoint: "/health"
 destinationRule:
   enabled: false
+authorizationPolicy:
+  enabled: false
+  denyAll: false
+  trustDomain: cluster.local
+  callers: {}
+  identities: {}
+  extraRules: []
 networkPolicy:
   enabled: false
   ingress:
@@ -208,50 +242,3 @@ networkPolicy:
         matchLabels:
           ghga-ingress: allow
 strimziApiVersion: kafka.strimzi.io/v1
-vaultAgent:
-  enabled: false
-  annotations:
-    vault.hashicorp.com/tls-skip-verify: "false"
-    vault.hashicorp.com/agent-inject: "true"
-    vault.hashicorp.com/agent-init-first: "true"
-    vault.hashicorp.com/agent-cache-enable: "true"
-    vault.hashicorp.com/agent-pre-populate-only: "false"
-    vault.hashicorp.com/agent-run-as-same-user: "true"
-  role: ""
-  rolePrefix: ""
-  caCert: ""
-  tlsSecret: ""
-  service: ""
-  tlsServerName: ""
-  pgrepPattern: python
-  secrets:
-    generic: {}
-    mongodb:
-      enabled: false
-      secretPath: ""
-      connectionString: "mongodb://{{username}}:{{password}}@mongodb:27017/admin"
-    service:
-      enabled: false
-      secretPath: ""
-      pathPrefix: operational-secrets/data/unique/apps/archive
-    crypt4ghInternalPub:
-      enabled: false
-      secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-internal"
-      mountPath: /keys/crypt4gh-internal/crypt4gh.pub
-      dataKey: crypt4gh.pub
-      renderToFile: true
-      parameterName: CRYPT4GH_PUBLIC_KEY
-    crypt4ghInternalPriv:
-      enabled: false
-      secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-internal"
-      mountPath: /keys/crypt4gh-internal/crypt4gh.sec
-      dataKey: crypt4gh.sec
-      renderToFile: true
-      parameterName: CRYPT4GH_PRIVATE_KEY
-    crypt4ghExternalPriv:
-      enabled: false
-      secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-external"
-      mountPath: /keys/crypt4gh-external/crypt4gh.sec
-      dataKey: crypt4gh.sec
-      renderToFile: true
-      parameterName: CRYPT4GH_PRIVATE_KEY

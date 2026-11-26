@@ -70,10 +70,10 @@ describe('StudyDetails', () => {
 
   /**
    * Answer the request for the datasets of the study
-   * @param hits the datasets to respond with
+   * @param items the datasets to respond with
    */
-  async function flushDatasets(hits = searchResults.hits.slice(0, 2)): Promise<void> {
-    httpMock.expectOne(DATASETS_URL).flush({ hits, count: hits.length });
+  async function flushDatasets(items = searchResults.items.slice(0, 2)): Promise<void> {
+    httpMock.expectOne(DATASETS_URL).flush({ items, total_count: items.length });
     await result.fixture.whenStable();
   }
 

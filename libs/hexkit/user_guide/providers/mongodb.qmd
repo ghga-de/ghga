@@ -56,7 +56,7 @@ config = MongoDbConfig(
 The recommended way to set up the factory is the `construct()` async context manager, which opens the MongoDB client on entry and closes it on exit:
 
 ```python
-from pydantic import BaseModel, ConfigDict, UUID4
+from pydantic import UUID4, BaseModel, ConfigDict
 
 from hexkit.protocols.dao import UUID4Field
 from hexkit.providers.mongodb import MongoDbDaoFactory
@@ -112,7 +112,7 @@ Since MongoDB stores datetimes with millisecond precision, truncate them accordi
 
 Field types without a BSON equivalent (such as `pathlib.Path`) need a `field_serializer` on the DTO model that converts them to something storable; the provider raises an error otherwise.
 
-You never interact with `_id` yourself: in DTOs, find mappings, sort specifications, and index definitions, always use the field name from your model.
+You never interact with `_id` yourself: in DTOs, filters, sort specifications, and index definitions, always use the field name from your model.
 
 ### CRUD Operations
 
@@ -153,7 +153,7 @@ async for book in book_dao.find_all(filter_={"author": "Martin Fowler"}):
     print(book.title)
 ```
 
-Filter keys are validated against the DTO model, and unknown field names raise an `InvalidMappingError`.
+Filter keys are validated against the DTO model, and unknown field names raise an `InvalidFilterError`.
 Two MongoDB-specific extensions pass through this validation:
 
 - **Dot notation** reaches into nested documents.
@@ -175,8 +175,8 @@ either = book_dao.find_all(
 )
 ```
 
-Keep in mind that operator-based mappings tie the calling code to MongoDB.
-That is a perfectly reasonable trade-off inside a translator, but if you want your code to stay provider-agnostic, stick to plain equality mappings.
+Keep in mind that operator-based filters tie the calling code to MongoDB.
+That is a perfectly reasonable trade-off inside a translator, but if you want your code to stay provider-agnostic, stick to plain equality filters.
 The [in-memory mock DAO](testing.qmd) understands a subset of these operators, so most operator-based queries remain testable without a database.
 
 For pagination and sorting, `find_all` accepts `skip`, `limit`, and `sort` arguments, and returns a [`FindResult`](../../reference/protocols.dao.FindResult.qmd) that also reports the total number of matches:
@@ -225,6 +225,22 @@ The `properties` dictionary is forwarded to pymongo's [`create_index()`](https:/
 
 A unique index is also the mechanism behind `UniqueConstraintViolationError`: writes that would break a unique index over non-ID fields raise it, letting you enforce uniqueness of, say, an email address at the database level.
 
+### Batch Operations
+
+The [batch operations](../protocols/dao.qmd#batch-operations) of the DAO protocol each send one bulk command per batch.
+The pymongo driver splits the writes of `insert_many`, `upsert_many` and `update_many` above 100,000 operations or 48 MB into several messages, so only smaller batches take a single round-trip.
+`delete_many` and the lookups of `update_many` send every ID in one filter, which MongoDB caps at 16 MB, a few hundred thousand IDs; a larger batch raises `DaoError`.
+
+A batch is not atomic, and there are no transactions yet to make it so.
+A `BatchOperationError` names every failed, unconfirmed and skipped ID.
+A write concern error names every resource it leaves unconfirmed, with `DbTimeoutError` when it timed out and `DaoError` otherwise; those writes stay stored unless a failover rolls them back.
+A retryable write concern error, such as one after a failover, is the exception: the driver stops the batch at it and sends none of a split batch's later messages, so the batch raises a plain `DaoError` and its outcome is unknown.
+Any other error leaves the outcome unknown, such as a timeout, a lost connection or a failure after the driver sent part of a split batch; `find_all` shows what arrived.
+`upsert_many` can then be repeated safely.
+To undo a partial `insert_many`, delete the batch's IDs minus `error.errors` and `error.not_attempted`; an ID in `errors` may belong to a resource stored before.
+After a write concern error or a timeout, `find_all` shows what arrived, but not which of it the batch wrote.
+The other batch operations overwrite stored resources, which only a copy taken before can restore.
+
 ### Error Handling
 
 The provider translates pymongo's errors into the exception types of the [DAO protocol](../protocols/dao.qmd#error-handling), so calling code never needs to import from pymongo:
@@ -234,9 +250,10 @@ The provider translates pymongo's errors into the exception types of the [DAO pr
 | `get_by_id`, `update`, or `delete` on a missing ID | `ResourceNotFoundError` |
 | `insert` with an already existing ID | `ResourceAlreadyExistsError` |
 | Write breaking a unique index over non-ID fields | `UniqueConstraintViolationError` |
-| Find mapping with unknown field names | `InvalidMappingError` |
+| Filter with unknown field names | `InvalidFilterError` |
 | `find_one` matching zero / more than one document | `NoHitsFoundError` / `MultipleHitsFoundError` |
 | Operation exceeding the configured `mongo_timeout` | `DbTimeoutError` |
+| Some resources of a batch failing | `BatchOperationError`, holding one of the errors above per ID |
 | Any other driver-level failure | `DaoError` |
 
 All of these derive from `DaoError`, so `except DaoError` is a safe catch-all for database problems.
@@ -248,33 +265,13 @@ Every single DAO operation is atomic on its own (MongoDB guarantees single-docum
 
 ### Testing
 
-For integration tests, the `test-mongodb` extra provides pytest fixtures based on [testcontainers](https://testcontainers-python.readthedocs.io) that spin up a disposable MongoDB instance.
-The `mongodb_fixture` yields a `MongoDbFixture` whose `dao_factory` attribute is a ready-to-use `MongoDbDaoFactory`:
-
-```python
-from hexkit.providers.mongodb.testutils import (
-    MongoDbFixture,
-    mongodb_container_fixture,  # noqa: F401
-    mongodb_fixture,  # noqa: F401
-)
-
-
-async def test_book_dao(mongodb: MongoDbFixture):
-    book_dao = await mongodb.dao_factory.get_dao(
-        name="books", dto_model=Book, id_field="id"
-    )
-    ...
-```
-
-For unit tests that should not touch a database at all, the [in-memory mock DAO](testing.qmd) mimics the MongoDB provider's behavior, including a subset of the query operators.
-See also the [MongoDB Test Utils](#mongodb-test-utils) section below.
-
-The provider's own [integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/dao/test_mongodb_dao.py) double as an extensive collection of runnable usage examples.
+For integration tests against a real database, use the fixtures in [MongoDB Test Utils](#mongodb-test-utils).
+For unit tests without a database, the [in-memory mock DAO](testing.qmd#mock-dao) mimics the MongoDB DAO, including a subset of the query operators.
 
 ## MongoDB Migration Tools
 
 When a service's data model evolves, documents already stored in MongoDB must be brought into the shape its DTO models now expect.
-The `hexkit.providers.mongodb.migrations` subpackage provides a versioned migration framework for exactly that, run by the service itself at startup.
+The `hexkit.providers.mongodb.migrations` subpackage provides a versioned migration framework for exactly that, run before the service begins its actual work.
 It is covered in the dedicated [MongoDB Migrations](mongodb_migrations.qmd) chapter.
 
 ## MongoDB KV Store Providers
@@ -286,3 +283,73 @@ Available variants are `MongoDbBytesKeyValueStore`, `MongoDbStrKeyValueStore`, `
 API reference: [hexkit.providers.mongodb](../../reference/index.qmd#provider-mongodb)
 
 ## MongoDB Test Utils
+
+For integration tests, the `test-mongodb` extra provides pytest fixtures based on [testcontainers](https://testcontainers-python.readthedocs.io) that start a disposable MongoDB container from the image named in `MONGODB_IMAGE`.
+The `test` extra includes it:
+
+```sh
+pip install hexkit[test-mongodb]
+```
+
+All utilities live in `hexkit.providers.mongodb.testutils`.
+They serve tests of the DAO and of the KV stores, and the [MongoDB + Kafka test utils](mongokafka.qmd#mongodb-kafka-test-utils) build on them.
+
+### Fixtures
+
+The `mongodb_fixture` yields a `MongoDbFixture` object under the fixture name `mongodb`.
+Both the container fixture and the MongoDB fixture must be imported into the test module or its `conftest.py` for pytest to resolve them, hence the `# noqa: F401` comments.
+This test inserts a `Book` from [Creating DAOs](#creating-daos) through a DAO and reads the stored document with the fixture's client:
+
+```python
+from uuid import uuid4
+
+import pytest
+
+from hexkit.providers.mongodb.testutils import (
+    MongoDbFixture,
+    mongodb_container_fixture,  # noqa: F401
+    mongodb_fixture,  # noqa: F401
+)
+
+
+@pytest.mark.asyncio()
+async def test_book_document(mongodb: MongoDbFixture):
+    book_dao = await mongodb.dao_factory.get_dao(
+        name="books", dto_model=Book, id_field="id"
+    )
+    book = Book(id=uuid4(), title="Refactoring", author="Martin Fowler", pages=448)
+    await book_dao.insert(book)
+
+    books = mongodb.client[mongodb.config.db_name]["books"]
+    assert books.find_one({"_id": book.id})["title"] == "Refactoring"
+```
+
+The fixtures split the work between two scopes:
+
+- `mongodb_container_fixture` (fixture name `mongodb_container`) is session-scoped: one MongoDB container is started per test session and reused by all tests.
+  It yields a `MongoDbContainerFixture`, the testcontainers container with a `mongodb_config` attribute for the database `test`.
+- `mongodb_fixture` (fixture name `mongodb`) is function-scoped: it drops all collections of the database before each test.
+  `clean_mongodb_fixture` is an alias for it.
+- `persistent_mongodb_fixture` is the variant without the cleanup, for tests that intentionally share state.
+  It also uses the fixture name `mongodb`, so to use both variants in one module, create one of them under another name with its factory function.
+
+If the default scopes or names do not fit your test setup, the factory functions `get_mongodb_container_fixture`, `get_clean_mongodb_fixture` and `get_persistent_mongodb_fixture` create the same fixtures with custom `scope` and `name` arguments.
+For example, `get_persistent_mongodb_fixture(name="mongodb_persistent")` creates the persistent variant under the name `mongodb_persistent`.
+
+Dropping a collection also drops its [indexes](#defining-indexes), which `get_dao()` creates.
+Create DAOs inside the test or in function-scoped fixtures that depend on `mongodb`, so that they are created after the cleanup.
+A DAO created before the cleanup, such as in a session-scoped fixture, has no indexes left and raises no `UniqueConstraintViolationError`.
+
+### The MongoDbFixture
+
+A `MongoDbFixture` has three attributes and one method:
+
+- `client`: a synchronous pymongo `MongoClient`, for arranging and inspecting documents directly, as in the example above.
+- `config`: a `MongoDbConfig` for the database `test`, to pass to your own DAO factories or [KV stores](#mongodb-kv-store-providers).
+- `dao_factory`: a `MongoDbDaoFactory` for the database, open for the lifetime of the fixture.
+- `empty_collections()`: drops collections of the database, all of them by default.
+  Pass `collections` to drop only some, and `exclude_collections` to keep some.
+  It raises a `RuntimeError` if MongoDB refuses the drop.
+
+For unit tests without a container, use the [in-memory providers](testing.qmd) instead.
+The provider's own [integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/dao/test_mongodb_dao.py) show further usage of the DAO.

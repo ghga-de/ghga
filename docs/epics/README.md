@@ -1,7 +1,8 @@
 # Epic Documentation
 
 > [!NOTE]
-> Each specification records the plan as it stood when its epic started and is not updated afterwards.
+> Each specification records the plan as it stood when its epic started, and is not kept in step with the code.
+> As an exception, it may be adapted or refined later, to correct something the epic design misjudged or missed that only became apparent during implementation, once the team has agreed on the new direction.
 > For current behaviour and binding rules, see the [ADRs](../adrs/), the [conventions](../conventions.md) and the code.
 
 This directory contains technical specifications for GHGA development epics, documenting the scope and plans for each epic before the epic is started.
@@ -21,7 +22,7 @@ Every specification names its own on an `**Epic Type:**` line below the heading,
 
 Please have a look at the templates ([exploratory](./epic-template-exploratory), [implementation](./epic-template-implementation)) and especially the contained technical specifications ([exploratory](./epic-template-exploratory/README.md), [implementation](./epic-template-implementation/README.md)).
 
-These specifications are part of the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/). (The SOP still describes the old epic repo and file layout; it will be updated to match the monorepo layout and our current procedures soon.)
+These specifications are part of the Epic Planning and Marathon SOP. (The SOP still describes the old epic repo and file layout; it will be updated to match the monorepo layout and our current procedures soon.)
 
 ## Writing an epic
 
@@ -142,5 +143,7 @@ An epic that was resolved in another way than its specification planned counts a
 - (89) [Apollo](./epic-0089-apollo.md): Initial Version of the GHGA Registry Service
 - (90) [Red-billed Quelea](./epic-0090-red-billed-quelea.md): Support for Batch DAO Operations in Hexkit
 - (93) [Giraffe](./epic-0093-giraffe.md): Early Data Lifecycle Rollout
-- (94) [Cuckoo Wasp](./epic-0094-cuckoo-wasp.md): Test Bed Runs Against a Cluster
+- (94) [Leafcutter Ant](./epic-0094-leafcutter-ant.md): File Leases for Multiple DHFS Instances
+- (95) [Shoebill](./epic-0095-shoebill/README.md): Upload Box Prioritization for Re-encryption
+- (96) [Cuckoo Wasp](./epic-0096-cuckoo-wasp.md): Test Bed Runs Against a Cluster
 <!-- epic-index:unfolding:end -->

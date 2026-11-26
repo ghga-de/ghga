@@ -18,6 +18,8 @@ Conventions baked into the derived values:
   post-build overlay rather than derived like the other image fields
 - --mono points every Python member at the single mono image instead of its own; the
   command stays the member's console script, which the mono image carries on its PATH
+- a member whose chart-values.yaml names a migrationInitContainer command gets the
+  init container enabled, unless it sets `enabled` itself
 """
 
 import argparse
@@ -418,8 +420,13 @@ def compose_member_values(
 
     values_file = REPO_ROOT / member["path"] / "chart-values.yaml"
     if values_file.is_file():
-        member_values = YAML_PARSER.load(values_file.read_text()) or {}
-        values = deep_merge(values, _plain(member_values))
+        member_values = _plain(YAML_PARSER.load(values_file.read_text()) or {})
+        values = deep_merge(values, member_values)
+        # a member that names its migration command runs it before every pod start;
+        # the library default stays off for the members without migrations
+        migration = member_values.get("migrationInitContainer") or {}
+        if migration.get("executableArgs") and "enabled" not in migration:
+            values["migrationInitContainer"]["enabled"] = True
     else:
         source = f"{source} (absent; library defaults only)"
         print(

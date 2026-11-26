@@ -115,11 +115,16 @@ def _load_object_list_from_yaml(yaml_str: str) -> list[dict[str, Any]]:
     return [obj for obj in yaml.safe_load_all(yaml_str) if obj]
 
 
-def compose_values(*filenames: str) -> dict[str, Any]:
-    """Deep-merge the named values files in order (helm-style)."""
+def compose_values(*sources: str | dict[str, Any]) -> dict[str, Any]:
+    """Deep-merge the named values files, or inline values, in order (helm-style)."""
     composed: dict[str, Any] = {}
-    for name in filenames:
-        composed = _deep_merge(composed, _load_yaml(CASES_DIR / "values" / name))
+    for source in sources:
+        values = (
+            source
+            if isinstance(source, dict)
+            else _load_yaml(CASES_DIR / "values" / source)
+        )
+        composed = _deep_merge(composed, values)
     return composed
 
 
@@ -127,8 +132,8 @@ def compose_values(*filenames: str) -> dict[str, Any]:
 def rendered_chart(_dependency_update, release_name):
     """Factory rendering the dummy chart with composed values, keyed by kind."""
 
-    def _factory(*filenames: str):
-        composed_values = compose_values(*filenames)
+    def _factory(*sources: str | dict[str, Any]):
+        composed_values = compose_values(*sources)
         return _load_objects_from_yaml(
             _render_chart_case(composed_values, release_name)
         )
@@ -153,8 +158,8 @@ def rendered_objects(_dependency_update, release_name):
     on duplicate kinds (e.g. multiple CronJobs).
     """
 
-    def _factory(*filenames: str):
-        composed_values = compose_values(*filenames)
+    def _factory(*sources: str | dict[str, Any]):
+        composed_values = compose_values(*sources)
         return _load_object_list_from_yaml(
             _render_chart_case(composed_values, release_name)
         )
@@ -168,8 +173,8 @@ def rendered_text(_dependency_update, release_name):
     duplicate YAML key, which yaml.safe_load silently resolves to the last value).
     """
 
-    def _factory(*filenames: str):
-        composed_values = compose_values(*filenames)
+    def _factory(*sources: str | dict[str, Any]):
+        composed_values = compose_values(*sources)
         return _render_chart_case(composed_values, release_name)
 
     return _factory

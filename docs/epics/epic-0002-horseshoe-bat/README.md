@@ -106,7 +106,7 @@ No further updates possible (within the scope of functionality provided by this 
 
 Now the Data Submitter submits all the files, using file accessions, that are part of the Submission via the Upload Controller.
 
-The individual steps for this process are detailed in [1 - Red-lipped Batfish - Basic File IO Service](https://wiki.verbis.dkfz.de/display/GHGA/1+-+Red-lipped+Batfish+-+Basic+File+IO+Service).
+The individual steps for this process are detailed in [Red-lipped Batfish: Basic File IO Service](../epic-0001-red-lipped-batfish/README.md).
 
 ### 6.0 Create a new Dataset from one or more files
 

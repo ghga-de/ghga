@@ -12,7 +12,7 @@ metadata:
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
   annotations:
-    configmap-hash: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
+    configmap-hash: {{ (include (print $.Template.BasePath "/configmap.yml") . | fromYaml).data | toYaml | sha256sum }}
     {{- if .Values.commonAnnotations }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
     {{- end }}
@@ -20,16 +20,9 @@ spec:
   template:
     metadata:
       annotations:
-        configmap-hash: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
+        configmap-hash: {{ (include (print $.Template.BasePath "/configmap.yml") . | fromYaml).data | toYaml | sha256sum }}
         {{- if .Values.podAnnotations }}
         {{- .Values.podAnnotations | toYaml | nindent 8}}
-        {{- end }}
-        {{- if .Values.vaultAgent.enabled }}
-        {{- if .Values.vaultAgent.singleTemplate }}
-        {{- include "ghga-common.vaultAgentAnnotationsSingleTemplate" . | nindent 8 }}
-        {{- else }}
-        {{- include "ghga-common.vaultAgentAnnotations" . | nindent 8 }}
-        {{- end }}
         {{- end }}
         helm.sh/revision: {{ .Release.Revision | quote }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}

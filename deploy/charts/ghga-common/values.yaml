@@ -32,7 +32,7 @@ exports:
 
     # Merged onto every rendered resource's metadata - Deployment, CronJob, Job,
     # Service, HPA, DestinationRule, HTTPRoute, Probe, ConfigMap, ServiceAccount,
-    # NetworkPolicy, KafkaUser. There is deliberately no separate, narrower
+    # NetworkPolicy, AuthorizationPolicy, KafkaUser. There is deliberately no separate, narrower
     # per-workload-only labels/annotations value: Service is the one resource that
     # regularly needs its own (LB/ingress-controller annotations, scrape labels,
     # ...), and that's what service.labels/service.annotations below are for: for
@@ -54,6 +54,10 @@ exports:
     revisionHistoryLimit: 1
 
     shareProcessNamespace: false
+
+    secretEnvFiles:
+      enabled: false
+      dir: /vault/secrets
 
     podSecurityContext:
       fsGroup: 1000
@@ -218,15 +222,16 @@ exports:
 
     mongodb:
       dbName: ""
-      service:
-        namespace: mongodb
-        name: mongodb
 
     apiBasePath: ""
     serviceName: ""
 
     serviceInstanceId:
       fromPodName: false
+
+    otelExcludedUrls: /health$
+    otelResource:
+      podName: true
 
     configMap:
       enabled: true
@@ -243,11 +248,13 @@ exports:
 
     successfulJobsHistoryLimit: 5
 
-    environment:
-      name: default
-
-    cluster:
-      name: default
+    # What a cronjob does when a run is still active at the next schedule.
+    # Forbid skips the new run, so hung runs cannot pile up.
+    concurrencyPolicy: Forbid
+    # Kill a cronjob run after this many seconds; null means no limit.
+    activeDeadlineSeconds: null
+    # Skip a cronjob run that could not start within this many seconds of its schedule.
+    startingDeadlineSeconds: null
 
     httpRoute:
       enabled: false
@@ -264,6 +271,14 @@ exports:
     destinationRule:
       enabled: false
 
+    authorizationPolicy:
+      enabled: false
+      denyAll: false
+      trustDomain: cluster.local
+      callers: {}
+      identities: {}
+      extraRules: []
+
     networkPolicy:
       enabled: false
       ingress:
@@ -273,50 +288,3 @@ exports:
                 ghga-ingress: allow
 
     strimziApiVersion: kafka.strimzi.io/v1
-    vaultAgent:
-      enabled: false
-      annotations:
-        vault.hashicorp.com/tls-skip-verify: "false"
-        vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/agent-init-first: "true"
-        vault.hashicorp.com/agent-cache-enable: "true"
-        vault.hashicorp.com/agent-pre-populate-only: "false"
-        vault.hashicorp.com/agent-run-as-same-user: "true"
-      role: ""
-      rolePrefix: ""
-      caCert: ""
-      tlsSecret: ""
-      service: ""
-      tlsServerName: ""
-      pgrepPattern: python
-      secrets:
-        generic: {}
-        mongodb:
-          enabled: false
-          secretPath: ""
-          connectionString: "mongodb://{{username}}:{{password}}@mongodb:27017/admin"
-        service:
-          enabled: false
-          secretPath: ""
-          pathPrefix: operational-secrets/data/unique/apps/archive
-        crypt4ghInternalPub:
-          enabled: false
-          secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-internal"
-          mountPath: /keys/crypt4gh-internal/crypt4gh.pub
-          dataKey: crypt4gh.pub
-          renderToFile: true
-          parameterName: CRYPT4GH_PUBLIC_KEY
-        crypt4ghInternalPriv:
-          enabled: false
-          secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-internal"
-          mountPath: /keys/crypt4gh-internal/crypt4gh.sec
-          dataKey: crypt4gh.sec
-          renderToFile: true
-          parameterName: CRYPT4GH_PRIVATE_KEY
-        crypt4ghExternalPriv:
-          enabled: false
-          secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-external"
-          mountPath: /keys/crypt4gh-external/crypt4gh.sec
-          dataKey: crypt4gh.sec
-          renderToFile: true
-          parameterName: CRYPT4GH_PRIVATE_KEY

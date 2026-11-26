@@ -19,27 +19,39 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
-import httpx2
 from fastapi import FastAPI
 
-from fis.adapters.inbound.event_sub import OutboxSubTranslator
+from fis.adapters.inbound.event_sub import (
+    OutboxSubTranslator,
+    UploadBoxPrioritySubTranslator,
+)
 from fis.adapters.inbound.fastapi_ import dummies
 from fis.adapters.inbound.fastapi_.configure import get_configured_app
 from fis.adapters.inbound.fastapi_.http_authorization import JWT
-from fis.adapters.outbound.dao import get_file_dao, get_interrogation_report_dao
+from fis.adapters.outbound.dao import (
+    get_file_dao,
+    get_interrogation_report_dao,
+    get_upload_box_priority_dao,
+)
 from fis.adapters.outbound.event_pub import EventPubTranslator
 from fis.adapters.outbound.http import get_configured_httpx_client
+from fis.adapters.outbound.interrogation_queue import MongoDbInterrogationQueue
 from fis.adapters.outbound.secrets import SecretsClient
 from fis.config import Config
-from fis.constants import AUTH_CHECK_CLAIMS
+from fis.constants import (
+    AUTH_CHECK_CLAIMS,
+    FILES_COLLECTION,
+    UPLOAD_BOX_PRIORITY_COLLECTION,
+)
 from fis.core.interrogation import InterrogationHandler, InterrogationHandlerPort
 from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
+from ghga_service_commons.transports import BaseTransportFactory
 from hexkit.providers.akafka import (
     ComboTranslator,
     KafkaEventPublisher,
     KafkaEventSubscriber,
 )
-from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongodb import ConfiguredMongoClient, MongoDbDaoFactory
 from hexkit.providers.mongokafka import PersistentKafkaPublisher
 
 
@@ -68,30 +80,36 @@ async def get_persistent_publisher(
 async def prepare_core(
     *,
     config: Config,
-    http_base_transport: httpx2.AsyncBaseTransport | None = None,
-    http_mount_env_proxies: bool = True,
+    http_make_base_transport: BaseTransportFactory | None = None,
 ) -> AsyncGenerator[InterrogationHandlerPort]:
     """Constructs and initializes all core components and their outbound dependencies.
 
-    `http_base_transport` is handed to the outbound HTTP client, which lets tests
-    serve the Secrets API from a mock instead of the network. Replacing the network
-    layer rules out the env proxies, so such callers also pass
-    `http_mount_env_proxies=False`.
+    `http_make_base_transport` is handed to the outbound HTTP client, which lets tests
+    serve the Secrets API from a mock instead of the network.
     """
     async with (
         MongoDbDaoFactory.construct(config=config) as dao_factory,
+        ConfiguredMongoClient(config=config) as mongo_client,
         get_persistent_publisher(
             config=config, dao_factory=dao_factory
         ) as persistent_publisher,
         get_configured_httpx_client(
             config=config,
-            base_transport=http_base_transport,
-            mount_env_proxies=http_mount_env_proxies,
+            make_base_transport=http_make_base_transport,
         ) as httpx_client,
     ):
         file_dao = await get_file_dao(dao_factory=dao_factory)
         interrogation_report_dao = await get_interrogation_report_dao(
             dao_factory=dao_factory
+        )
+        upload_box_priority_dao = await get_upload_box_priority_dao(
+            dao_factory=dao_factory
+        )
+        interrogation_queue = MongoDbInterrogationQueue(
+            client=mongo_client,
+            db_name=config.db_name,
+            files_collection_name=FILES_COLLECTION,
+            priority_collection_name=UPLOAD_BOX_PRIORITY_COLLECTION,
         )
         event_publisher = EventPubTranslator(
             config=config, provider=persistent_publisher
@@ -101,6 +119,8 @@ async def prepare_core(
             config=config,
             file_dao=file_dao,
             interrogation_report_dao=interrogation_report_dao,
+            upload_box_priority_dao=upload_box_priority_dao,
+            interrogation_queue=interrogation_queue,
             event_publisher=event_publisher,
             secrets_client=secrets_client,
         )
@@ -167,7 +187,13 @@ async def prepare_event_subscriber(
             config=config,
             interrogation_handler=interrogation_handler,
         )
-        combo_translator = ComboTranslator(translators=[file_upload_translator])
+        upload_box_priority_translator = UploadBoxPrioritySubTranslator(
+            config=config,
+            interrogation_handler=interrogation_handler,
+        )
+        combo_translator = ComboTranslator(
+            translators=[file_upload_translator, upload_box_priority_translator]
+        )
 
         async with (
             KafkaEventPublisher.construct(config=config) as dlq_publisher,

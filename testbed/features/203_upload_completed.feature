@@ -34,6 +34,7 @@ Feature: 203 Upload Completed
 
     When "Data Steward" retrieves the research data upload boxes for "<storage>" storage
     Then the research data upload box state is "archived"
+    And the "<storage>" upload box is no longer in the priority list
 
     Examples:
       | storage   |

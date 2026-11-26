@@ -114,7 +114,7 @@ class JointFixture:
         response = await self.rest_client.get(url="/search", params=params)
         result = response.json()
         assert result is not None, result
-        assert "detail" in result or "hits" in result, result
+        assert "detail" in result or "items" in result, result
         response.raise_for_status()
         return models.QueryResults(**result)
 
@@ -134,7 +134,7 @@ class JointFixture:
         class_name: str,
         query: str = "",
         filters: list[models.Filter] | None = None,
-        sorting_parameters: list[models.SortingParameter] | None = None,
+        sort: list[str] | None = None,
         skip: int = 0,
         limit: int | None = None,
     ) -> models.QueryResults:
@@ -145,7 +145,7 @@ class JointFixture:
             filters=filters,
             skip=skip,
             limit=limit,
-            sorting_parameters=sorting_parameters,
+            sort=sort,
         )
 
     async def delete_resource(self, resource_id: str, class_name: str) -> None:

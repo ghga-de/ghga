@@ -18,8 +18,8 @@ What the repository is, its layout, and how to run the demo and test bed are doc
 
 ## Tech stack
 
-- Python 3.13 (`.python-version`), one `uv` workspace spanning `libs/`, `services/`, `tools/`, a single `uv.lock`, internal libraries consumed from source (HEAD is always integrated).
-  Members set their own `requires-python` floor — 3.11 on the PyPI lane, 3.13 for the services — and the combo gate tests a PyPI-lane member on every version from 3.11 to 3.14 its floor allows (`TEST_PYTHONS` in `scripts/pypi_members.py`).
+- Python 3.14 (`.python-version`), one `uv` workspace spanning `libs/`, `services/`, `tools/`, a single `uv.lock`, internal libraries consumed from source (HEAD is always integrated).
+  Members set their own `requires-python` floor — 3.11 on the PyPI lane, 3.14 for the services — and the combo gate tests a PyPI-lane member on every version from 3.11 to 3.15 its floor allows (`TEST_PYTHONS` in `scripts/pypi_members.py`).
 - Services: FastAPI + Pydantic on `hexkit` (ports-and-adapters; Kafka, MongoDB, S3 providers); most run as a rest + consumer pair
 - Lint/format: `ruff` · typecheck: `mypy` · unit tests: `pytest`, each configured **once**, in the root `pyproject.toml`
 - Front end: Angular 22 with its own `pnpm` workspace and lockfile (not a uv member)
@@ -46,7 +46,7 @@ The container puts `rg`, `fd`, `jq`, `bat`, `shellcheck` and `shfmt` on `PATH`; 
 
 Agent sessions belong in the container too, whichever agent it is — their state is per-machine, so a session on the host writes to a home the container cannot see.
 At the start of a session, check for `/.dockerenv`; if it is missing and `CI` and `GHGA_ALLOW_HOST` are unset, tell the dev and ask before running repo tooling.
-Only `~/.claude` persists across rebuilds (the `ghga-claude` volume in `devcontainer.json`); another agent's state needs its own volume there.
+Agent state persists across rebuilds only in `~/.claude`, `~/.copilot` and `~/.agents`, the named volumes in `devcontainer.json`; another agent's state needs its own volume there.
 
 ## Repo commands (just)
 
@@ -56,8 +56,9 @@ Read commands from there, and prefer the recipes over raw uv/pnpm/helm/kubectl �
 Further rules:
 
 - Always scope test runs to the member you touched (e.g. `just test services/auth-service`); a bare `just test` runs every suite in the workspace.
-- Use `just affected [base]` to decide what to test when a change may cross members.
-  It defaults to `origin/dev`, the branch features are cut from; on a hotfix branch, which is cut from `main` instead, pass `origin/main`.
+  Pytest options go after the targets, e.g. `just test services/auth-service/tests/unit -k login -x`.
+- Use `just affected [base]` to decide what to test when a change may cross members, and `just test-affected [base]` to run those suites.
+  Both default to `origin/dev`, the branch features are cut from; on a hotfix branch, which is cut from `main` instead, pass `origin/main`.
 - Use `just fe-dev` for the front-end dev server, bare `pnpm start` skips the `config.js` generation the launcher does.
   For anything beyond the `just fe-*` recipes, work in `frontend/data-portal` under its own `AGENTS.md`.
 - For parallel work, create a worktree with `just wt <branch>`, which syncs its `.venv`; a worktree from Claude Code's `--worktree` gets a branch name outside the [grammar](docs/conventions.md#names-branches-prs-commits), so rename it before pushing.
@@ -70,23 +71,25 @@ Further rules:
 - **Chart tests** are defined in [deploy/AGENTS.md](deploy/AGENTS.md).
 - **Test bed** (`just testbed`) is defined in [testbed/AGENTS.md](testbed/AGENTS.md).
   It is the only level that can verify a cross-service flow end to end, so a test whose outcome depends on backend state changing belongs there.
-- **Front-end levels** (Vitest unit tests, Playwright smoke tests against MSW mocks) are defined in [frontend/data-portal/AGENTS.md](frontend/data-portal/AGENTS.md).
+- **Front-end levels** (Vitest unit tests, mocked E2E tests with Playwright) are defined in [frontend/data-portal/AGENTS.md](frontend/data-portal/AGENTS.md).
 
 ## Execution policy
 
-- For code changes, run the smallest relevant validation first (the touched member's tests, `just lint`), then widen via `just affected` when the change crosses members; editing a `libs/` member affects every consumer.
+- For code changes, run the smallest relevant validation first (the touched member's tests, `just lint`), then widen via `just test-affected` when the change crosses members; editing a `libs/` member affects every consumer.
 - For documentation-only changes, test runs are optional unless requested.
 - Do not create commits or branches unless explicitly requested.
   When they are, read [branching](docs/conventions.md#branching) and [names](docs/conventions.md#names-branches-prs-commits) first.
   Cut the branch from `dev` and target `dev`; `main` carries the latest release and takes hotfixes only.
   Name the branch, the pull request and the commit as the grammar there says.
+- Changing a required check changes a ruleset; see [branching](docs/conventions.md#branching).
+- A pull request description ends in `Upgrade:` lines, or `Upgrade: none`, when it changes config, API or chart values files, and in `Upgrade:` lines for any other action an upgrade requires; the [names](docs/conventions.md#names-branches-prs-commits) section says which files and what counts as one.
 - Never put a `Co-authored-by:` line for yourself in a commit message, whatever your own guidance says.
   Credit yourself in the pull request description instead, and only as far as you actually contributed — the [names](docs/conventions.md#names-branches-prs-commits) section says in which words.
 
 ## Definition of done
 
 1. Unit tests cover the change and the touched member's suite passes (`just test <member>`), with `just lint` clean.
-2. `just affected` is green when the change crosses members.
+2. `just test-affected` is green when the change crosses members.
 3. Generated artifacts are regenerated, never hand-edited (`just charts`, `just lock`).
 4. The feature branch is peer reviewed and meets every requirement of the story.
 
@@ -96,6 +99,8 @@ Further rules:
 - The ADR index in `docs/README.md` and the epic index in `docs/epics/README.md` are regenerated by `just docs-check` (and its pre-commit hook), never edited by hand.
   The one exception is moving an epic's line from the unfolding into the completed list, which the check keeps.
 - A service's `config_schema.json`, `example_config.yaml` and `openapi.yaml`, and the parameter list in its README, are regenerated from its code by `just service-docs` (and its pre-commit hook); change the Config class, the routes or `dev_config.yaml` instead.
+- The `kafka-map-data` block in `docs/architecture/kafka-cascade-map.html` is regenerated from `docs/architecture/kafka-cascades.yaml` by `just kafka-map` (and its pre-commit hook); edit the YAML instead.
+  The page's styles and drawing code around the block are hand-written.
 - The generated charts, the test-bed overlay and the front-end output directories are listed in the `AGENTS.md` of the area that owns them.
 
 ## Writing
@@ -104,7 +109,7 @@ Docs, code comments, docstrings, commits and pull requests follow the [writing s
 Markdown files in the repo take one sentence per line; text for a GitHub web form — pull request descriptions, review and issue comments, release notes — takes one line per paragraph, as the [line wrapping](docs/style.md#line-wrapping) rules say.
 Read the section that applies before writing any of them.
 For anything under `docs/`, read [docs/README.md](docs/README.md) first for what each document is for, then the [ADR shape](docs/style.md#architecture-decision-records) or the [epic conventions](docs/epics/README.md).
-An epic specification records the plan as its epic started, so do not update it afterwards; current behaviour belongs in an ADR or the code.
+Before changing a started epic, read the note at the top of the [epic conventions](docs/epics/README.md), which says when that is allowed.
 
 ## Python best practices
 

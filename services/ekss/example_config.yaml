@@ -7,6 +7,7 @@ cors_allowed_origins: null
 cors_exposed_headers: null
 docs_url: /docs
 enable_opentelemetry: false
+enable_otel_metrics: false
 generate_correlation_id: true
 host: 127.0.0.1
 log_format: null

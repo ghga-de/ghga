@@ -15,12 +15,17 @@ import { AccessionMapRequest } from '../models/accession-map';
 import {
   BoxRequeueResult,
   BoxRetrievalResults,
+  FileStateCountsByBox,
+  matchesFileStatesFilter,
+  MAX_FILE_STATE_COUNTS_BOXES,
+  needsFileStateCounts,
   ResearchDataUploadBox,
   ResearchDataUploadBoxBase,
   ResearchDataUploadBoxUpdate,
   UploadBoxFilter,
   UploadBoxState,
 } from '../models/box';
+import { prioritizeBoxes, UploadBoxPriority } from '../models/box-priority';
 import {
   BoxUploadsPage,
   DEFAULT_UPLOADS_PAGE_SIZE,
@@ -54,6 +59,7 @@ export class UploadBoxService {
   // so the RS serves them under a separate /rpc prefix
   #boxesRpcUrl = `${this.#rsUrl}/rpc/upload-boxes`;
   #grantsUrl = `${this.#rsUrl}/upload-grants`;
+  #priorityUrl = `${this.#rsUrl}/upload-box-priority`;
   #wkvsUrl = this.#config.wkvsUrl;
   #storageLabelsUrl = `${this.#wkvsUrl}/values/storage_labels`;
 
@@ -64,18 +70,24 @@ export class UploadBoxService {
   // invalidates all variants of that endpoint at once, which matters for the
   // paginated and sorted file uploads, where the keys are not known upfront.
   #boxesBucket = new CacheBucket();
+  #fileStateCountsBucket = new CacheBucket();
   #boxBucket = new CacheBucket();
   #boxGrantsBucket = new CacheBucket();
   #userGrantsBucket = new CacheBucket();
   #fileUploadsBucket = new CacheBucket();
+  #priorityBucket = new CacheBucket();
 
   #boxesContext = volatileCacheContext(this.#boxesBucket);
+  #fileStateCountsContext = volatileCacheContext(this.#fileStateCountsBucket);
   #boxContext = volatileCacheContext(this.#boxBucket);
   #boxGrantsContext = volatileCacheContext(this.#boxGrantsBucket);
   #userGrantsContext = volatileCacheContext(this.#userGrantsBucket);
   #fileUploadsContext = volatileCacheContext(this.#fileUploadsBucket);
+  #priorityContext = volatileCacheContext(this.#priorityBucket);
 
   #loadAllUploadBoxes = signal<boolean>(false);
+  // Sorted, so that the same boxes in another order make the same request
+  #visibleBoxIds = signal<string[]>([]);
   #loadStorageLabels = signal<boolean>(false);
   #uploadBoxesFilter = signal<UploadBoxFilter | undefined>(undefined);
   #loadSingleBox = signal<string>('');
@@ -98,6 +110,10 @@ export class UploadBoxService {
 
   /**
    * Resource for loading all upload boxes.
+   * The list filters, sorts and pages them in the browser, which is cheap while
+   * there are a few hundred boxes. The RS can page the boxes in its database
+   * (`skip`, `limit` and `state`), but would need the other filters and sort
+   * orders of the list as well before the list could page there.
    */
   boxRetrievalResults = httpResource<BoxRetrievalResults>(
     () =>
@@ -107,6 +123,58 @@ export class UploadBoxService {
     {
       defaultValue: this.#emptyBoxResults,
     },
+  );
+
+  /**
+   * The upload boxes to load the file state counts of: the IDs of the boxes on
+   * the current page of the list that need them, or 'all' while the list is
+   * filtered by the file states, since that needs the counts beyond the page,
+   * or while the page holds more boxes than one request can count.
+   * The equality check keeps an unchanged set of boxes from loading again.
+   */
+  #fileStateCountsBoxIds = computed<string[] | 'all' | undefined>(
+    () => {
+      if (!this.#loadAllUploadBoxes()) return undefined;
+      const fileStates = this.#uploadBoxesFilter()?.fileStates;
+      if (fileStates && fileStates !== 'no_files') return 'all';
+      const boxIds = this.#visibleBoxIds();
+      if (boxIds.length > MAX_FILE_STATE_COUNTS_BOXES) return 'all';
+      return boxIds.length ? boxIds : undefined;
+    },
+    {
+      equal: (a, b) =>
+        a === b ||
+        (Array.isArray(a) &&
+          Array.isArray(b) &&
+          a.length === b.length &&
+          a.every((id, index) => id === b[index])),
+    },
+  );
+
+  /**
+   * Resource for loading the file state counts of the open and locked upload
+   * boxes with files; the others need none (see `fileStateCountsOf`). The RS
+   * computes them on request, which takes longer than loading the boxes, so they
+   * come in a request of their own and the list does not wait for them.
+   */
+  fileStateCounts = httpResource<FileStateCountsByBox>(() => {
+    const boxIds = this.#fileStateCountsBoxIds();
+    if (!boxIds) return undefined;
+    return {
+      url: `${this.#boxesUrl}/file-state-counts`,
+      params: boxIds === 'all' ? undefined : { box_id: boxIds },
+      context: this.#fileStateCountsContext,
+    };
+  });
+
+  /**
+   * Resource for loading the upload box priority order, together with all
+   * upload boxes, which it refers to.
+   */
+  boxPriority = httpResource<UploadBoxPriority>(() =>
+    this.#loadAllUploadBoxes()
+      ? { url: this.#priorityUrl, context: this.#priorityContext }
+      : undefined,
   );
 
   /**
@@ -282,6 +350,27 @@ export class UploadBoxService {
   });
 
   /**
+   * Signal for the file state counts loaded from the RS, keyed by the box ID.
+   * Undefined while those of other boxes than before load, or if loading failed.
+   * Use `fileStateCountsOf` to get the counts of a box, which also covers the
+   * boxes that are not loaded.
+   */
+  fileStateCountsByBox = computed(() =>
+    this.fileStateCounts.error() ? undefined : this.fileStateCounts.value(),
+  );
+
+  /**
+   * Signal for the upload boxes that are not archived, in priority order (see
+   * `prioritizeBoxes`). Undefined while the priority order loads, or if loading
+   * it failed.
+   */
+  prioritizedUploadBoxes = computed(() => {
+    if (this.boxPriority.error()) return undefined;
+    const priority = this.boxPriority.value();
+    return priority && prioritizeBoxes(this.uploadBoxes(), priority);
+  });
+
+  /**
    * The currently active filter applied to `filteredUploadBoxes`.
    */
   uploadBoxesFilter = computed(
@@ -323,6 +412,14 @@ export class UploadBoxService {
       );
     }
 
+    const fileStates = filter.fileStates;
+    if (fileStates) {
+      const countsByBox = this.fileStateCountsByBox();
+      boxes = boxes.filter((box) =>
+        matchesFileStatesFilter(box, countsByBox, fileStates),
+      );
+    }
+
     return boxes;
   });
 
@@ -347,6 +444,22 @@ export class UploadBoxService {
   }
 
   /**
+   * Load the file state counts of the upload boxes on the current page of the
+   * list, as far as they need them.
+   * @param boxes - the upload boxes on the current page
+   */
+  showFileStateCountsOf(
+    boxes: Pick<ResearchDataUploadBox, 'id' | 'state' | 'file_count'>[],
+  ): void {
+    this.#visibleBoxIds.set(
+      boxes
+        .filter(needsFileStateCounts)
+        .map((box) => box.id)
+        .sort(),
+    );
+  }
+
+  /**
    * Trigger loading of all upload boxes from the RS backend.
    */
   loadAllUploadBoxes(): void {
@@ -354,14 +467,19 @@ export class UploadBoxService {
   }
 
   /**
-   * Fetch all upload boxes again, bypassing the HTTP cache.
+   * Fetch all upload boxes, their file state counts and their priority order
+   * again, bypassing the HTTP cache.
    * Boxes change outside the portal (files are uploaded with the GHGA Connector),
    * so entering the box list must not rely on what was fetched earlier.
    */
   reloadAllUploadBoxes(): void {
     this.#httpCache.delete(this.#boxesBucket);
+    this.#httpCache.delete(this.#fileStateCountsBucket);
+    this.#httpCache.delete(this.#priorityBucket);
     if (this.#loadAllUploadBoxes()) {
       this.boxRetrievalResults.reload();
+      this.fileStateCounts.reload();
+      this.boxPriority.reload();
     } else {
       this.loadAllUploadBoxes();
     }
@@ -493,6 +611,25 @@ export class UploadBoxService {
    */
   loadAllFileUploadsForBox(boxId: string): void {
     this.#loadAllFileUploadsForBox.set(boxId);
+  }
+
+  /**
+   * Save a new priority order. The RS answers 409 if the stored order is no
+   * longer the given version, or if the order holds other boxes than the ones
+   * that are not archived.
+   * @param version - the version of the order that the new order is based on
+   * @param boxIds - the IDs of all upload boxes that are not archived, in the new order
+   * @returns An observable that emits the saved priority order
+   */
+  saveBoxPriority(version: number, boxIds: string[]): Observable<UploadBoxPriority> {
+    return this.#http
+      .put<UploadBoxPriority>(this.#priorityUrl, { version, box_ids: boxIds })
+      .pipe(
+        tap((priority) => {
+          this.#httpCache.delete(this.#priorityBucket);
+          this.boxPriority.value.set(priority);
+        }),
+      );
   }
 
   /**
@@ -752,6 +889,7 @@ export class UploadBoxService {
    */
   #invalidateBoxes(): void {
     this.#httpCache.delete(this.#boxesBucket);
+    this.#httpCache.delete(this.#fileStateCountsBucket);
     this.#httpCache.delete(this.#boxBucket);
     this.#httpCache.delete(this.#userGrantsBucket);
   }

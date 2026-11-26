@@ -64,6 +64,26 @@
 {{- if .Values.serviceInstanceId.fromPodName }}
 {{- $envVars = append $envVars (dict "name" (print .Values.configPrefix "_SERVICE_INSTANCE_ID" | upper) "valueFrom" (dict "fieldRef" (dict "fieldPath" "metadata.name"))) }}
 {{- end }}
+{{- /* Keep requests like the health probes out of traces and HTTP metrics, unless
+the values set OTEL_PYTHON_EXCLUDED_URLS themselves. */}}
+{{- if .Values.otelExcludedUrls }}
+{{- $ownExclusions := false }}
+{{- range $envVars }}{{ if eq .name "OTEL_PYTHON_EXCLUDED_URLS" }}{{ $ownExclusions = true }}{{ end }}{{ end }}
+{{- if not $ownExclusions }}
+{{- $envVars = append $envVars (dict "name" "OTEL_PYTHON_EXCLUDED_URLS" "value" .Values.otelExcludedUrls) }}
+{{- end }}
+{{- end }}
+{{- /* Name the pod in the OpenTelemetry resource of traces and metrics, unless the
+values set OTEL_RESOURCE_ATTRIBUTES themselves. K8S_POD_NAME comes first, since
+$(VAR) only expands variables defined earlier in the list. */}}
+{{- if .Values.otelResource.podName }}
+{{- $ownAttributes := false }}
+{{- range $envVars }}{{ if eq .name "OTEL_RESOURCE_ATTRIBUTES" }}{{ $ownAttributes = true }}{{ end }}{{ end }}
+{{- if not $ownAttributes }}
+{{- $envVars = append $envVars (dict "name" "K8S_POD_NAME" "valueFrom" (dict "fieldRef" (dict "fieldPath" "metadata.name"))) }}
+{{- $envVars = append $envVars (dict "name" "OTEL_RESOURCE_ATTRIBUTES" "value" "k8s.pod.name=$(K8S_POD_NAME)") }}
+{{- end }}
+{{- end }}
 {{- dict "envVars" $envVars | toYaml -}}
 {{- end -}}
 

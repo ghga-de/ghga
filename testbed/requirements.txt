@@ -10,12 +10,12 @@ ghga-service-commons[auth,crypt]
 hexkit[all]
 openpyxl >= 3.1,<4
 
-# pytest-bdd currently does not work properly with pytest >= 8
-# therefore we need to pin pytest to an older version until this is fixed
-# see https://github.com/pytest-dev/pytest-bdd/issues/689
-pytest>=9.0.3,<10
+# pytest 9.2 replaced the private fixture registry that pytest-bdd reads, so every
+# scenario fails at step lookup; the bound here and in the root pyproject.toml wait
+# for a pytest-bdd release that fixes https://github.com/pytest-dev/pytest-bdd/issues/850
+pytest>=9.0.3,<9.2
 pytest-asyncio>=1,<2
-pytest-bdd>=8.1,<9
+pytest-bdd>=9,<10
 pytest-cov>=7,<8
 pyotp>=2.9,<3
 

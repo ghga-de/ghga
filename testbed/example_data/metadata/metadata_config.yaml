@@ -3,24 +3,6 @@ source_event_type: source_event
 event_store_path: event_store
 artifact_topic_prefix: artifact
 accession_store_path: accession_store
-prefix_mapping:
-  Study: GHGAS
-  ExperimentMethod: GHGAQ
-  Experiment: GHGAX
-  ResearchDataFile: GHGAF
-  ProcessDataFile: GHGAF
-  ExperimentMethodSupportingFile: GHGAF
-  AnalysisMethodSupportingFile: GHGAF
-  IndividualSupportingFile: GHGAF
-  DataAccessPolicy: GHGAP
-  DataAccessCommittee: GHGAC
-  AnalysisMethod: GHGAZ
-  Publication: GHGAU
-  Analysis: GHGAR
-  Individual: GHGAI
-  Sample: GHGAN
-  Dataset: GHGAD
-suffix_length: 14
 metadata_model_path: metadata_model.yaml
 submission_store_dir: submission_store
 artifact_model_dir: artifact_models

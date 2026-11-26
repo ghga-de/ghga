@@ -21,7 +21,6 @@ import functools
 import io
 import logging
 import os
-import time
 from collections.abc import Callable, Generator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
@@ -33,19 +32,20 @@ from uuid import UUID, uuid4
 import crypt4gh.header
 import crypt4gh.lib
 from crypt4gh.keys import get_private_key
-from nacl.bindings import (
-    crypto_aead_chacha20poly1305_ietf_decrypt as decrypt_algo,
-)
-from nacl.bindings import (
-    crypto_aead_chacha20poly1305_ietf_encrypt as encrypt_algo,
-)
+from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 from pydantic import UUID4, SecretBytes
 
 from dhfs.adapters.outbound.http import ConnectionFailedError
 from dhfs.config import Config
-from dhfs.constants import ENCRYPTION_SECRET_LENGTH, NONCE_LENGTH, SEGMENT_OVERHEAD
+from dhfs.constants import (
+    ENCRYPTION_SECRET_LENGTH,
+    NONCE_LENGTH,
+    SEGMENT_OVERHEAD,
+    TAG_LENGTH,
+)
 from dhfs.core.checksums import Checksums
 from dhfs.core.models import FileUpload, InterrogationReport, PartRange
+from dhfs.core.timings import PartTimings
 from dhfs.ports.outbound.central import CentralClientPort
 from dhfs.ports.outbound.interrogator import InterrogatorPort
 from dhfs.ports.outbound.s3 import S3ClientPort
@@ -58,8 +58,7 @@ log = logging.getLogger(__name__)
 type ByteBuffer = bytes | bytearray | memoryview
 
 # Crypto and hashing run off the loop: a part's decrypt/re-encrypt/verify chain has no
-#  `await` in it and would block S3 ops. Two workers benchmarked best; more regressed,
-#  because pynacl holds the GIL for most of each segment.
+#  `await` in it and would block S3 ops. Two workers benchmarked best.
 CRYPTO_THREAD_COUNT = 2
 
 
@@ -71,7 +70,7 @@ class _PartContext:
     part_range: PartRange
     part_no: int
     new_object_id: str
-    timings: dict[str, float]
+    timings: PartTimings
 
     @property
     def file_id(self) -> UUID4:
@@ -88,18 +87,6 @@ class _PartContext:
             "file_part_number": self.part_no,
             "content_range": f"{self.part_range.start}-{self.part_range.stop}",
         }
-
-
-@contextmanager
-def _stopwatch(timings: dict[str, float], stage: str) -> Generator[None]:
-    """Add the block's elapsed time to `timings[stage]`.
-
-    Deliberately not exception-safe: a stage that raised did not do its work, so its
-    time is not recorded.
-    """
-    start = time.monotonic()
-    yield
-    timings[stage] += time.monotonic() - start
 
 
 def _flatten_exception_group(error: BaseException) -> list[BaseException]:
@@ -177,10 +164,11 @@ class Interrogator(InterrogatorPort):
         self._storage_alias = config.storage_alias
         self._interrogation_bucket_id = config.interrogation_bucket_id
         self._central_client = central_client
+        passphrase = config.data_hub_crypt4gh_private_key_passphrase
         self._data_hub_private_key = SecretBytes(
             get_private_key(
                 config.data_hub_crypt4gh_private_key_path,
-                lambda: config.data_hub_crypt4gh_private_key_passphrase,
+                lambda: passphrase.get_secret_value() if passphrase else None,
             )
         )
         self._s3_client = s3_client
@@ -207,40 +195,52 @@ class Interrogator(InterrogatorPort):
             self._crypto_executor, functools.partial(context.run, func, *args, **kwargs)
         )
 
-    async def interrogate_new_files(self) -> None:
+    async def interrogate_new_files(self) -> bool:
         """Query the GHGA Central API for new files that need to be re-encrypted.
 
         This method handles InterrogationError exceptions by reporting failures to the
         Central API. CantCompleteError exceptions propagate up to the caller.
+
+        Returns `True` if the Central API accepted the report of at least one file, a
+        success or a failure, and `False` if there were no files, every file was
+        inconclusive, or the Central API rejected every report. A file whose report
+        was rejected stays waiting, so the next request returns it again.
 
         Raises:
         - CantCompleteError if an error prevents interrogation from completing (e.g., network issues, S3 unavailable).
         """
         new_files = await self._fetch_batch()
         if new_files is None:
-            return
+            return False
 
         log.info("Received a batch of %i file(s) to process.", len(new_files))
 
         # One file at a time. A CriticalError is left uncaught so that it abandons
         #  the rest of the batch, which is the point of that severity.
+        concluded_a_file = False
         for file in new_files:
             try:
                 await self._check_file_is_in_inbox(file=file)
-                await self.interrogate_file(file)
+                report_accepted = await self.interrogate_file(file)
             except self.ConclusiveError as err:
                 reason = getattr(err, "reason", None) or "Unexpected error"
                 # Errors in .report_failure() are logged without re-raising, because
                 #  the solution to the error is simply to move on to the next file
-                await self.report_failure(file_id=file.id, reason=reason)
+                report_accepted = await self.report_failure(
+                    file_id=file.id, reason=reason
+                )
             except self.InconclusiveError as err:
                 log.warning(
                     "File %s: Unable to conclusively process file - will retry later. Reason: %s",
                     file.id,
                     err,
                 )
+                continue
+            if report_accepted:
+                concluded_a_file = True
 
         log.info("Finished processing current file batch.")
+        return concluded_a_file
 
     async def _check_file_is_in_inbox(self, *, file: FileUpload) -> None:
         """Verify that the file exists in the inbox before processing it.
@@ -338,8 +338,6 @@ class Interrogator(InterrogatorPort):
         """
         part_size = len(encrypted_part)
         segments = ceil(part_size / crypt4gh.lib.CIPHER_SEGMENT_SIZE)
-        key = secret.get_secret_value()
-        read_position = write_position = 0
 
         try:
             # Sizing happens inside the try so that a malformed part fails as a
@@ -354,71 +352,68 @@ class Interrogator(InterrogatorPort):
             buffer = bytearray(plaintext_size)
             source = memoryview(encrypted_part)
             target = memoryview(buffer)
-            while read_position < part_size:
-                chunk = source[
-                    read_position : read_position + crypt4gh.lib.CIPHER_SEGMENT_SIZE
-                ]
-                # nacl needs real bytes; slicing the view is free.
-                decrypted = decrypt_algo(
-                    bytes(chunk[NONCE_LENGTH:]),  # data to decrypt (after nonce)
-                    None,
-                    bytes(chunk[:NONCE_LENGTH]),  # nonce (first 12 bytes)
-                    key,
+            cipher = ChaCha20Poly1305(secret.get_secret_value())
+            for segment in range(segments):
+                read_position = segment * crypt4gh.lib.CIPHER_SEGMENT_SIZE
+                nonce_end = read_position + NONCE_LENGTH
+                segment_end = min(
+                    read_position + crypt4gh.lib.CIPHER_SEGMENT_SIZE, part_size
                 )
-                target[write_position : write_position + len(decrypted)] = decrypted
-                write_position += len(decrypted)
-                read_position += crypt4gh.lib.CIPHER_SEGMENT_SIZE
-
-            # Slicing into a bytearray would copy, undoing preallocation gains.
-            # That is only sound while the segment framing fills it exactly; a short write
-            # would otherwise hand back silent trailing zeros as if they were plaintext.
-            if write_position != len(buffer):
-                raise ValueError(
-                    f"Decryption produced {write_position} bytes for a"
-                    + f" {len(buffer)}-byte buffer"
+                write_position = segment * crypt4gh.lib.SEGMENT_SIZE
+                plaintext_end = write_position + segment_end - nonce_end - TAG_LENGTH
+                # Views in and out, so no segment is copied. decrypt_into rejects an
+                #  output view of the wrong length, which is what guarantees the
+                #  segments fill the buffer exactly instead of leaving trailing zeros.
+                cipher.decrypt_into(
+                    source[read_position:nonce_end],
+                    source[nonce_end:segment_end],
+                    None,
+                    target[write_position:plaintext_end],
                 )
             return buffer
         except Exception as err:
-            # We do a catch-all here on purpose - decrypt_algo can raise several error types
+            # We do a catch-all here on purpose - decryption can raise several error types
             raise self.DecryptionError() from err
 
     def _reencrypt_part(
         self, *, decrypted_part: ByteBuffer, new_secret: SecretBytes
-    ) -> bytes:
+    ) -> bytearray:
         """Re-encrypt a decrypted file part using a new secret.
 
-        Returns `bytes` because the result is handed to httpx, which treats other
-        buffer types as iterables of integers.
+        Each segment is encrypted from a view of the input straight into the output
+        buffer, which is returned as it is.
 
-        May raise exceptions from the underlying encrypt_algo if re-encryption fails.
+        May raise exceptions from cryptography if re-encryption fails.
         """
         part_size = len(decrypted_part)
         segments = ceil(part_size / crypt4gh.lib.SEGMENT_SIZE)
         buffer = bytearray(part_size + SEGMENT_OVERHEAD * segments)
-        key = new_secret.get_secret_value()
-        read_position = write_position = 0
+        cipher = ChaCha20Poly1305(new_secret.get_secret_value())
+        nonces = os.urandom(NONCE_LENGTH * segments)
 
         source = memoryview(decrypted_part)
         target = memoryview(buffer)
-        while read_position < part_size:
-            chunk = bytes(
-                source[read_position : read_position + crypt4gh.lib.SEGMENT_SIZE]
+        for segment in range(segments):
+            read_position = segment * crypt4gh.lib.SEGMENT_SIZE
+            chunk = source[read_position : read_position + crypt4gh.lib.SEGMENT_SIZE]
+            write_position = segment * crypt4gh.lib.CIPHER_SEGMENT_SIZE
+            nonce_end = write_position + NONCE_LENGTH
+            nonce = target[write_position:nonce_end]
+            nonce[:] = nonces[segment * NONCE_LENGTH : (segment + 1) * NONCE_LENGTH]
+            cipher.encrypt_into(
+                nonce,
+                chunk,
+                None,
+                target[nonce_end : nonce_end + len(chunk) + TAG_LENGTH],
             )
-            nonce = os.urandom(NONCE_LENGTH)
-            encrypted = encrypt_algo(chunk, None, nonce, key)
-            target[write_position : write_position + NONCE_LENGTH] = nonce
-            write_position += NONCE_LENGTH
-            target[write_position : write_position + len(encrypted)] = encrypted
-            write_position += len(encrypted)
-            read_position += crypt4gh.lib.SEGMENT_SIZE
 
-        return bytes(buffer)
+        return buffer
 
     async def _download_part(self, ctx: _PartContext) -> bytes:
         """Download a single encrypted part, translating S3 errors."""
         file_upload = ctx.file_upload
         try:
-            with _stopwatch(ctx.timings, "download"):
+            with ctx.timings.measure_stage("download"):
                 return await self._s3_client.fetch_file_content_range(
                     bucket_id=file_upload.bucket_id,
                     object_id=str(file_upload.object_id),
@@ -435,11 +430,11 @@ class Interrogator(InterrogatorPort):
             raise _translate_s3_error(err) from err
 
     async def _upload_part(
-        self, ctx: _PartContext, *, upload_id: str, part_md5: bytes, part: bytes
+        self, ctx: _PartContext, *, upload_id: str, part_md5: bytes, part: bytearray
     ) -> None:
         """Upload a single re-encrypted part, translating S3 errors."""
         try:
-            with _stopwatch(ctx.timings, "upload"):
+            with ctx.timings.measure_stage("upload"):
                 await self._s3_client.upload_file_part(
                     upload_id=upload_id,
                     object_id=ctx.new_object_id,
@@ -472,7 +467,7 @@ class Interrogator(InterrogatorPort):
         InconclusiveError, so an unrecognised failure schedules a retry.
         """
         try:
-            with _stopwatch(ctx.timings, stage):
+            with ctx.timings.measure_stage(stage):
                 return await self._run_crypto(func, **kwargs)
         except Exception as err:
             log.warning(failure_message, ctx.file_id, extra=ctx.log_extra)
@@ -499,7 +494,7 @@ class Interrogator(InterrogatorPort):
 
     async def _reencrypt_stage(
         self, ctx: _PartContext, *, decrypted_part: ByteBuffer, secret: SecretBytes
-    ) -> bytes:
+    ) -> bytearray:
         """Re-encrypt a part under the new secret, on the crypto pool."""
         return await self._crypto_stage(
             ctx,
@@ -530,7 +525,7 @@ class Interrogator(InterrogatorPort):
 
     async def _prepare_part(
         self, ctx: _PartContext, *, old_secret: SecretBytes, new_secret: SecretBytes
-    ) -> tuple[bytes, tuple[bytes, bytes]]:
+    ) -> tuple[bytearray, tuple[bytes, bytes]]:
         """Produce the bytes to upload for one part, plus their (md5, sha256) digests.
 
         Each `del` drops a buffer the moment the next stage stops needing it, holding
@@ -565,7 +560,7 @@ class Interrogator(InterrogatorPort):
         upload_id: str,
         old_secret: SecretBytes,
         new_secret: SecretBytes,
-    ) -> Checksums:
+    ) -> tuple[Checksums, PartTimings]:
         """Perform the decrypt/re-encrypt/decrypt/upload cycle on each file part.
 
         `max_concurrent_parts` workers draw part ranges from a shared iterator; the
@@ -573,8 +568,9 @@ class Interrogator(InterrogatorPort):
         that pool is this file's whole budget - memory, live tasks and S3 transfers.
 
         Returns the `Checksums` object containing the checksums calculated during
-        the file processing. All error translation is done here, but all S3 cleanup is
-        handled from the calling function, `interrogate_file()`.
+        the file processing, and the `PartTimings` of the parts phase. All error translation is done
+        here, but all S3 cleanup is handled from the calling function,
+        `interrogate_file()`.
 
         Raises:
         - DecryptionError if a file part cannot be decrypted.
@@ -589,10 +585,7 @@ class Interrogator(InterrogatorPort):
         #  predecessor to be folded in before folding itself in and releasing the next.
         hashed: list[asyncio.Event] = [asyncio.Event() for _ in part_ranges]
 
-        timings = dict.fromkeys(
-            ("download", "decrypt", "reencrypt", "verify", "digest", "fold", "upload"),
-            0.0,
-        )
+        timings = PartTimings()
 
         async def _handle_part(
             index: int, part_range: PartRange
@@ -622,7 +615,7 @@ class Interrogator(InterrogatorPort):
             #  it can only ever wait on a part that is progressing.
             if index:
                 await hashed[index - 1].wait()
-            with _stopwatch(timings, "fold"):
+            with timings.measure_stage("fold"):
                 await self._run_crypto(checksums.update_unencrypted, verified_part)
             hashed[index].set()
             del verified_part
@@ -648,12 +641,10 @@ class Interrogator(InterrogatorPort):
                     return
                 digests[index] = await _handle_part(index, part_range)
 
-        _wall = time.monotonic()
-        with _collapsing_error_groups():
+        with timings.measure_wall_time(), _collapsing_error_groups():
             async with asyncio.TaskGroup() as task_group:
                 for _ in range(worker_count):
                     task_group.create_task(_part_worker())
-        wall_time = time.monotonic() - _wall
 
         # The group only exits cleanly once every part is done, so there are no holes.
         checksums.set_encrypted_parts(cast(list[tuple[bytes, bytes]], digests))
@@ -662,17 +653,15 @@ class Interrogator(InterrogatorPort):
             file_upload=file_upload,
             part_count=len(part_ranges),
             timings=timings,
-            wall_time=wall_time,
         )
-        return checksums
+        return checksums, timings
 
     def _log_part_metrics(
         self,
         *,
         file_upload: FileUpload,
         part_count: int,
-        timings: dict[str, float],
-        wall_time: float,
+        timings: PartTimings,
     ) -> None:
         """Log throughput metrics for a completed file."""
         size_mib = file_upload.decrypted_size / (1024**2)
@@ -684,14 +673,14 @@ class Interrogator(InterrogatorPort):
             "part_count": part_count,
             "max_concurrent_parts": self._max_concurrent_parts,
         }
-        for stage, elapsed in timings.items():
+        for stage, elapsed in timings.stages.items():
             metrics[f"{stage}_s"] = round(elapsed, 3)
             metrics[f"{stage}_mib_per_s"] = _throughput(elapsed)
 
         # Stage times overlap across parts, so only wall time is the real duration.
-        metrics["stage_total_s"] = round(sum(timings.values()), 3)
-        metrics["total_s"] = round(wall_time, 3)
-        metrics["total_mib_per_s"] = _throughput(wall_time)
+        metrics["stage_total_s"] = round(timings.stage_total, 3)
+        metrics["total_s"] = timings.wall_time_seconds
+        metrics["total_mib_per_s"] = _throughput(timings.wall_time)
 
         log.info(
             "File %s: Re-encryption process complete. See log details for metrics.",
@@ -699,8 +688,10 @@ class Interrogator(InterrogatorPort):
             extra=metrics,
         )
 
-    async def interrogate_file(self, file_upload: FileUpload) -> None:
+    async def interrogate_file(self, file_upload: FileUpload) -> bool:
         """Inspect and re-encrypt a newly uploaded file.
+
+        Returns whether the Central API accepted the success report.
 
         Raises:
         - FileEnvelopeDecryptionError if the Crypt4GH envelope cannot be decrypted.
@@ -756,7 +747,7 @@ class Interrogator(InterrogatorPort):
                 file_upload.id,
             )
             # Error translation handled inside ._process_file_parts()
-            checksums = await self._process_file_parts(
+            checksums, timings = await self._process_file_parts(
                 file_upload=file_upload,
                 new_object_id=new_object_id,
                 upload_id=upload_id,
@@ -851,7 +842,7 @@ class Interrogator(InterrogatorPort):
             "File %s: S3 ETag check passed - submitting success report.",
             file_upload.id,
         )
-        await self.report_success(
+        return await self.report_success(
             file_id=file_upload.id,
             bucket_id=self._interrogation_bucket_id,
             object_id=UUID(new_object_id),
@@ -859,6 +850,8 @@ class Interrogator(InterrogatorPort):
             encrypted_parts_md5=checksums.encrypted_md5,
             encrypted_parts_sha256=checksums.encrypted_sha256,
             encrypted_size=file_upload.encrypted_size - file_upload.offset,
+            wall_time_seconds=timings.wall_time_seconds,
+            stage_seconds=timings.stage_seconds,
         )
 
     async def _clean_up_upload(self, *, upload_id: str, object_id: str, file_id: UUID4):
@@ -890,8 +883,11 @@ class Interrogator(InterrogatorPort):
         encrypted_parts_md5: list[bytes],
         encrypted_parts_sha256: list[bytes],
         encrypted_size: int,
-    ) -> None:
-        """Submit an InterrogationReport for a successful interrogation.
+        wall_time_seconds: float | None = None,
+        stage_seconds: dict[str, float] | None = None,
+    ) -> bool:
+        """Submit an InterrogationReport for a successful interrogation, and return
+        whether the Central API accepted it.
 
         Submission errors are logged but not raised; the re-encrypted file is
         left in the interrogation bucket regardless of outcome so that it is not
@@ -908,9 +904,12 @@ class Interrogator(InterrogatorPort):
             encrypted_parts_md5=[h.hex() for h in encrypted_parts_md5],
             encrypted_parts_sha256=[h.hex() for h in encrypted_parts_sha256],
             encrypted_size=encrypted_size,
+            wall_time_seconds=wall_time_seconds,
+            stage_seconds=stage_seconds,
         )
         try:
             await self._central_client.submit_interrogation_report(report=report)
+            return True
         except ConnectionFailedError as err:
             raise InterrogatorPort.InconclusiveError(
                 "Unable to reach the GHGA Central API.",
@@ -938,9 +937,11 @@ class Interrogator(InterrogatorPort):
                 file_id,
                 extra={"err_msg": str(err)},
             )
+        return False
 
-    async def report_failure(self, *, file_id: UUID4, reason: str) -> None:
-        """Submit an InterrogationReport for an unsuccessful interrogation.
+    async def report_failure(self, *, file_id: UUID4, reason: str) -> bool:
+        """Submit an InterrogationReport for an unsuccessful interrogation, and return
+        whether the Central API accepted it.
 
         Submission errors are logged but not raised so that processing of
         remaining files in the batch is not interrupted.
@@ -954,6 +955,7 @@ class Interrogator(InterrogatorPort):
         )
         try:
             await self._central_client.submit_interrogation_report(report=report)
+            return True
         except CentralClientPort.UpgradeRequiredError as err:
             raise InterrogatorPort.CriticalError(err) from err
         except ConnectionFailedError as err:
@@ -980,3 +982,4 @@ class Interrogator(InterrogatorPort):
                 file_id,
                 extra={"err_msg": str(err)},
             )
+        return False

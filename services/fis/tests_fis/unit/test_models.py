@@ -125,6 +125,24 @@ def test_interrogation_report_validator():
         )
 
 
+@pytest.mark.parametrize(
+    "timing",
+    [{"wall_time_seconds": -1.0}, {"stage_seconds": {"upload": -0.5}}],
+    ids=["wall_time", "stage"],
+)
+def test_interrogation_report_rejects_negative_timing(timing: dict):
+    """Test that a report with a negative timing fails validation."""
+    with pytest.raises(ValidationError, match="greater than or equal to 0"):
+        InterrogationReportWithSecret(
+            file_id=uuid4(),
+            storage_alias="HD01",
+            interrogated_at=now_utc_ms_prec(),
+            passed=False,
+            reason="Checksum mismatch",
+            **timing,
+        )
+
+
 @pytest.mark.parametrize("decrypted_sha256", [None, "", "bigchecksum"])
 @pytest.mark.parametrize(
     "state",

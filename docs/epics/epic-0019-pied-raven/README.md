@@ -2,10 +2,6 @@
 
 **Epic Type:** Implementation Epic
 
-## Scope
-
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/4AC2D>
-
 ## User Journeys
 
 Building on the [*18 - Hooded Crow*](../epic-0018-hooded-crow/README.md) epic, this epic aims to finish the work started on the encryption & decryption services, integrating them into the wider GHGA microservice landscape and resolving remaining questions and issues.
@@ -18,7 +14,7 @@ The API should allow to store a secret and return a newly generated ID by which 
 
 Implementing this change includes multiple steps:
 
-1. Explore how to set up HashiCorp Vault for our use case - see also <https://wiki.verbis.dkfz.de/x/SoKcCw> for what has already been done
+1. Explore how to set up HashiCorp Vault for our use case, building on the two options for runtime secret management with Vault that have already been discussed
 2. Explore how to connect, store and retrieve secrets
 3. Implement a HashiCorp vault setup for development (.devcontainer) and testing (python-testcontainers).
 
@@ -66,6 +62,8 @@ However, this might be more fitting to consider in conjunction with a refactorin
 [Encryption Key Store REST API](./api_definitions/rest/encryption_key_store.yml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0019-pied-raven/api_definitions/rest/encryption_key_store.yml) - This supersedes the 18 Hooded Crow version.
 
 ## Additional Implementation Details
+
+- Encryption Key Store: improve error handling to differentiate more specifically between the underlying issues.
 
 ## Human Resource/Time Estimation
 

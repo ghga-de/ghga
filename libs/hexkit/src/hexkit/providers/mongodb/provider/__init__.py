@@ -25,8 +25,8 @@ from .dao import (
     MongoDbDaoFactory,
     MongoDbIndex,
     get_single_hit,
-    replace_id_field_in_find_mapping,
-    validate_find_mapping,
+    replace_id_field_in_find_filter,
+    validate_find_filter,
 )
 from .kvstore import (
     MongoDbBytesKeyValueStore,
@@ -48,7 +48,7 @@ __all__ = [
     "document_to_dto",
     "dto_to_document",
     "get_single_hit",
-    "replace_id_field_in_find_mapping",
+    "replace_id_field_in_find_filter",
     "translate_pymongo_errors",
-    "validate_find_mapping",
+    "validate_find_filter",
 ]

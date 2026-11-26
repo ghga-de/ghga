@@ -2,10 +2,6 @@
 
 **Epic Type:** Implementation Epic
 
-## Scope
-
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/TgA5D>
-
 ## User Journeys
 
 Building on the [*16 - Cuban Crow*](../epic-0016-cuban-crow.md) epic, this implementation epic aims to develop the functionality explored in the prototype script into fully fledged services to deal with encryption and decryption functionality using Crypt4GH along both the download and upload path.
@@ -87,6 +83,7 @@ Following implementation goals for the *Encryption Key Store* shall be achieved 
 
 Defining message formats for events at the boundaries of the *Interrogation Room* will be part of a follow-up epic.
 Adjusting and integrating existing services will also be handled in that same epic and not in *Hooded Crow*.
+Encryption, decryption and checksum calculation in the CLI are not part of this epic either.
 
 ## API Definitions
 

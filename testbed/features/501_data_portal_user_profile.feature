@@ -66,3 +66,24 @@ Feature: 501 Data Portal User Profile
       When I send the code to the IVA waiting for verification
       Then I filter one IVA with state "Code Transmitted"
       And remove the state "user has one IVA waiting for verification"
+
+    Scenario: User consents to the verification SMS
+
+      Given I am logged in as "Dr. John Doe"
+      And I am authenticated as "Dr. John Doe"
+      And I am logged in to the Data Portal as "Dr. John Doe"
+
+      When I navigate to the user account page
+      And I add a new "SMS" contact address with the "other" number
+      Then the "other" SMS contact address has state "Unverified"
+
+      When I click to request verification for the "SMS" IVA
+      Then I am asked for consent to send an SMS to the "other" number
+
+      When I consent to sending the SMS
+      Then the "other" SMS contact address has state "CodeTransmitted"
+      And "Dr. John Doe" receives an SMS at the "other" number for IVA verification code
+
+      When I delete the "other" SMS contact address
+      Then the "other" SMS contact address is gone
+      And I have an "SMS" contact address with state "Verified"

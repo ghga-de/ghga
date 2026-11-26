@@ -23,12 +23,12 @@ import pytest
 
 from ghga_event_schemas.pydantic_ import SearchableResource
 from ghga_service_commons.auth.ghga import AuthContext
+from ghga_service_commons.http.mock_api import respond
 from hexkit.utils import now_utc_ms_prec
 from rs.constants import EXC_ID_BOX_NOT_FOUND
 from rs.core.models import GrantId
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
 from rs.ports.outbound.http import FileBoxClientPort
-from tests.fixtures.external_apis import respond
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import TEST_MAX_SIZE
 
@@ -93,9 +93,10 @@ async def test_typical_journey(joint_fixture: JointFixture):
             data_steward_id=ds_user_id,
             max_size=TEST_MAX_SIZE,
         )
-    assert audit_event_recorder.recorded_events
-    audit_event = audit_event_recorder.recorded_events[0]
-    assert audit_event.payload["label"] == "ResearchDataUploadBox created"  # suffices
+    # The box joins the priority list before the box audit record is written
+    assert [
+        event.payload["label"] for event in audit_event_recorder.recorded_events
+    ] == ["UploadBoxPriority updated", "ResearchDataUploadBox created"]
     assert box_id is not None
     assert box_event_recorder.recorded_events
     assert len(box_event_recorder.recorded_events) == 1
@@ -176,7 +177,7 @@ async def test_typical_journey(joint_fixture: JointFixture):
     assert recorder.recorded_events[0].payload["file_count"] == 1  # check one property
 
     # Query the box (should show updated file count and size)
-    access_api.on_check_box_access = respond(200)
+    access_api.on_check_box_access = respond(200, json=valid_until.isoformat())
     updated_box = await rdub_manager.get_research_data_upload_box(
         box_id=box_id,
         auth_context=user_auth_context,
@@ -330,10 +331,11 @@ async def test_typical_journey(joint_fixture: JointFixture):
             auth_context=ds_auth_context,
         )
 
-    # Verify audit and box events were published
-    assert audit_event_recorder.recorded_events
-    audit_event = audit_event_recorder.recorded_events[0]
-    assert audit_event.payload["label"] == "ResearchDataUploadBox updated"
+    # Verify audit and box events were published, the box leaving the priority list
+    #  before the box audit record is written
+    assert [
+        event.payload["label"] for event in audit_event_recorder.recorded_events
+    ] == ["UploadBoxPriority updated", "ResearchDataUploadBox updated"]
     assert box_event_recorder.recorded_events
     assert len(box_event_recorder.recorded_events) == 1
     assert box_event_recorder.recorded_events[0].payload["state"] == "archived"

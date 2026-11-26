@@ -7,10 +7,15 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
+import { routes } from '@app/app-routes';
+import { UserService } from '@app/auth/services/user';
+import { pendingEditsGuard } from '@app/shared/features/pending-edits';
 import { Notifier } from '@app/shared/services/notification';
 import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
+import { UploadBoxPriority } from '@app/upload/models/box-priority';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 import { of } from 'rxjs';
 import { UploadBoxManager } from './upload-box-manager';
 
@@ -26,6 +31,21 @@ const TEST_UPLOAD_BOX: ResearchDataUploadBox = {
   size: 123456,
   storage_alias: 'TUE01',
   max_size: 10_000_000_000_000,
+};
+
+const OTHER_UPLOAD_BOX: ResearchDataUploadBox = {
+  ...TEST_UPLOAD_BOX,
+  id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68010',
+  title: 'Other Upload Box',
+};
+
+const TEST_PRIORITY: UploadBoxPriority = {
+  version: 3,
+  entries: [],
+  changed_by: null,
+  last_changed: '2025-02-10T14:30:00Z',
+  reordered_by: null,
+  reordered_at: null,
 };
 
 /**
@@ -47,6 +67,15 @@ class MockUploadBoxService {
   });
   uploadBoxLocationOptions = () => [];
   filteredUploadBoxes = () => this.#uploadBoxes();
+  fileStateCounts = { isLoading: () => false, error: () => undefined };
+  fileStateCountsByBox = () => ({});
+  showFileStateCountsOf = vitest.fn();
+  boxPriority = {
+    value: () => TEST_PRIORITY,
+    error: () => undefined,
+    isLoading: () => false,
+  };
+  prioritizedUploadBoxes = signal<ResearchDataUploadBox[] | undefined>(undefined);
   storageLabels = {
     value: () => ({}),
     isLoading: () => false,
@@ -74,6 +103,13 @@ const mockNotificationService = {
   showSuccess: vitest.fn(),
 };
 
+const mockUserService = {
+  createUserFetcher: () => ({
+    load: vitest.fn(),
+    resource: { value: () => undefined, error: () => undefined },
+  }),
+};
+
 describe('UploadBoxManager', () => {
   let component: UploadBoxManager;
   let fixture: ComponentFixture<UploadBoxManager>;
@@ -89,6 +125,7 @@ describe('UploadBoxManager', () => {
         { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: MatDialog, useValue: mockDialog },
         { provide: Notifier, useValue: mockNotificationService },
+        { provide: UserService, useValue: mockUserService },
       ],
     }).compileComponents();
 
@@ -152,5 +189,72 @@ describe('UploadBoxManager', () => {
     expect(mockNotificationService.showSuccess).toHaveBeenCalledWith(
       'Upload Box created successfully.',
     );
+  });
+
+  describe('reorder mode', () => {
+    beforeEach(async () => {
+      uploadBoxService.setUploadBoxes([TEST_UPLOAD_BOX, OTHER_UPLOAD_BOX]);
+      uploadBoxService.prioritizedUploadBoxes.set([TEST_UPLOAD_BOX, OTHER_UPLOAD_BOX]);
+      await fixture.whenStable();
+    });
+
+    /**
+     * Click a button and wait for the page to update.
+     * @param name - the accessible name of the button
+     */
+    async function click(name: string): Promise<void> {
+      await userEvent.click(screen.getByRole('button', { name }));
+      await fixture.whenStable();
+    }
+
+    it('should disable Change order if the priority order is not loaded', async () => {
+      const changePriority = screen.getByRole('button', { name: 'Change order' });
+      expect(changePriority).toBeEnabled();
+
+      uploadBoxService.prioritizedUploadBoxes.set(undefined);
+      await fixture.whenStable();
+      expect(changePriority).toBeDisabled();
+    });
+
+    it('should switch between the list and the reorder mode', async () => {
+      await click('Change order');
+
+      expect(screen.getByRole('heading', { name: 'Priority order' })).toBeVisible();
+      expect(screen.getByRole('list', { name: 'Priority order' })).toBeVisible();
+      expect(screen.queryByRole('button', { name: /create upload box/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Change order' })).toBeNull();
+
+      await click('Cancel');
+
+      expect(screen.queryByRole('heading', { name: 'Priority order' })).toBeNull();
+      expect(screen.getByRole('button', { name: /create upload box/i })).toBeVisible();
+    });
+
+    it('should move the focus to the heading and back to Change order', async () => {
+      await click('Change order');
+      expect(screen.getByRole('heading', { name: 'Priority order' })).toHaveFocus();
+
+      await click('Cancel');
+      expect(screen.getByRole('button', { name: 'Change order' })).toHaveFocus();
+    });
+
+    it('should report unsaved changes to the leave guard until Cancel', async () => {
+      expect(component.hasPendingEdits()).toBe(false);
+
+      await click('Change order');
+      expect(component.hasPendingEdits()).toBe(false);
+
+      await click('Move Other Upload Box up');
+      expect(component.hasPendingEdits()).toBe(true);
+
+      await click('Cancel');
+      expect(component.hasPendingEdits()).toBe(false);
+    });
+
+    it('should guard the page against leaving with unsaved changes', () => {
+      const manager = routes.find((route) => route.path === 'upload-box-manager');
+      const list = manager?.children?.find((route) => route.path === '');
+      expect(list?.canDeactivate).toContain(pendingEditsGuard);
+    });
   });
 });

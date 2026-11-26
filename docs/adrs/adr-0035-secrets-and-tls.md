@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-06-30
+amended: 2026-11-13
 tags: [security, deploy]
 related: [ADR-0031]
 ---
@@ -38,10 +39,14 @@ App charts reference secrets by name, whatever produces them ([ADR-0031](adr-003
 - **Production:** secrets come from Vault through Vault Agent injection, TLS certificates from cert-manager, and `auth-km-jobs` rotates the signing keys in Vault.
   The platform layer owns all of this; the charts reference secret names and switch the Vault Agent annotations on.
 
+  **Amended 2026-11-13:** the platform repo now builds the Vault Agent annotations itself, with helmfile, and passes them to the charts as `podAnnotations`.
+  `ghga-common` 3.0.0 dropped its Vault templates, whose secret paths were production knowledge, and keeps only generic switches: `secretEnvFiles` sources a directory of env files before the command, and `deployment.shareProcessNamespace` lets a sidecar signal the app.
+
 ### Consequences
 
 - The demo needs no secret store; production keeps using Vault.
 - How a workload consumes secrets is a per-profile switch in `ghga-common`.
+  **Amended 2026-11-13:** that switch is now generic; nothing in `ghga-common` names Vault.
 - TLS is a production concern only.
   Unencrypted traffic is fine on a local cluster, but not for a demo exposed to a network.
 

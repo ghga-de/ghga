@@ -5,13 +5,15 @@
 # Python / uv
 __pycache__/
 *.py[cod]
-.venv/
+# also .venv-docs and .venv-testbed; the ignore file uv writes inside is gone during a rebuild
+.venv*/
 venv/
 *.egg-info/
 build/
 dist/
 .mypy_cache/
 .ruff_cache/
+.rumdl_cache/
 .pytest_cache/
 .coverage
 coverage.xml
@@ -21,6 +23,8 @@ htmlcov/
 node_modules/
 frontend/**/dist/
 .pnpm-store/
+# pnpm run in the repo root, which has no package.json, writes an empty lockfile
+/pnpm-lock.yaml
 
 # Editors / OS
 .idea/
@@ -55,6 +59,8 @@ claude-backup/
 **/.claude/rules/*.local.md
 # skill eval cases and results, which `just skill-eval` expands from evals.yaml and writes
 .agents/skills/*/evals/
+# and the same for a skill shipped in a package, reached through its root link
+libs/*/src/*/.agents/skills/*/evals/
 # and the local Copilot settings
 .github/copilot/settings.local.json
 

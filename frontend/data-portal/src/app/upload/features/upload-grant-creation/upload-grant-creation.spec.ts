@@ -187,7 +187,7 @@ describe('UploadGrantCreation', () => {
 
   it('should show the search input before a user is selected', () => {
     expect(
-      screen.getByLabelText(/search by name, email or external id/i),
+      screen.getByLabelText(/search by name, LS Login email or LS ID/i),
     ).toBeVisible();
   });
 
@@ -214,7 +214,7 @@ describe('UploadGrantCreation', () => {
 
       it('should hide the search input', () => {
         expect(
-          screen.queryByLabelText(/search by name, email or external id/i),
+          screen.queryByLabelText(/search by name, LS Login email or LS ID/i),
         ).not.toBeInTheDocument();
       });
 
@@ -222,8 +222,12 @@ describe('UploadGrantCreation', () => {
         expect(screen.getByText('Dr. John Doe')).toBeVisible();
       });
 
-      it('should display the selected user email', () => {
-        expect(screen.getByText('doe@home.org')).toBeVisible();
+      it('should display the selected user email as the LS Login email', () => {
+        const email = screen.getByText('doe@home.org');
+        expect(email).toBeVisible();
+        expect(email.parentElement).toHaveTextContent(
+          /^\s*LS Login email:\s*doe@home\.org/,
+        );
       });
 
       it('should show the IVA selection card', () => {
@@ -242,7 +246,7 @@ describe('UploadGrantCreation', () => {
 
         it('should show the search input again', () => {
           expect(
-            screen.getByLabelText(/search by name, email or external id/i),
+            screen.getByLabelText(/search by name, LS Login email or LS ID/i),
           ).toBeVisible();
         });
       });

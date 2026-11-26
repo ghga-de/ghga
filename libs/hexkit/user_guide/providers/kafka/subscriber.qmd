@@ -151,8 +151,21 @@ async with (
 For tests and one-shot scenarios, `run(forever=False)` consumes exactly one event and returns.
 
 The provider subscribes to the translator's `topics_of_interest`.
-Incoming events are screened before they reach the translator: events whose type is not among the `types_of_interest`, or which lack a type or correlation ID entirely, are ignored (with a log message) and acknowledged.
+Incoming events are screened before they reach the translator: events whose type is missing, not ASCII, or not among the `types_of_interest` are ignored (with a log message) and acknowledged.
 For each accepted event, the provider extracts the [correlation ID](../../observability_tools/correlation_ids.qmd) from the event headers and sets it as a context variable, so all downstream processing — including any events the service publishes in turn — carries the same correlation ID automatically.
+A missing or invalid correlation ID is replaced by a new one, with a warning in the log.
+
+### Malformed Records
+
+The provider decodes the key as ASCII and the value as a JSON object, read as UTF-8.
+A record it cannot decode — a non-ASCII key, a value that is not JSON or not an object, or a null value (a tombstone) — never reaches the translator, and is not retried, since the same bytes fail the same way again:
+
+- With the DLQ enabled, the record goes to the DLQ as described in [the DLQ chapter](../../arch_concepts/dlq.qmd#malformed-records), with `MalformedRecordError` as its exception class, and consumption continues.
+- With the DLQ disabled, the subscriber raises `KafkaEventSubscriber.MalformedRecordError` without committing the offset, just as for a failing translator.
+  The critical log names the topic, partition and offset, so an operator can move the consumer group past the record.
+
+Header values are decoded leniently, with undecodable bytes replaced, so a foreign header value alone never stops the consumer.
+Header names are different: aiokafka decodes them as UTF-8 while it reads the batch, before the provider sees the record, so a header name that is not UTF-8 still stops the consumer, with the DLQ enabled or not.
 
 ## Offset Management
 

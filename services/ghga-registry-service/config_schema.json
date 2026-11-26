@@ -2,6 +2,14 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
+    "upload_box_priority_topic": {
+      "description": "Name of the event topic containing upload box priority events",
+      "examples": [
+        "upload-box-priority"
+      ],
+      "title": "Upload Box Priority Topic",
+      "type": "string"
+    },
     "study_topic": {
       "description": "Name of the event topic containing study events",
       "examples": [
@@ -365,6 +373,12 @@
       "title": "Otel Trace Sampling Rate",
       "type": "number"
     },
+    "enable_otel_metrics": {
+      "default": false,
+      "description": "Also export metrics via OTLP. Requires `enable_opentelemetry` and a collector with a metrics pipeline.",
+      "title": "Enable Otel Metrics",
+      "type": "boolean"
+    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -598,6 +612,7 @@
     }
   },
   "required": [
+    "upload_box_priority_topic",
     "study_topic",
     "accession_map_topic",
     "research_data_upload_box_topic",

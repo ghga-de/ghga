@@ -27,7 +27,12 @@ ObjectID = str
 
 
 class InMemObjectStorage(ObjectStorageProtocol):
-    """In-memory object storage mock just the method used in this service"""
+    """In-memory ObjectStorage provider for tests.
+
+    Tracks which buckets and object IDs exist, but stores no file content.
+    Presigned URLs point to no server, and object sizes, ETags and upload
+    parts are fake values.
+    """
 
     base_url = "https://storage.test"
 
@@ -317,6 +322,7 @@ class InMemObjectStorage(ObjectStorageProtocol):
         part_number: int,
         expires_after: int = 3600,
         part_md5: str | None = None,
+        verify_upload: bool = True,
     ) -> str:
         """
         Return a FAKE presigned part upload URL based on the bucket, object, and part no.
@@ -325,6 +331,9 @@ class InMemObjectStorage(ObjectStorageProtocol):
 
         You may also specify a custom expiry duration in seconds (`expires_after`).
         Please note: the part number must be a non-zero, positive integer.
+
+        With `verify_upload=False`, neither the bucket nor the upload is checked, so
+        only the `ValueError` below can be raised.
 
         Raises:
             `BucketNotFoundError`: If the bucket does not exist.
@@ -339,9 +348,10 @@ class InMemObjectStorage(ObjectStorageProtocol):
                 + f" smaller or equal to {self.MAX_FILE_PART_NUMBER}"
             )
 
-        await self._assert_multipart_upload_exists(
-            upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
-        )
+        if verify_upload:
+            await self._assert_multipart_upload_exists(
+                upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
+            )
 
         return (
             f"{self.base_url}/{bucket_id}/{object_id}/{upload_id}"

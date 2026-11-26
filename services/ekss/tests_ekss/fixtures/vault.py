@@ -21,8 +21,6 @@ from dataclasses import dataclass
 import hvac
 import pytest
 import requests
-
-# from testcontainers.vault import DockerContainer
 from testcontainers.core.generic import DockerContainer
 
 from ekss.adapters.outbound.vault import VaultClient
@@ -84,7 +82,7 @@ def wait_for_vault(client: hvac.Client, timeout: float = VAULT_STARTUP_TIMEOUT) 
             mounts = client.sys.list_mounted_secrets_engines()
             if "secret/" in mounts["data"]:
                 return
-        except (requests.exceptions.ConnectionError, hvac.exceptions.VaultError):
+        except requests.exceptions.ConnectionError, hvac.exceptions.VaultError:
             pass
         if time.monotonic() > deadline:
             raise RuntimeError(f"Vault was not ready within {timeout} seconds")

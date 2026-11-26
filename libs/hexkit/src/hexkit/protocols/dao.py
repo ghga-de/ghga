@@ -19,11 +19,22 @@ with the database.
 """
 
 import typing
-import warnings
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Mapping
+from asyncio import sleep
+from collections import Counter
+from collections.abc import (
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Collection,
+    Iterable,
+    Mapping,
+)
 from contextlib import AbstractAsyncContextManager
 from functools import partial
+from logging import Logger
+from random import uniform
+from types import TracebackType
 from typing import Any, Generic, TypeVar
 from uuid import uuid4
 
@@ -33,16 +44,19 @@ from hexkit.custom_types import ID
 from hexkit.utils import FieldNotInModelError, validate_fields_in_model
 
 __all__ = [
+    "BatchOperationError",
     "Dao",
     "DaoFactoryProtocol",
     "FindError",
     "FindResult",
     "MultipleHitsFoundError",
     "PreconditionFailedError",
+    "RaceConditionAttempt",
     "ResourceAlreadyExistsError",
     "ResourceNotFoundError",
     "UUID4Field",
     "UniqueConstraintViolationError",
+    "race_condition_retries",
 ]
 
 
@@ -107,45 +121,72 @@ class PreconditionFailedError(DaoError):
         super().__init__(message)
 
 
-# TODO: Remove `mapping` when moving hexkit to v11.0.0
-MAPPING_DEPRECATION_MESSAGE = (
-    "The mapping parameter is being renamed to filter_, and support for mapping will"
-    " be removed in hexkit v11.0.0."
-)
+# How many IDs an error message names before it only counts the rest
+_NAMED_IDS = 5
 
 
-# TODO: Remove `mapping` when moving hexkit to v11.0.0
-def resolve_filter(
-    filter_: Mapping[str, Any] | None,
-    mapping: Mapping[str, Any] | None,
-    *,
-    stacklevel: int = 3,
-) -> Mapping[str, Any]:
-    """Return the filter to use, accepting the deprecated `mapping` name for it.
+def _named_ids(ids: list[ID]) -> str:
+    """Name the first IDs and count the rest, so that a log line stays short."""
+    named = str(ids[:_NAMED_IDS])
+    if len(ids) > _NAMED_IDS:
+        named += f" and {len(ids) - _NAMED_IDS} more"
+    return named
 
-    Deprecated because `mapping` is being renamed to `filter_`. Passing `mapping`
-    warns; passing both, or neither, is an error.
+
+def _note_all_ids(error: Exception, ids: list[ID]) -> None:
+    """Attach every ID when the message leaves some out.
+
+    A traceback prints the note, while `str(error)`, and so a log line of the
+    message, leaves it out.
     """
-    if mapping is None:
-        if filter_ is None:
-            raise TypeError("Missing required keyword argument: 'filter_'")
-        return filter_
+    if len(ids) > _NAMED_IDS:
+        error.add_note(f"All {len(ids)} IDs: {ids}")
 
-    if filter_ is not None:
-        raise TypeError("Pass either 'filter_' or 'mapping', not both")
 
-    warnings.warn(
-        MAPPING_DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=stacklevel
-    )
-    return mapping
+class BatchOperationError(DaoError):
+    """Raised when a batch partly failed: what it names failed, the rest succeeded.
+
+    `errors` maps each failed ID to the error a single-resource method would raise.
+    It also names each resource whose write was applied but not confirmed, such as
+    after a MongoDB write concern error, with the error a single write raises for that;
+    such a write stays stored unless a failover rolls it back.
+    `not_attempted` lists, in input order, the IDs an ordered batch skipped after its
+    first failure. An unordered batch attempts every resource, so for it the list is
+    empty.
+
+    The message names the first five failed IDs; when there are more, a note on the
+    error, which a traceback prints, lists all of them.
+    """
+
+    def __init__(
+        self, *, errors: Mapping[ID, DaoError], not_attempted: Collection[ID] = ()
+    ):
+        self.errors = dict(errors)
+        self.not_attempted = tuple(not_attempted)
+        failed = list(self.errors)
+        super().__init__(
+            f"{len(failed)} resource(s) of the batch failed: {_named_ids(failed)}"
+        )
+        _note_all_ids(self, failed)
+
+
+def ensure_distinct_ids(ids: Iterable[ID]) -> None:
+    """Raise a ValueError naming the IDs that occur more than once in a batch."""
+    duplicates = [id_ for id_, count in Counter(ids).items() if count > 1]
+    if duplicates:
+        error = ValueError(
+            f"The batch holds these IDs more than once: {_named_ids(duplicates)}"
+        )
+        _note_all_ids(error, duplicates)
+        raise error
 
 
 class FindError(DaoError):
     """Base for all error related to DAO find operations."""
 
 
-class InvalidMappingError(FindError):
-    """Raised when an invalid mapping was passed provided to find."""
+class InvalidFilterError(FindError):
+    """Raised when an invalid filter was provided to find."""
 
 
 class MultipleHitsFoundError(FindError):
@@ -153,14 +194,11 @@ class MultipleHitsFoundError(FindError):
     single hit was expected.
     """
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def __init__(
         self,
         *,
-        filter_: Mapping[str, str] | None = None,
-        mapping: Mapping[str, str] | None = None,
+        filter_: Mapping[str, str],
     ):
-        filter_ = resolve_filter(filter_, mapping)
         message = (
             "Multiple hits were found for the following key-value pairs while only a"
             f" single one was expected: {filter_}"
@@ -173,14 +211,11 @@ class NoHitsFoundError(FindError):
     single hit was expected.
     """
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def __init__(
         self,
         *,
-        filter_: Mapping[str, str] | None = None,
-        mapping: Mapping[str, str] | None = None,
+        filter_: Mapping[str, str],
     ):
-        filter_ = resolve_filter(filter_, mapping)
         message = (
             "No hits were found for the following key-value pairs while a single one"
             f" was expected: {filter_}"
@@ -292,7 +327,7 @@ class Dao(typing.Protocol[Dto]):
                 when resource with the id specified in the dto was not found
             PreconditionFailedError:
                 when the resource exists but doesn't match `precondition`
-            InvalidMappingError: when `precondition` doesn't pass validation
+            InvalidFilterError: when `precondition` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.
@@ -310,12 +345,10 @@ class Dao(typing.Protocol[Dto]):
         """
         ...
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     async def find_one(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
     ) -> Dto:
         """Find the resource that matches the specified filter.
 
@@ -331,8 +364,6 @@ class Dao(typing.Protocol[Dto]):
             filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields
-            mapping:
-                Deprecated alias for `filter_`.
 
         Returns:
             Returns a hit in the form of the respective DTO model if exactly one hit
@@ -346,12 +377,10 @@ class Dao(typing.Protocol[Dto]):
         """
         ...
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def find_all(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
@@ -367,8 +396,6 @@ class Dao(typing.Protocol[Dto]):
             filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields.
-            mapping:
-                Deprecated alias for `filter_`.
             skip:
                 Number of matching resources to skip before yielding results.
                 Defaults to None (no skipping).
@@ -388,7 +415,7 @@ class Dao(typing.Protocol[Dto]):
             A FindResult that is async-iterable and also provides total_count().
 
         Raises:
-            InvalidMappingError: If `mapping` doesn't pass validation.
+            InvalidFilterError: If `filter_` doesn't pass validation.
             ValueError: if `skip` or `limit` are less than 0.
         """
         ...
@@ -422,6 +449,113 @@ class Dao(typing.Protocol[Dto]):
             UniqueConstraintViolationError:
                 when upserting the dto would violate a unique index constraint over some
                 field other than the ID field.
+        """
+        ...
+
+    async def insert_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Create several resources in one call.
+
+        The batch is not atomic: when some resources fail, the others are still
+        created. An empty batch writes nothing.
+
+        Args:
+            dtos:
+                The resources as pydantic-based data transfer objects, each including
+                its ID. No two of them may share an ID.
+            ordered:
+                Whether to stop at the first failure and skip the remaining resources,
+                instead of attempting every one.
+
+        Raises:
+            ValueError: when two DTOs share an ID; nothing is written then.
+            BatchOperationError:
+                when some resources failed. Each failed ID maps to
+                `ResourceAlreadyExistsError` if a resource with that ID already exists,
+                to `UniqueConstraintViolationError` if it clashes with a unique index
+                over another field, to `DbTimeoutError` if its write timed out, or to
+                a plain `DaoError` for any other failure, such as a failed document
+                validation. A failed write concern also names each resource it left
+                unconfirmed, with `DbTimeoutError` if it timed out or a plain
+                `DaoError` otherwise; those resources stay stored.
+        """
+        ...
+
+    async def update_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Replace several existing resources in one call, matched by their IDs.
+
+        The batch is not atomic: when some resources fail, the others are still
+        replaced. An empty batch writes nothing.
+
+        Args:
+            dtos:
+                The updated resources as pydantic-based data transfer objects, each
+                including its ID. No two of them may share an ID.
+            ordered:
+                Whether to stop at the first failure and skip the remaining resources,
+                instead of attempting every one. A missing resource never stops the
+                batch.
+
+        Raises:
+            ValueError: when two DTOs share an ID; nothing is written then.
+            BatchOperationError:
+                when some resources failed. Each failed ID maps to
+                `ResourceNotFoundError` if no resource with that ID exists, to
+                `UniqueConstraintViolationError` if it clashes with a unique index over
+                another field, to `DbTimeoutError` if its write timed out, or to a plain
+                `DaoError` for any other failure, such as a failed document validation.
+                A failed write concern also names each resource it left unconfirmed,
+                a missing one included, with `DbTimeoutError` if it timed out or a
+                plain `DaoError` otherwise; those resources stay stored.
+        """
+        ...
+
+    async def upsert_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Create or replace several resources in one call, matched by their IDs.
+
+        The batch is not atomic: when some resources fail, the others are still
+        written. An empty batch writes nothing.
+
+        Args:
+            dtos:
+                The resources as pydantic-based data transfer objects, each including
+                its ID. No two of them may share an ID.
+            ordered:
+                Whether to stop at the first failure and skip the remaining resources,
+                instead of attempting every one.
+
+        Raises:
+            ValueError: when two DTOs share an ID; nothing is written then.
+            BatchOperationError:
+                when some resources failed. Each failed ID maps to
+                `UniqueConstraintViolationError` if it clashes with a unique index over
+                another field, to `DbTimeoutError` if its write timed out, or to a plain
+                `DaoError` for any other failure, such as a failed document validation.
+                A failed write concern also names each resource it left unconfirmed,
+                with `DbTimeoutError` if it timed out or a plain `DaoError` otherwise;
+                those resources stay stored.
+        """
+        ...
+
+    async def delete_many(self, ids: Collection[ID]) -> None:
+        """Delete several resources in one call by providing their IDs.
+
+        IDs that do not exist are ignored, and an ID given more than once is deleted
+        once. An empty batch deletes nothing.
+
+        Args:
+            ids: The IDs of the resources.
+
+        Raises:
+            TypeError: when `ids` is a single string instead of a collection of IDs.
+            DbTimeoutError: when the write or its write concern timed out.
+            DaoError: when the write concern failed otherwise, which no single resource
+                caused.
         """
         ...
 
@@ -545,3 +679,125 @@ class DaoFactoryProtocol(DaoFactoryBase, ABC, Generic[Index]):
         method.*
         """
         ...
+
+
+class RaceConditionAttempt:
+    """A single try yielded by `race_condition_retries`.
+
+    Used as a context manager: suppresses a `PreconditionFailedError` raised in its block,
+    keeps it in `error`, and records whether the block was entered and whether it
+    finished without one.
+    """
+
+    def __init__(self) -> None:
+        self.entered = False
+        self.succeeded = False
+        self.error: PreconditionFailedError | None = None
+
+    def __enter__(self) -> None:
+        """Mark the attempt as entered; the outcome is recorded on exit."""
+        self.entered = True
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> bool:
+        """Record the outcome and suppress a `PreconditionFailedError`."""
+        if exc_type is None:
+            self.succeeded = True
+            return False
+        if isinstance(exc_value, PreconditionFailedError):
+            self.error = exc_value
+            return True
+        return False
+
+
+async def race_condition_retries(  # noqa: PLR0913
+    *,
+    description: str,
+    error_on_failure: Callable[[], BaseException],
+    logger: Logger | None = None,
+    max_tries: int = 3,
+    interval: float = 0.5,
+    jitter: float = 0.3,
+) -> AsyncIterator[RaceConditionAttempt]:
+    """Yield attempts for an action that can lose a race condition.
+
+    Wrap the action in `with attempt:` for each yielded attempt. Retries it up to
+    `max_tries` times, waiting `interval` seconds (plus jitter) after each
+    `PreconditionFailedError`. That error means the `precondition` of a DAO update no
+    longer matched because another write came first. A `return` inside the block
+    ends the retries.
+
+    ```python
+    async for attempt in race_condition_retries(
+        description=f"add pages to book {book_id}",
+        error_on_failure=lambda: BookUpdateError(book_id),
+    ):
+        with attempt:  # <-- must use `with attempt:`
+            book = await book_dao.get_by_id(book_id)
+            extended = book.model_copy(update={"pages": book.pages + 16})
+            await book_dao.update(extended, precondition={"pages": book.pages})
+    ```
+
+    Leaving the loop early, by `return`, `break` or an exception, leaves the generator
+    suspended until asyncio finalizes it. For deterministic cleanup, wrap it in
+    `contextlib.aclosing`:
+
+    ```python
+    async with aclosing(race_condition_retries(...)) as attempts:
+        async for attempt in attempts:
+            with attempt:
+                ...
+    ```
+
+    Args:
+        description:
+            What the action does, phrased to follow "to", e.g.
+            "add pages to book <book_id>". Used in log messages.
+        error_on_failure:
+            Builds the error to raise once all tries have failed. Called at most once,
+            after the last try.
+        logger:
+            Logs a debug message for each conflict and an error once all tries have
+            failed. Nothing is logged if omitted.
+        max_tries: How many times to try the action. Values below 1 count as 1.
+        interval: Seconds to wait between tries. Negative values count as 0.
+        jitter:
+            Upper bound, in seconds, of a random delay added to each wait, so callers
+            that conflicted don't retry at the same moment. Negative values count as 0.
+
+    Raises:
+    - The error built by `error_on_failure` if the action still raises
+      `PreconditionFailedError` on the last try. It is chained from that last
+      `PreconditionFailedError`.
+    - `RuntimeError` if a yielded attempt was not used as `with attempt:`.
+    """
+    description = description.strip(" .")
+    tries = max(1, max_tries)
+    last_error: PreconditionFailedError | None = None
+    for attempt_number in range(1, tries + 1):
+        attempt = RaceConditionAttempt()
+        yield attempt
+        if not attempt.entered:
+            raise RuntimeError(
+                "Each attempt yielded by race_condition_retries must be used as"
+                " `with attempt:`."
+            )
+        if attempt.succeeded:
+            return
+        last_error = attempt.error
+        if logger:
+            logger.debug("Detected race condition while trying to %s.", description)
+        if attempt_number < tries:
+            await sleep(max(0, interval) + uniform(0, max(jitter, 0)))  # noqa: S311
+
+    if logger:
+        logger.error(
+            "Failed %s times to %s due to persistent race conditions.",
+            tries,
+            description,
+        )
+    raise error_on_failure() from last_error

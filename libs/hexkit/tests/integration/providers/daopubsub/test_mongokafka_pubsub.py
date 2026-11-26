@@ -16,8 +16,10 @@
 
 """Test the DAO pub/sub functionality based on the mongokafka/kafka providers."""
 
+import asyncio
 import uuid
-from collections.abc import Generator
+from collections.abc import AsyncIterator, Callable, Generator, Mapping, Sequence
+from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -25,7 +27,9 @@ from typing import Any
 import pytest
 from pydantic import UUID4, BaseModel
 from pymongo import MongoClient
+from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.collection import Collection
+from pymongo.errors import BulkWriteError
 
 from hexkit.correlation import (
     correlation_id_var,
@@ -33,15 +37,20 @@ from hexkit.correlation import (
     new_correlation_id,
     set_new_correlation_id,
 )
+from hexkit.custom_types import JsonObject
 from hexkit.protocols.dao import (
-    InvalidMappingError,
+    BatchOperationError,
+    DbTimeoutError,
+    InvalidFilterError,
     PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
     UUID4Field,
 )
+from hexkit.protocols.daopub import DaoPublisher
 from hexkit.protocols.daosub import DaoSubscriberProtocol, DtoValidationError
+from hexkit.protocols.eventpub import EventPublisherProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 from hexkit.providers.akafka import (
     ComboTranslator,
@@ -55,8 +64,8 @@ from hexkit.providers.akafka.testutils import (
     kafka_container_fixture,  # noqa: F401
     kafka_fixture,  # noqa: F401
 )
-from hexkit.providers.mongodb.provider import dto_to_document
-from hexkit.providers.mongodb.provider.dao import MongoDbIndex
+from hexkit.providers.mongodb.provider import ConfiguredMongoClient, dto_to_document
+from hexkit.providers.mongodb.provider.dao import MongoDbDao, MongoDbIndex
 from hexkit.providers.mongodb.testutils import (
     mongodb_container_fixture,  # noqa: F401
     mongodb_fixture,  # noqa: F401
@@ -66,6 +75,10 @@ from hexkit.providers.mongokafka.provider import (
     CHANGE_EVENT_TYPE,
     DELETE_EVENT_TYPE,
     document_to_dto,
+)
+from hexkit.providers.mongokafka.provider.daopub import (
+    MAX_REPUBLISH_ROUNDS,
+    mark_published,
 )
 from hexkit.providers.mongokafka.testutils import (
     MongoKafkaFixture,
@@ -737,6 +750,7 @@ async def test_mongokafka_dao_correlation_id_upsert(mongo_kafka: MongoKafkaFixtu
         inserted = collection.find_one({"__metadata__.correlation_id": correlation_id})
         assert inserted
         inserted_event_id = inserted["__metadata__"].pop("last_event_id", None)
+        assert isinstance(inserted["__metadata__"].pop("write_id"), uuid.UUID)
         assert isinstance(inserted_event_id, uuid.UUID)
 
         # Check the other metadata (now that we've removed the unpredictable event ID)
@@ -765,6 +779,7 @@ async def test_mongokafka_dao_correlation_id_upsert(mongo_kafka: MongoKafkaFixtu
 
             # Make sure the event ID is new since mongokafka shouldn't reuse event IDs
             updated_event_id = updated["__metadata__"].pop("last_event_id", None)
+            assert isinstance(updated["__metadata__"].pop("write_id"), uuid.UUID)
             assert isinstance(updated_event_id, uuid.UUID)
             assert updated_event_id != inserted_event_id
 
@@ -818,6 +833,7 @@ async def test_mongokafka_dao_correlation_id_delete(mongo_kafka: MongoKafkaFixtu
             "field_e": str(example.field_e),
         }
         inserted_event_id = metadata.pop("last_event_id", None)
+        assert isinstance(metadata.pop("write_id"), uuid.UUID)
         assert metadata == {
             "correlation_id": correlation_id,
             "deleted": False,
@@ -836,6 +852,7 @@ async def test_mongokafka_dao_correlation_id_delete(mongo_kafka: MongoKafkaFixtu
             metadata = deleted.pop("__metadata__")
             assert deleted == {"_id": example.id}
             deleted_event_id = metadata.pop("last_event_id", None)
+            assert isinstance(metadata.pop("write_id"), uuid.UUID)
             assert isinstance(deleted_event_id, uuid.UUID)
             assert deleted_event_id != inserted_event_id
             assert metadata == {
@@ -892,6 +909,7 @@ async def test_documents_without_metadata(mongo_kafka: MongoKafkaFixture):
         document = mongo_client[db_name]["example"].find_one({"_id": doc1["_id"]})
         assert document is not None and "__metadata__" in document
         event_id = document["__metadata__"].pop("last_event_id", None)
+        assert isinstance(document["__metadata__"].pop("write_id"), uuid.UUID)
         assert isinstance(event_id, uuid.UUID)
 
         # Check the other metadata (now that we've removed the unpredictable event ID)
@@ -909,6 +927,7 @@ async def test_documents_without_metadata(mongo_kafka: MongoKafkaFixture):
         deleted_doc = mongo_client[db_name]["example"].find_one({"_id": doc2["_id"]})
         assert deleted_doc is not None and "__metadata__" in deleted_doc
         deletion_event_id = deleted_doc["__metadata__"].pop("last_event_id", None)
+        assert isinstance(deleted_doc["__metadata__"].pop("write_id"), uuid.UUID)
         assert isinstance(event_id, uuid.UUID)
         assert deletion_event_id != event_id
         assert deleted_doc["__metadata__"] == {
@@ -1037,12 +1056,12 @@ async def test_update_precondition(mongo_kafka: MongoKafkaFixture):
         await dao.insert(example)
 
         # Criteria mismatch should raise NotHitsFoundError
-        # Bogus fields for precondition should raise InvalidMappingError
+        # Bogus fields for precondition should raise InvalidFilterError
         # and in either of the above cases, no events should be published
         async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
             with pytest.raises(PreconditionFailedError):
                 await dao.update(example_update, precondition={"field_b": 3})
-            with pytest.raises(InvalidMappingError):
+            with pytest.raises(InvalidFilterError):
                 await dao.update(example_update, precondition={"not_a_field": 1})
         assert await dao.get_by_id(example.id) == example
 
@@ -1070,6 +1089,466 @@ async def test_update_precondition(mongo_kafka: MongoKafkaFixture):
         async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
             with pytest.raises(ResourceNotFoundError):
                 await dao.update(example, precondition={"field_b": 2})
+
+
+class HeldEventPublisher(EventPublisherProtocol):
+    """Records published events and holds back the first one matching `hold` until
+    `release` is set, so a test can let a second writer overtake the first.
+    """
+
+    def __init__(self, hold: Callable[[JsonObject, str], bool]):
+        self._hold = hold
+        self.held = asyncio.Event()
+        self.release = asyncio.Event()
+        self.published: list[tuple[str, JsonObject]] = []
+
+    async def _publish_validated(
+        self,
+        *,
+        payload: JsonObject,
+        type_: str,
+        key: str,
+        topic: str,
+        event_id: uuid.UUID,
+        headers: Mapping[str, str],
+    ) -> None:
+        if not self.held.is_set() and self._hold(payload, type_):
+            self.held.set()
+            await self.release.wait()
+        self.published.append((type_, payload))
+
+
+@asynccontextmanager
+async def dao_with_publisher(
+    mongo_kafka: MongoKafkaFixture,
+    event_publisher: EventPublisherProtocol,
+    *,
+    autopublish: bool = True,
+) -> AsyncIterator[DaoPublisher[ExampleDto]]:
+    """Provide an outbox DAO for `ExampleDto` that publishes via `event_publisher`."""
+    async with ConfiguredMongoClient(config=mongo_kafka.config) as client:
+        factory = MongoKafkaDaoPublisherFactory(
+            config=mongo_kafka.config, event_publisher=event_publisher, db_client=client
+        )
+        yield await factory.get_dao(
+            name="example",
+            dto_model=ExampleDto,
+            id_field="id",
+            dto_to_event=lambda dto: dto.model_dump(mode="json"),
+            event_topic=EXAMPLE_TOPIC,
+            autopublish=autopublish,
+        )
+
+
+async def test_update_overtaking_a_slow_publish(mongo_kafka: MongoKafkaFixture):
+    """Test that a guarded update is kept when an earlier update finishes publishing
+    after it.
+
+    Marking the earlier update as published must not write its stale state back, and
+    the last event must show the newer state again.
+    """
+    # field_b serves as the version that the updates use as precondition
+    publisher = HeldEventPublisher(hold=lambda payload, _: payload["field_b"] == 2)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto(field_a="locked", field_b=1)
+        await dao.insert(example)
+
+        first = example.model_copy(update={"field_b": 2})
+        first_update = asyncio.create_task(
+            dao.update(first, precondition={"field_b": 1})
+        )
+        await publisher.held.wait()
+
+        second = first.model_copy(update={"field_a": "open", "field_b": 3})
+        await dao.update(second, precondition={"field_b": 2})
+
+        publisher.release.set()
+        await first_update
+
+        assert await dao.get_by_id(example.id) == second
+        assert [payload["field_b"] for _, payload in publisher.published] == [
+            1,
+            3,
+            2,
+            3,
+        ]
+        collection = get_mongo_collection(mongo_kafka, "example")
+        document = collection.find_one({"_id": example.id})
+        assert document and document["__metadata__"]["published"] is True
+
+
+async def test_publish_pending_overtaken_by_update(mongo_kafka: MongoKafkaFixture):
+    """Test that `publish_pending` does not revert an update made while it was
+    publishing the previous state, and publishes that update after it.
+    """
+    publisher = HeldEventPublisher(hold=lambda payload, _: payload["field_b"] == 1)
+    async with dao_with_publisher(mongo_kafka, publisher, autopublish=False) as dao:
+        example = ExampleDto(field_b=1)
+        await dao.insert(example)
+
+        publishing = asyncio.create_task(dao.publish_pending())
+        await publisher.held.wait()
+
+        updated = example.model_copy(update={"field_b": 2})
+        await dao.update(updated, precondition={"field_b": 1})
+
+        publisher.release.set()
+        await publishing
+
+        assert await dao.get_by_id(example.id) == updated
+        assert [payload["field_b"] for _, payload in publisher.published] == [1, 2]
+        collection = get_mongo_collection(mongo_kafka, "example")
+        document = collection.find_one({"_id": example.id})
+        assert document and document["__metadata__"]["published"] is True
+
+
+async def test_delete_overtaking_a_slow_publish(mongo_kafka: MongoKafkaFixture):
+    """Test that a resource stays deleted when its insertion finishes publishing
+    after the deletion.
+    """
+    publisher = HeldEventPublisher(hold=lambda _, type_: type_ == CHANGE_EVENT_TYPE)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        insertion = asyncio.create_task(dao.insert(example))
+        await publisher.held.wait()
+
+        await dao.delete(example.id)
+
+        publisher.release.set()
+        await insertion
+
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(example.id)
+        assert [type_ for type_, _ in publisher.published] == [
+            DELETE_EVENT_TYPE,
+            CHANGE_EVENT_TYPE,
+            DELETE_EVENT_TYPE,
+        ]
+
+
+async def test_upsert_overtaking_a_slow_deletion(mongo_kafka: MongoKafkaFixture):
+    """Test that a resource upserted again is kept when its deletion finishes
+    publishing after the upsert.
+    """
+    publisher = HeldEventPublisher(hold=lambda _, type_: type_ == DELETE_EVENT_TYPE)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        await dao.insert(example)
+
+        deletion = asyncio.create_task(dao.delete(example.id))
+        await publisher.held.wait()
+
+        recreated = example.model_copy(update={"field_b": 2})
+        await dao.upsert(recreated)
+
+        publisher.release.set()
+        await deletion
+
+        assert await dao.get_by_id(example.id) == recreated
+        assert publisher.published[-2:] == [
+            (DELETE_EVENT_TYPE, {}),
+            (CHANGE_EVENT_TYPE, recreated.model_dump(mode="json")),
+        ]
+
+
+async def test_republishing_stops_under_constant_writes(
+    mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
+):
+    """Test that republishing a superseded write gives up after a few rounds when
+    every publish is overtaken by yet another write, and leaves the resource pending.
+    """
+    collection = get_mongo_collection(mongo_kafka, "example")
+
+    class OvertakenEventPublisher(EventPublisherProtocol):
+        """Simulates a newer write of the resource during every publish."""
+
+        def __init__(self):
+            self.published = 0
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published += 1
+            collection.update_one(
+                {"_id": uuid.UUID(key)},
+                {"$set": {"__metadata__.write_id": uuid.uuid4()}},
+            )
+
+    publisher = OvertakenEventPublisher()
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        with caplog.at_level("WARNING"):
+            await dao.insert(example)
+
+    # the first publish plus one per republishing round
+    assert publisher.published == 1 + MAX_REPUBLISH_ROUNDS
+    assert "Stopped republishing resource" in caplog.text
+    stored = collection.find_one({"_id": example.id})
+    assert stored and stored["__metadata__"]["published"] is False
+
+
+async def test_republishing_error_is_logged(
+    mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
+):
+    """Test that a failure while republishing a newer write's state does not fail
+    the write that was overtaken, since that write is already stored and published,
+    and leaves the resource pending.
+    """
+    collection = get_mongo_collection(mongo_kafka, "example")
+
+    class FailingRepublishPublisher(EventPublisherProtocol):
+        """Simulates a newer write that is published and marked during the first
+        publish, then fails.
+        """
+
+        def __init__(self):
+            self.published = 0
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published += 1
+            if self.published > 1:
+                raise RuntimeError("broker unavailable")
+            collection.update_one(
+                {"_id": uuid.UUID(key)},
+                {
+                    "$set": {
+                        "__metadata__.write_id": uuid.uuid4(),
+                        "__metadata__.published": True,
+                    }
+                },
+            )
+
+    publisher = FailingRepublishPublisher()
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        with caplog.at_level("WARNING"):
+            await dao.insert(example)
+
+    assert publisher.published == 2
+    assert "Could not republish the current state" in caplog.text
+    stored = collection.find_one({"_id": example.id})
+    assert stored and stored["__metadata__"]["published"] is False
+
+
+async def test_late_mark_after_failed_republish(
+    mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
+):
+    """Test that a newer write cannot clear the pending flag when its mark lands
+    after a failed republish of its state set the flag, so that it republishes the
+    current state itself.
+    """
+    collection = get_mongo_collection(mongo_kafka, "example")
+    newer_write_id = uuid.uuid4()
+
+    class FailingRepublishPublisher(EventPublisherProtocol):
+        """Simulates a newer write that is not yet marked during the first publish,
+        then fails the republish of its state.
+        """
+
+        def __init__(self):
+            self.published = 0
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published += 1
+            if self.published == 2:
+                raise RuntimeError("broker unavailable")
+            if self.published == 1:
+                collection.update_one(
+                    {"_id": uuid.UUID(key)},
+                    {"$set": {"__metadata__.write_id": newer_write_id}},
+                )
+
+    publisher = FailingRepublishPublisher()
+    async with (
+        dao_with_publisher(mongo_kafka, publisher) as dao,
+        ConfiguredMongoClient(config=mongo_kafka.config) as client,
+    ):
+        example = ExampleDto()
+        with caplog.at_level("WARNING"):
+            await dao.insert(example)
+        assert publisher.published == 2
+        assert "Could not republish the current state" in caplog.text
+
+        # the mark of the newer write arrives only now and must miss
+        async_collection = client.get_database(mongo_kafka.config.db_name)["example"]
+        marked = await mark_published(
+            async_collection,
+            example.id,
+            write_id=newer_write_id,
+            deleted=False,
+            event_id=None,
+        )
+        assert marked is False
+        stored = collection.find_one({"_id": example.id})
+        assert stored and stored["__metadata__"]["published"] is False
+        assert stored["__metadata__"]["write_id"] != newer_write_id
+
+        # so the newer write republishes the current state, as publish_pending does
+        await dao.publish_pending()
+        assert publisher.published == 3
+        stored = collection.find_one({"_id": example.id})
+        assert stored and stored["__metadata__"]["published"] is True
+
+
+async def test_failed_publish_of_a_superseded_write_leaves_it_pending(
+    mongo_kafka: MongoKafkaFixture,
+):
+    """Test that a write whose publish fails after a newer write replaced and
+    published the resource leaves it pending, since the failed write's event may
+    already be on the topic behind the newer write's event.
+    """
+    collection = get_mongo_collection(mongo_kafka, "example")
+
+    class FailingPublisher(EventPublisherProtocol):
+        """Simulates a newer write that is published and marked during the first
+        publish, which then fails.
+        """
+
+        def __init__(self):
+            self.published = 0
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published += 1
+            if self.published == 1:
+                collection.update_one(
+                    {"_id": uuid.UUID(key)},
+                    {
+                        "$set": {
+                            "__metadata__.write_id": uuid.uuid4(),
+                            "__metadata__.published": True,
+                        }
+                    },
+                )
+                raise RuntimeError("broker unavailable")
+
+    publisher = FailingPublisher()
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        with pytest.raises(RuntimeError):
+            await dao.insert(example)
+        stored = collection.find_one({"_id": example.id})
+        assert stored and stored["__metadata__"]["published"] is False
+
+        await dao.publish_pending()
+        assert publisher.published == 2
+        stored = collection.find_one({"_id": example.id})
+        assert stored and stored["__metadata__"]["published"] is True
+
+
+async def test_legacy_publish_keeps_a_deletion(mongo_kafka: MongoKafkaFixture):
+    """Test that publishing a change written before the write ID existed does not
+    revive the resource when it was deleted meanwhile by a writer that sets no write
+    ID either, as an older service version would.
+    """
+    example = ExampleDto()
+    document = dto_to_document(example, id_field="id")
+    document["__metadata__"] = {
+        "deleted": False,
+        "published": False,
+        "correlation_id": get_correlation_id(),
+        "last_event_id": None,
+    }
+    collection = get_mongo_collection(mongo_kafka, "example")
+    collection.insert_one(document)
+
+    class DeletingEventPublisher(EventPublisherProtocol):
+        """Replaces the resource with a deletion stub during the change event."""
+
+        def __init__(self):
+            self.published: list[str] = []
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published.append(type_)
+            if type_ == CHANGE_EVENT_TYPE:
+                collection.replace_one(
+                    {"_id": uuid.UUID(key)},
+                    {
+                        "__metadata__": {
+                            "deleted": True,
+                            "published": False,
+                            "correlation_id": get_correlation_id(),
+                        }
+                    },
+                )
+
+    publisher = DeletingEventPublisher()
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        await dao.publish_pending()
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(example.id)
+
+    assert publisher.published == [CHANGE_EVENT_TYPE, DELETE_EVENT_TYPE]
+    stored = collection.find_one({"_id": example.id})
+    assert stored and stored["__metadata__"]["deleted"] is True
+    assert stored["__metadata__"]["published"] is True
+
+
+async def test_publish_pending_without_write_id(mongo_kafka: MongoKafkaFixture):
+    """Test that `publish_pending` marks documents as published whose metadata was
+    written before the write ID existed.
+    """
+    example = ExampleDto()
+    document = dto_to_document(example, id_field="id")
+    document["__metadata__"] = {
+        "deleted": False,
+        "published": False,
+        "correlation_id": get_correlation_id(),
+        "last_event_id": None,
+    }
+    collection = get_mongo_collection(mongo_kafka, "example")
+    collection.insert_one(document)
+
+    publisher = HeldEventPublisher(hold=lambda *_: False)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        await dao.publish_pending()
+        assert len(publisher.published) == 1
+        assert await dao.get_by_id(example.id) == example
+
+    stored = collection.find_one({"_id": example.id})
+    assert stored and stored["__metadata__"]["published"] is True
 
 
 async def test_find_all_total_count_excludes_soft_deleted(
@@ -1245,3 +1724,687 @@ async def test_find_all_to_list(mongo_kafka: MongoKafkaFixture):
         assert isinstance(items, list)
         assert items == dtos
         assert await result.total_count() == 3
+
+
+def change_event(dto: ExampleDto) -> ExpectedEvent:
+    """The change event that a DAO from `dao_with_publisher` sends for `dto`."""
+    return ExpectedEvent(
+        payload=dto.model_dump(mode="json"), type_=CHANGE_EVENT_TYPE, key=str(dto.id)
+    )
+
+
+def delete_event(id_: uuid.UUID) -> ExpectedEvent:
+    """The delete event that an outbox DAO sends for the resource with this ID."""
+    return ExpectedEvent(payload={}, type_=DELETE_EVENT_TYPE, key=str(id_))
+
+
+def is_published(mongo_kafka: MongoKafkaFixture, id_: uuid.UUID) -> bool:
+    """Whether the stored document of the resource is marked as published."""
+    document = get_mongo_collection(mongo_kafka, "example").find_one({"_id": id_})
+    assert document is not None
+    return document["__metadata__"]["published"]
+
+
+def reject_on_write(mongo_kafka: MongoKafkaFixture, validator: dict[str, Any]) -> None:
+    """Make the example collection reject every write of a document that does not
+    match the validator.
+    """
+    collection = get_mongo_collection(mongo_kafka, "example")
+    collection.database.command(
+        "collMod",
+        collection.name,
+        validator=validator,
+        # command() otherwise ignores the collection's UUID representation
+        codec_options=collection.codec_options,
+    )
+
+
+async def test_insert_many_publishes_written(mongo_kafka: MongoKafkaFixture):
+    """Test that insert_many publishes the resources it created in input order, and
+    that a tombstoned ID counts as existing.
+    """
+    async with dao_with_publisher(mongo_kafka, mongo_kafka.kafka.publisher) as dao:
+        existing, tombstoned = ExampleDto(), ExampleDto()
+        await dao.insert(existing)
+        await dao.insert(tombstoned)
+        await dao.delete(tombstoned.id)
+        first, last = ExampleDto(), ExampleDto()
+
+        async with mongo_kafka.kafka.expect_events(
+            events=[change_event(first), change_event(last)], in_topic=EXAMPLE_TOPIC
+        ):
+            with pytest.raises(BatchOperationError) as caught:
+                await dao.insert_many([first, existing, tombstoned, last])
+
+        assert set(caught.value.errors) == {existing.id, tombstoned.id}
+        for error in caught.value.errors.values():
+            assert isinstance(error, ResourceAlreadyExistsError)
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(tombstoned.id)
+        assert is_published(mongo_kafka, first.id)
+        assert is_published(mongo_kafka, last.id)
+
+
+async def test_insert_many_publishes_nothing_it_skipped(mongo_kafka: MongoKafkaFixture):
+    """Test that an ordered insert_many publishes neither the failed resource nor the
+    ones it skipped, and leaves the skipped ones unwritten.
+    """
+    async with dao_with_publisher(mongo_kafka, mongo_kafka.kafka.publisher) as dao:
+        existing = ExampleDto()
+        await dao.insert(existing)
+        first, skipped = ExampleDto(), ExampleDto()
+
+        async with mongo_kafka.kafka.expect_events(
+            events=[change_event(first)], in_topic=EXAMPLE_TOPIC
+        ):
+            with pytest.raises(BatchOperationError) as caught:
+                await dao.insert_many([first, existing, skipped], ordered=True)
+
+        assert list(caught.value.not_attempted) == [skipped.id]
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(skipped.id)
+
+
+async def test_insert_many_overtaken_by_a_deletion(mongo_kafka: MongoKafkaFixture):
+    """Test that a resource stays deleted when insert_many finishes publishing its
+    creation after another writer deleted it, and that the last event is the delete.
+    """
+    publisher = HeldEventPublisher(hold=lambda _, type_: type_ == CHANGE_EVENT_TYPE)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        batch = asyncio.create_task(dao.insert_many([example]))
+        await publisher.held.wait()
+
+        await dao.delete(example.id)
+
+        publisher.release.set()
+        await batch
+
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(example.id)
+        assert [type_ for type_, _ in publisher.published] == [
+            DELETE_EVENT_TYPE,
+            CHANGE_EVENT_TYPE,
+            DELETE_EVENT_TYPE,
+        ]
+        assert is_published(mongo_kafka, example.id)
+
+
+async def test_upsert_many_publishes(mongo_kafka: MongoKafkaFixture):
+    """Test that upsert_many publishes each resource it wrote in input order and
+    recreates a tombstoned one.
+    """
+    async with dao_with_publisher(mongo_kafka, mongo_kafka.kafka.publisher) as dao:
+        tombstoned = ExampleDto()
+        await dao.insert(tombstoned)
+        await dao.delete(tombstoned.id)
+        recreated = tombstoned.model_copy(update={"field_b": 7})
+        new = ExampleDto()
+
+        async with mongo_kafka.kafka.expect_events(
+            events=[change_event(recreated), change_event(new)], in_topic=EXAMPLE_TOPIC
+        ):
+            await dao.upsert_many([recreated, new])
+
+        assert await dao.get_by_id(tombstoned.id) == recreated
+
+
+async def test_upsert_many_publishes_written_on_failure(mongo_kafka: MongoKafkaFixture):
+    """Test that upsert_many publishes the resources it wrote when another one fails,
+    and nothing for the failed one.
+    """
+    async with dao_with_publisher(mongo_kafka, mongo_kafka.kafka.publisher) as dao:
+        kept, rejected = ExampleDto(), ExampleDto()
+        await dao.insert(kept)
+        reject_on_write(mongo_kafka, {"_id": {"$ne": rejected.id}})
+        changed = kept.model_copy(update={"field_b": 7})
+
+        async with mongo_kafka.kafka.expect_events(
+            events=[change_event(changed)], in_topic=EXAMPLE_TOPIC
+        ):
+            with pytest.raises(BatchOperationError) as caught:
+                await dao.upsert_many([changed, rejected])
+
+        assert list(caught.value.errors) == [rejected.id]
+
+
+async def test_update_many_keeps_tombstones(mongo_kafka: MongoKafkaFixture):
+    """Test that update_many publishes only the replaced resources and treats a
+    tombstoned ID as missing.
+    """
+    async with dao_with_publisher(mongo_kafka, mongo_kafka.kafka.publisher) as dao:
+        live, tombstoned = ExampleDto(), ExampleDto()
+        await dao.insert(live)
+        await dao.insert(tombstoned)
+        await dao.delete(tombstoned.id)
+        changed = live.model_copy(update={"field_b": 7})
+        missing = ExampleDto()
+
+        async with mongo_kafka.kafka.expect_events(
+            events=[change_event(changed)], in_topic=EXAMPLE_TOPIC
+        ):
+            with pytest.raises(BatchOperationError) as caught:
+                await dao.update_many(
+                    [changed, tombstoned.model_copy(update={"field_b": 7}), missing]
+                )
+
+        assert set(caught.value.errors) == {tombstoned.id, missing.id}
+        for error in caught.value.errors.values():
+            assert isinstance(error, ResourceNotFoundError)
+        assert await dao.get_by_id(live.id) == changed
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(tombstoned.id)
+
+
+async def test_update_many_republishes_resource_created_meanwhile(
+    mongo_kafka: MongoKafkaFixture, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that update_many does not overwrite a resource that another writer creates
+    between the batch's write and its lookup of the missing IDs, and that the batch's
+    event for it is followed by its stored state.
+    """
+    async with dao_with_publisher(mongo_kafka, mongo_kafka.kafka.publisher) as dao:
+        stored = ExampleDto()
+        await dao.insert(stored)
+        changed = stored.model_copy(update={"field_b": 7})
+        created = ExampleDto(field_a="created by the other writer")
+        lookup = MongoDbDao._existing_ids
+        other_writer_done = False
+
+        async def lookup_after_other_writer(
+            self: MongoDbDao, ids: Sequence[Any], extra: Mapping[str, Any]
+        ) -> set[Any]:
+            nonlocal other_writer_done
+            if not other_writer_done:
+                other_writer_done = True
+                await dao.insert(created)
+            return await lookup(self, ids, extra)
+
+        monkeypatch.setattr(MongoDbDao, "_existing_ids", lookup_after_other_writer)
+        batch_version = created.model_copy(update={"field_a": "updated by the batch"})
+        async with mongo_kafka.kafka.expect_events(
+            events=[
+                change_event(created),
+                change_event(changed),
+                change_event(batch_version),
+                change_event(created),
+            ],
+            in_topic=EXAMPLE_TOPIC,
+        ):
+            await dao.update_many([changed, batch_version])
+
+        assert await dao.get_by_id(created.id) == created
+        assert is_published(mongo_kafka, created.id)
+
+
+async def test_update_many_republishes_resource_changed_meanwhile(
+    mongo_kafka: MongoKafkaFixture, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that update_many keeps a resource that another writer changes between the
+    batch's write and its publish, and that the batch's event for it is followed by
+    its stored state.
+    """
+    async with dao_with_publisher(mongo_kafka, mongo_kafka.kafka.publisher) as dao:
+        first, second = ExampleDto(), ExampleDto()
+        for dto in (first, second):
+            await dao.insert(dto)
+        theirs = second.model_copy(update={"field_a": "changed by the other writer"})
+        replace_existing = MongoDbDao._replace_existing
+
+        async def other_writer_after(
+            self: MongoDbDao,
+            documents: list[dict[str, Any]],
+            ids: list[Any],
+            extra: Mapping[str, Any],
+            *,
+            ordered: bool,
+        ) -> None:
+            await replace_existing(self, documents, ids, extra, ordered=ordered)
+            await dao.update(theirs)
+
+        monkeypatch.setattr(MongoDbDao, "_replace_existing", other_writer_after)
+        ours = [dto.model_copy(update={"field_b": 7}) for dto in (first, second)]
+        async with mongo_kafka.kafka.expect_events(
+            events=[
+                change_event(theirs),
+                change_event(ours[0]),
+                change_event(ours[1]),
+                change_event(theirs),
+            ],
+            in_topic=EXAMPLE_TOPIC,
+        ):
+            await dao.update_many(ours)
+
+        assert await dao.get_by_id(second.id) == theirs
+        for dto in (first, second):
+            assert is_published(mongo_kafka, dto.id)
+
+
+async def test_update_many_overtaken_during_its_publish(
+    mongo_kafka: MongoKafkaFixture,
+):
+    """Test that update_many keeps a newer update made while the batch's event is
+    on its way, and publishes the newer state again after the batch's event.
+    """
+    publisher = HeldEventPublisher(hold=lambda payload, _: payload["field_b"] == 2)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto(field_b=1)
+        await dao.insert(example)
+        batch = asyncio.create_task(
+            dao.update_many([example.model_copy(update={"field_b": 2})])
+        )
+        await publisher.held.wait()
+
+        theirs = example.model_copy(update={"field_b": 3})
+        await dao.update(theirs)
+
+        publisher.release.set()
+        await batch
+
+        assert await dao.get_by_id(example.id) == theirs
+        assert [payload["field_b"] for _, payload in publisher.published] == [
+            1,
+            3,
+            2,
+            3,
+        ]
+        assert is_published(mongo_kafka, example.id)
+
+
+async def test_update_many_publishes_its_write_after_a_failed_concurrent_publish(
+    mongo_kafka: MongoKafkaFixture, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that update_many publishes its write when another writer's failed publish
+    flags the resource as unpublished right after the batch's write.
+    """
+
+    class FailingHeldPublisher(EventPublisherProtocol):
+        """Holds the event with field_b == 2 until released, then fails it, and
+        records the field_b of every other event.
+        """
+
+        def __init__(self):
+            self.held = asyncio.Event()
+            self.release = asyncio.Event()
+            self.published: list[Any] = []
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            if payload["field_b"] == 2:
+                self.held.set()
+                await self.release.wait()
+                raise RuntimeError("broker unavailable")
+            self.published.append(payload["field_b"])
+
+    publisher = FailingHeldPublisher()
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto(field_b=1)
+        await dao.insert(example)
+        other = asyncio.create_task(
+            dao.update(example.model_copy(update={"field_b": 2}))
+        )
+        await publisher.held.wait()
+        replace_existing = MongoDbDao._replace_existing
+
+        async def write_then_other_fails(
+            self: MongoDbDao,
+            documents: list[dict[str, Any]],
+            ids: list[Any],
+            extra: Mapping[str, Any],
+            *,
+            ordered: bool,
+        ) -> None:
+            await replace_existing(self, documents, ids, extra, ordered=ordered)
+            publisher.release.set()
+            with pytest.raises(RuntimeError, match="broker unavailable"):
+                await other
+
+        monkeypatch.setattr(MongoDbDao, "_replace_existing", write_then_other_fails)
+        ours = example.model_copy(update={"field_b": 3})
+        await dao.update_many([ours])
+
+        assert await dao.get_by_id(example.id) == ours
+        assert publisher.published == [1, 3, 3]
+        assert is_published(mongo_kafka, example.id)
+
+
+async def test_update_many_with_failed_lookup_publishes_nothing(
+    mongo_kafka: MongoKafkaFixture, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that update_many raises and publishes nothing when its lookup of the
+    missing IDs fails, and that publish_pending then sends only what it wrote.
+    """
+    publisher = HeldEventPublisher(hold=lambda *_: False)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        stored = ExampleDto()
+        await dao.insert(stored)
+        changed = stored.model_copy(update={"field_b": 7})
+
+        async def failing_lookup(*args: Any, **kwargs: Any) -> set[Any]:
+            raise RuntimeError("lookup failed")
+
+        monkeypatch.setattr(MongoDbDao, "_existing_ids", failing_lookup)
+        with pytest.raises(RuntimeError, match="lookup failed"):
+            await dao.update_many([changed, ExampleDto()])
+
+        assert publisher.published == [
+            (CHANGE_EVENT_TYPE, stored.model_dump(mode="json"))
+        ]
+        assert not is_published(mongo_kafka, changed.id)
+
+        monkeypatch.undo()
+        await dao.publish_pending()
+        assert publisher.published[1:] == [
+            (CHANGE_EVENT_TYPE, changed.model_dump(mode="json"))
+        ]
+
+
+async def test_insert_many_with_write_concern_error_publishes_nothing(
+    mongo_kafka: MongoKafkaFixture, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a batch whose write concern failed publishes nothing and raises its
+    BatchOperationError, as a single write raises before it publishes, and that
+    publish_pending then sends the documents it wrote.
+    """
+    publisher = HeldEventPublisher(hold=lambda *_: False)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        dtos = [ExampleDto(), ExampleDto()]
+        insert_many = AsyncCollection.insert_many
+
+        async def insert_then_time_out(
+            self: AsyncCollection, *args: Any, **kwargs: Any
+        ) -> Any:
+            await insert_many(self, *args, **kwargs)
+            concern = {
+                "code": 64,
+                "errmsg": "waiting for replication timed out",
+                "errInfo": {"wtimeout": True},
+            }
+            raise BulkWriteError({"writeErrors": [], "writeConcernErrors": [concern]})
+
+        monkeypatch.setattr(AsyncCollection, "insert_many", insert_then_time_out)
+        with pytest.raises(BatchOperationError) as caught:
+            await dao.insert_many(dtos)
+
+        assert list(caught.value.errors) == [dto.id for dto in dtos]
+        for error in caught.value.errors.values():
+            assert isinstance(error, DbTimeoutError)
+        assert publisher.published == []
+        for dto in dtos:
+            assert await dao.get_by_id(dto.id) == dto
+            assert not is_published(mongo_kafka, dto.id)
+
+        monkeypatch.undo()
+        await dao.publish_pending()
+        expected = [(CHANGE_EVENT_TYPE, dto.model_dump(mode="json")) for dto in dtos]
+        assert sorted(publisher.published, key=str) == sorted(expected, key=str)
+
+
+async def test_delete_many_tombstones_live_ids(mongo_kafka: MongoKafkaFixture):
+    """Test that delete_many tombstones the live resources and publishes one delete
+    each in input order, and nothing for missing, deleted or repeated IDs.
+    """
+    async with dao_with_publisher(mongo_kafka, mongo_kafka.kafka.publisher) as dao:
+        first, second, deleted = ExampleDto(), ExampleDto(), ExampleDto()
+        for dto in (first, second, deleted):
+            await dao.insert(dto)
+        await dao.delete(deleted.id)
+        missing = uuid.uuid4()
+
+        async with mongo_kafka.kafka.expect_events(
+            events=[delete_event(first.id), delete_event(second.id)],
+            in_topic=EXAMPLE_TOPIC,
+        ):
+            await dao.delete_many([first.id, missing, deleted.id, second.id, first.id])
+
+        for dto in (first, second):
+            with pytest.raises(ResourceNotFoundError):
+                await dao.get_by_id(dto.id)
+            assert is_published(mongo_kafka, dto.id)
+        collection = get_mongo_collection(mongo_kafka, "example")
+        assert collection.find_one({"_id": missing}) is None
+
+
+async def test_delete_many_rejects_a_single_id(mongo_kafka: MongoKafkaFixture):
+    """Test that delete_many rejects one string ID instead of tombstoning the
+    resources named by its characters and publishing their deletion.
+    """
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=mongo_kafka.config
+    ) as factory:
+        dao = await factory.get_dao(
+            name="example",
+            dto_model=ExampleDtoWithStrID,
+            id_field="custom_id",
+            dto_to_event=lambda dto: dto.model_dump(),
+            event_topic=EXAMPLE_TOPIC,
+        )
+        named = ExampleDtoWithStrID(custom_id="ab")
+        by_character = ExampleDtoWithStrID(custom_id="a")
+        for dto in (named, by_character):
+            await dao.insert(dto)
+
+        async with mongo_kafka.kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
+            with pytest.raises(TypeError):
+                await dao.delete_many("ab")
+
+        for dto in (named, by_character):
+            assert await dao.get_by_id(dto.custom_id) == dto
+
+
+@pytest.mark.parametrize("recreate", [False, True])
+async def test_delete_many_republishes_resource_deleted_meanwhile(
+    recreate: bool, mongo_kafka: MongoKafkaFixture, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that delete_many leaves a resource as another writer left it that deletes
+    it between the batch's lookup and its write, also when the writer recreates it
+    right after, and that the batch's delete event is followed by its stored state.
+    """
+    async with dao_with_publisher(mongo_kafka, mongo_kafka.kafka.publisher) as dao:
+        raced, plain = ExampleDto(), ExampleDto()
+        for dto in (raced, plain):
+            await dao.insert(dto)
+        recreated = raced.model_copy(
+            update={"field_a": "recreated by the other writer"}
+        )
+        bulk_replace = MongoDbDao._bulk_replace
+
+        async def around_other_writer(
+            self: MongoDbDao,
+            documents: list[dict[str, Any]],
+            ids: list[Any],
+            extra: Mapping[str, Any],
+            **kwargs: Any,
+        ) -> tuple[int, BatchOperationError | None]:
+            await dao.delete(raced.id)
+            result = await bulk_replace(self, documents, ids, extra, **kwargs)
+            if recreate:
+                await dao.upsert(recreated)
+            return result
+
+        monkeypatch.setattr(MongoDbDao, "_bulk_replace", around_other_writer)
+        theirs = [delete_event(raced.id)]
+        stored = delete_event(raced.id)
+        if recreate:
+            theirs.append(change_event(recreated))
+            stored = change_event(recreated)
+        async with mongo_kafka.kafka.expect_events(
+            events=[*theirs, delete_event(raced.id), stored, delete_event(plain.id)],
+            in_topic=EXAMPLE_TOPIC,
+        ):
+            await dao.delete_many([raced.id, plain.id])
+
+        if recreate:
+            assert await dao.get_by_id(raced.id) == recreated
+        else:
+            with pytest.raises(ResourceNotFoundError):
+                await dao.get_by_id(raced.id)
+
+
+async def test_delete_many_overtaken_during_its_publish(
+    mongo_kafka: MongoKafkaFixture,
+):
+    """Test that a resource recreated while delete_many's event is on its way is
+    kept, and that its state is published again after the delete.
+    """
+    publisher = HeldEventPublisher(hold=lambda _, type_: type_ == DELETE_EVENT_TYPE)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        await dao.insert(example)
+        batch = asyncio.create_task(dao.delete_many([example.id]))
+        await publisher.held.wait()
+
+        recreated = example.model_copy(update={"field_b": 2})
+        await dao.upsert(recreated)
+
+        publisher.release.set()
+        await batch
+
+        assert await dao.get_by_id(example.id) == recreated
+        assert publisher.published[1:] == [
+            (CHANGE_EVENT_TYPE, recreated.model_dump(mode="json")),
+            (DELETE_EVENT_TYPE, {}),
+            (CHANGE_EVENT_TYPE, recreated.model_dump(mode="json")),
+        ]
+        assert is_published(mongo_kafka, example.id)
+
+
+async def test_delete_many_publishes_before_raising(mongo_kafka: MongoKafkaFixture):
+    """Test that delete_many publishes the tombstones it wrote before it raises the
+    error of a failed one.
+    """
+    async with dao_with_publisher(mongo_kafka, mongo_kafka.kafka.publisher) as dao:
+        kept, deleted = ExampleDto(), ExampleDto()
+        for dto in (kept, deleted):
+            await dao.insert(dto)
+        reject_on_write(
+            mongo_kafka,
+            {"$or": [{"_id": {"$ne": kept.id}}, {"__metadata__.deleted": False}]},
+        )
+
+        async with mongo_kafka.kafka.expect_events(
+            events=[delete_event(deleted.id)], in_topic=EXAMPLE_TOPIC
+        ):
+            with pytest.raises(BatchOperationError) as caught:
+                await dao.delete_many([kept.id, deleted.id])
+
+        assert list(caught.value.errors) == [kept.id]
+        assert await dao.get_by_id(kept.id) == kept
+
+
+class FailingPublisher(EventPublisherProtocol):
+    """Records the keys of published and failed events, and fails the first publish
+    of each key in `fail_keys`.
+    """
+
+    def __init__(self, fail_keys: set[str]):
+        self.fail_keys = fail_keys
+        self.published: list[str] = []
+        self.failed: list[str] = []
+
+    async def _publish_validated(
+        self,
+        *,
+        payload: JsonObject,
+        type_: str,
+        key: str,
+        topic: str,
+        event_id: uuid.UUID,
+        headers: Mapping[str, str],
+    ) -> None:
+        if key in self.fail_keys:
+            self.fail_keys.remove(key)
+            self.failed.append(key)
+            raise RuntimeError("broker unavailable")
+        self.published.append(key)
+
+
+async def test_batch_raises_at_first_failed_publish(mongo_kafka: MongoKafkaFixture):
+    """Test that a batch raises at its first failed publish, as a single write does,
+    and that publish_pending sends what the batch left.
+    """
+    first, failing, after = ExampleDto(), ExampleDto(), ExampleDto()
+    publisher = FailingPublisher(fail_keys={str(failing.id)})
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        with pytest.raises(RuntimeError, match="broker unavailable"):
+            await dao.insert_many([first, failing, after])
+
+        assert publisher.published == [str(first.id)]
+        assert publisher.failed == [str(failing.id)]
+        for dto in (first, failing, after):
+            assert await dao.get_by_id(dto.id) == dto
+            assert is_published(mongo_kafka, dto.id) is (dto == first)
+
+        await dao.publish_pending()
+        assert set(publisher.published[1:]) == {str(failing.id), str(after.id)}
+
+
+async def test_batch_with_write_errors_logs_failed_publish(
+    mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
+):
+    """Test that a batch whose write failed for some IDs logs a failed publish and
+    raises its BatchOperationError instead, and that publish_pending sends what the
+    batch left.
+    """
+    existing, failing, after = ExampleDto(), ExampleDto(), ExampleDto()
+    publisher = FailingPublisher(fail_keys={str(failing.id)})
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        await dao.insert(existing)
+        with (
+            caplog.at_level("WARNING"),
+            pytest.raises(BatchOperationError) as caught,
+        ):
+            await dao.insert_many([existing, failing, after])
+
+        assert list(caught.value.errors) == [existing.id]
+        assert publisher.failed == [str(failing.id)]
+        assert (
+            f"Could not publish the event for {failing.id}; leaving it and the rest"
+            " of the batch to publish_pending." in caplog.text
+        )
+        for dto in (failing, after):
+            assert not is_published(mongo_kafka, dto.id)
+
+        await dao.publish_pending()
+        assert set(publisher.published[1:]) == {str(failing.id), str(after.id)}
+
+
+async def test_batch_without_autopublish(mongo_kafka: MongoKafkaFixture):
+    """Test that a batch without autopublish writes but publishes nothing, and leaves
+    its resources to publish_pending.
+    """
+    publisher = HeldEventPublisher(hold=lambda *_: False)
+    async with dao_with_publisher(mongo_kafka, publisher, autopublish=False) as dao:
+        dtos = [ExampleDto(), ExampleDto()]
+        await dao.insert_many(dtos)
+        await dao.delete_many([dtos[0].id])
+        assert publisher.published == []
+
+        await dao.publish_pending()
+        assert publisher.published == [
+            (DELETE_EVENT_TYPE, {}),
+            (CHANGE_EVENT_TYPE, dtos[1].model_dump(mode="json")),
+        ]
+
+
+@pytest.mark.parametrize(
+    "method", ["insert_many", "upsert_many", "update_many", "delete_many"]
+)
+async def test_empty_batch_through_the_outbox(
+    method: str, mongo_kafka: MongoKafkaFixture
+):
+    """Test that an empty batch through an outbox DAO writes and publishes nothing."""
+    publisher = HeldEventPublisher(hold=lambda *_: False)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        await getattr(dao, method)([])
+
+    assert publisher.published == []
+    assert get_mongo_collection(mongo_kafka, "example").count_documents({}) == 0

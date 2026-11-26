@@ -145,22 +145,30 @@ Once the workflow has created the draft, edit it.
 
 - `release.yaml` drafts one for a final `ghga/` tag once a dispatch with `push` has pushed its images and charts; the build-only run of the tag push drafts nothing.
   It also tags the companions, the platform-lane members with `notes = true`, now only `ghga-datasteward-kit`, as `name/X.Y.Z` with the platform version and drafts theirs, unless nothing they ship has changed.
+  A companion's tag pushed by hand starts a run of its own, which only checks that it tags the commit of `ghga/X.Y.Z`.
 - `pypi-publish.yaml` drafts one for each member it uploaded, except for a prerelease version.
   A sweep first tags each of them as `name/x.y.z`, prereleases included, so the next release has a tag to compare with.
 
 The draft lists the pull requests since the previous release of the same name, grouped by commit type; a first release lists those since the first `ghga/` tag.
+A final tag without a GitHub release counts as abandoned: deleting a draft abandons its release, and the next release lists its pull requests.
+Keep the draft of a library or tool that was uploaded: PyPI keeps the version, and without the draft its pull requests move to the notes of the next one.
 For the platform, those are the ones that touched `services/`, `frontend/`, `deploy/` or `uv.lock`; for a library or tool, those that changed its shipped files.
 The platform's draft also names each library and tool that changed, with its version and a link to its release; a release tagged after the draft is not linked yet.
+The `Upgrade:` lines of those pull requests' descriptions ([names](conventions.md#names-branches-prs-commits)) are listed under Upgrade notes, above the lists; `Upgrade: none` is left out.
+The script fetches the descriptions with `gh`, so drafting fails if GitHub cannot be reached, while printing the notes locally falls back to the commit messages with a warning; run `gh auth login` first.
+A candidate's notes show the same section, so a deployment can be prepared before the final tag.
 The summary headings above the lists are left for you to fill in:
 
 1. Open the draft under the repository's releases.
 2. Under New features, Changes and Bug fixes, write a few short sentences each for users: no pull request numbers, no minor changes or refactorings, and one item for a feature that spans several services.
    Delete a heading with nothing worth saying, and the hint comments.
+   Check Upgrade notes against the charts, config and CLI; edit a line there rather than leave it vague.
 3. Publish the draft.
 
-To see the notes before tagging, or to compare with a ref other than the previous tag:
+To see the notes before pushing a tag, or to compare with a ref other than the previous tag:
 
 ```sh
+git tag ghga/15.4.0    # the script needs the tag; delete it with `git tag -d` if you do not push it
 uv run --script scripts/release_notes.py ghga/15.4.0 --previous ghga/15.3.1
 ```
 

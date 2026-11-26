@@ -13,6 +13,11 @@ service:
 containerPorts:
   http: null
 
+migrationInitContainer:
+  executable: ns
+  executableArgs:
+  - migrate-db
+
 config:
   mongo_dsn:
   from_address: test@test.com
@@ -41,8 +46,11 @@ config:
   kafka_enable_dlq: true
   db_version_collection: "nsDbVersions"
   migration_wait_sec: 10
+  # replicas waiting on another one's migration fail after this, so a stuck lock shows
+  migration_max_wait_sec: 600
 
-executableArgs: []
+executableArgs:
+- consume-events
 
 _topics:
   notificationEvent:

@@ -11,6 +11,9 @@ cleanup:
   containerName: test-my-app-cleanup
   schedule: "0 3 * * *"
   successfulJobsHistoryLimit: 2
+  concurrencyPolicy: Replace
+  activeDeadlineSeconds: 3000
+  startingDeadlineSeconds: 300
   command:
   - sh
   - -c
@@ -29,6 +32,9 @@ report:
   containerName: test-my-app-report
   schedule: "0 * * * *"
   successfulJobsHistoryLimit: 5
+  concurrencyPolicy: Allow
+  activeDeadlineSeconds: 600
+  startingDeadlineSeconds: null
   command:
   - sh
   - -c

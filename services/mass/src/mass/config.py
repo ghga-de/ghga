@@ -21,6 +21,7 @@ from pydantic_settings import BaseSettings
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
 from mass.adapters.inbound.event_sub import EventSubTranslatorConfig
@@ -38,6 +39,7 @@ class SearchableClassesConfig(BaseSettings):
 
 @config_from_yaml(prefix="mass")
 class Config(
+    OpenTelemetryConfig,
     ApiConfigBase,
     MongoDbConfig,
     KafkaConfig,

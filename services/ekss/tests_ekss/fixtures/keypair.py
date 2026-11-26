@@ -57,7 +57,8 @@ def keypair_fixture() -> Generator[KeypairFixture]:
         # Crypt4GH does not reset the umask it sets, so we need to deal with it
         # umask returns the current value before setting the specified mask
         original_umask = os.umask(0o022)
-        passphrase = DEFAULT_CONFIG.private_key_passphrase
+        secret_passphrase = DEFAULT_CONFIG.private_key_passphrase
+        passphrase = secret_passphrase.get_secret_value() if secret_passphrase else None
         if passphrase:
             generate_keypair(
                 seckey=sk_path,
@@ -93,6 +94,7 @@ def keypair_fixture() -> Generator[KeypairFixture]:
             user_pk=user_pk,
             user_sk=user_sk,
             config=Crypt4GHConfig(
-                server_private_key_path=sk_path, private_key_passphrase=passphrase
+                server_private_key_path=sk_path,
+                private_key_passphrase=secret_passphrase,
             ),
         )

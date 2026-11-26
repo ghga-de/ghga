@@ -18,6 +18,7 @@ import {
   getDatasetDetails,
   getDatasetSummary,
   metadataGlobalSummary,
+  savedUploadBoxPriority,
   searchResults,
   storageLabels,
   studyData,
@@ -29,6 +30,8 @@ import {
   uploadBox5Uploads,
   uploadBox6Uploads,
   uploadBoxes,
+  uploadBoxFileStateCounts,
+  uploadBoxPriority,
   pediatricLeukemiaDatasetDetails,
   pediatricLeukemiaFileIds,
   pediatricLeukemiaStudyData,
@@ -178,11 +181,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
    * MASS API
    */
 
-  'GET /api/mass/search*': {
-    facets: searchResults.facets,
-    count: searchResults.count,
-    hits: searchResults.hits,
-  },
+  // Pinning the limit serves the fixture as a canned page: the handler would
+  // otherwise paginate it and replace its total count with the number of items.
+  'GET /api/mass/search?limit=10': searchResults,
 
   /**
    * DINS API
@@ -240,6 +241,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // Patch an access request
   'PATCH /api/ars/access-requests/*': 204,
+  'POST /api/ars/access-requests/*/verification-sms': {
+    internal_note: 'Verification code sent.',
+  },
 
   /**
    * RTS API
@@ -274,6 +278,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // Fetch all upload boxes
   'GET /api/rs/upload-boxes': uploadBoxes,
+
+  // Fetch the file state counts of all upload boxes
+  'GET /api/rs/upload-boxes/file-state-counts': uploadBoxFileStateCounts,
 
   // Fetch file uploads for a specific box. This endpoint is paginated and sorted
   // by the RS, so the fixtures are the complete file list of each box and the
@@ -324,9 +331,20 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68004': uploadBoxes.boxes[3],
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68005': uploadBoxes.boxes[4],
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68006': uploadBoxes.boxes[5],
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68007': uploadBoxes.boxes[6],
 
   // Unknown upload box (catch-all, must stay after nested routes above)
   'GET /api/rs/upload-boxes/*': 404,
+
+  /**
+   * RS Upload Box Priority API
+   */
+
+  // Fetch the priority order of the upload boxes
+  'GET /api/rs/upload-box-priority': uploadBoxPriority,
+
+  // Replace the priority order
+  'PUT /api/rs/upload-box-priority': savedUploadBoxPriority,
 
   /**
    * RS Upload Grants API

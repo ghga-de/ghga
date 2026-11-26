@@ -44,8 +44,11 @@ from rs.core.models import (
     ResearchDataUploadBox,
     Study,
     StudyStatus,
+    UploadBoxPriorityEntry,
+    UploadBoxPriorityResponse,
 )
 from rs.inject import prepare_rest_app
+from rs.ports.inbound.priority import UploadBoxPriorityManagerPort
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
 from rs.ports.inbound.registry import RegistryPort
 from rs.ports.outbound.http import FileBoxClientPort
@@ -167,6 +170,72 @@ async def test_get_storage_overview(
         # handle other exception
         registry.reset_mock()
         registry.rdub_manager.get_storage_overview.side_effect = TypeError()
+        response = await rest_client.get(url, headers=ds_auth_headers)
+        assert response.status_code == 500
+
+
+async def test_get_file_state_counts(
+    config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
+):
+    """Test the GET /upload-boxes/file-state-counts endpoint"""
+    registry = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, registry_override=registry) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = "/upload-boxes/file-state-counts"
+
+        # unauthenticated
+        response = await rest_client.get(url)
+        assert response.status_code == 401
+
+        # bad credentials
+        response = await rest_client.get(url, headers=bad_auth_headers)
+        assert response.status_code == 401
+
+        # normal response but user is not a data steward (no data_steward role)
+        response = await rest_client.get(url, headers=user_auth_headers)
+        assert response.status_code == 403
+
+        # normal response with data steward role, not shadowed by GET /{box_id}
+        box_id = uuid4()
+        registry.rdub_manager.get_file_state_counts.return_value = {
+            box_id: {"inbox": 2, "archived": 3}
+        }
+        response = await rest_client.get(url, headers=ds_auth_headers)
+        assert response.status_code == 200
+        assert response.json() == {str(box_id): {"inbox": 2, "archived": 3}}
+        registry.rdub_manager.get_research_data_upload_box.assert_not_called()
+        registry.rdub_manager.get_file_state_counts.assert_awaited_once_with(
+            box_ids=None
+        )
+
+        # only the given boxes
+        other_box_id = uuid4()
+        registry.reset_mock()
+        response = await rest_client.get(
+            url,
+            headers=ds_auth_headers,
+            params={"box_id": [str(box_id), str(other_box_id)]},
+        )
+        assert response.status_code == 200
+        registry.rdub_manager.get_file_state_counts.assert_awaited_once_with(
+            box_ids=[box_id, other_box_id]
+        )
+
+        # too many boxes for one request
+        registry.reset_mock()
+        response = await rest_client.get(
+            url,
+            headers=ds_auth_headers,
+            params={"box_id": [str(uuid4()) for _ in range(101)]},
+        )
+        assert response.status_code == 422
+        registry.rdub_manager.get_file_state_counts.assert_not_called()
+
+        # handle other exception
+        registry.reset_mock()
+        registry.rdub_manager.get_file_state_counts.side_effect = TypeError()
         response = await rest_client.get(url, headers=ds_auth_headers)
         assert response.status_code == 500
 
@@ -1861,4 +1930,126 @@ async def test_requeue_whole_box_uploads_error_translation(
         registry.reset_mock()
         registry.rdub_manager.requeue_all_box_uploads.side_effect = TypeError()
         response = await rest_client.post(url, headers=ds_auth_headers)
+        assert response.status_code == 500
+
+
+async def test_get_upload_box_priority(
+    config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
+):
+    """Test the GET /upload-box-priority endpoint"""
+    registry = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, registry_override=registry) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = "/upload-box-priority"
+
+        # unauthenticated
+        response = await rest_client.get(url)
+        assert response.status_code == 401
+
+        # bad credentials
+        response = await rest_client.get(url, headers=bad_auth_headers)
+        assert response.status_code == 401
+
+        # normal response but user is not a data steward (no data_steward role)
+        response = await rest_client.get(url, headers=user_auth_headers)
+        assert response.status_code == 403
+        registry.priority_manager.get_priority.assert_not_called()
+
+        # normal response with data steward role, before the first list is stored
+        registry.priority_manager.get_priority.return_value = (
+            UploadBoxPriorityResponse.from_priority(None)
+        )
+        response = await rest_client.get(url, headers=ds_auth_headers)
+        assert response.status_code == 200
+        assert response.json() == {
+            "version": 0,
+            "changed_by": None,
+            "last_changed": None,
+            "reordered_by": None,
+            "reordered_at": None,
+            "entries": [],
+        }
+
+        # handle other exception
+        registry.priority_manager.get_priority.side_effect = TypeError()
+        response = await rest_client.get(url, headers=ds_auth_headers)
+        assert response.status_code == 500
+
+
+async def test_set_upload_box_priority(
+    config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
+):
+    """Test the PUT /upload-box-priority endpoint"""
+    registry = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, registry_override=registry) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = "/upload-box-priority"
+        box_ids = [uuid4(), uuid4()]
+        body = {"version": 7, "box_ids": [str(box_id) for box_id in box_ids]}
+
+        # unauthenticated
+        response = await rest_client.put(url, json=body)
+        assert response.status_code == 401
+
+        # bad credentials
+        response = await rest_client.put(url, json=body, headers=bad_auth_headers)
+        assert response.status_code == 401
+
+        # normal response but user is not a data steward (no data_steward role)
+        response = await rest_client.put(url, json=body, headers=user_auth_headers)
+        assert response.status_code == 403
+        registry.priority_manager.set_order.assert_not_called()
+
+        # normal response with data steward role
+        saved_at = now_utc_ms_prec()
+        priority = UploadBoxPriorityResponse(
+            version=8,
+            changed_by=TEST_DS_ID,
+            last_changed=saved_at,
+            reordered_by=TEST_DS_ID,
+            reordered_at=saved_at,
+            entries=[
+                UploadBoxPriorityEntry(
+                    research_data_upload_box_id=box_id, file_upload_box_id=uuid4()
+                )
+                for box_id in box_ids
+            ],
+        )
+        registry.priority_manager.set_order.return_value = priority
+        response = await rest_client.put(url, json=body, headers=ds_auth_headers)
+        assert response.status_code == 200
+        assert response.json() == priority.model_dump(mode="json")
+        registry.priority_manager.set_order.assert_awaited_once_with(
+            version=7, box_ids=box_ids, user_id=TEST_DS_ID
+        )
+
+        # malformed body
+        registry.reset_mock()
+        for bad_body in [
+            {"box_ids": body["box_ids"]},
+            {"version": 7},
+            {"version": -1, "box_ids": []},
+            {"version": 7, "box_ids": [str(box_ids[0])] * 2},
+        ]:
+            response = await rest_client.put(
+                url, json=bad_body, headers=ds_auth_headers
+            )
+            assert response.status_code == 422
+        registry.priority_manager.set_order.assert_not_called()
+
+        # the list changed since the version, or holds other boxes
+        registry.priority_manager.set_order.side_effect = (
+            UploadBoxPriorityManagerPort.PriorityChangedError(version=7)
+        )
+        response = await rest_client.put(url, json=body, headers=ds_auth_headers)
+        assert response.status_code == 409
+        assert response.json()["exception_id"] == EXC_ID_BOX_VERSION_OUTDATED
+
+        # handle other exception
+        registry.priority_manager.set_order.side_effect = TypeError()
+        response = await rest_client.put(url, json=body, headers=ds_auth_headers)
         assert response.status_code == 500

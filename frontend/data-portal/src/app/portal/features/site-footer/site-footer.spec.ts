@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { ConfigService } from '@app/shared/services/config';
 import { render, RenderResult, screen } from '@testing-library/angular';
 
 import { SiteFooter } from './site-footer';
@@ -12,7 +13,12 @@ describe('SiteFooter', () => {
   let result: RenderResult<SiteFooter>;
 
   beforeEach(async () => {
-    result = await render(SiteFooter, { routes: [] });
+    result = await render(SiteFooter, {
+      routes: [],
+      providers: [
+        { provide: ConfigService, useValue: { contactUrl: 'https://contact.test/' } },
+      ],
+    });
   });
 
   it('should create', () => {
@@ -29,6 +35,13 @@ describe('SiteFooter', () => {
     expect(screen.getByRole('link', { name: 'Browse Data' })).toHaveAttribute(
       'href',
       '/browse',
+    );
+  });
+
+  it('should link the configured contact page', () => {
+    expect(screen.getByRole('link', { name: 'Contact page' })).toHaveAttribute(
+      'href',
+      'https://contact.test/',
     );
   });
 

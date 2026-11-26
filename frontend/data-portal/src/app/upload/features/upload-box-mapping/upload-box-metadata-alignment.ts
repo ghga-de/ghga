@@ -10,6 +10,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 
+import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import {
   computeMetadataAlignment,
@@ -26,7 +27,13 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
  */
 @Component({
   selector: 'app-upload-box-metadata-alignment',
-  imports: [MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule],
+  imports: [
+    MatButtonModule,
+    MatCardModule,
+    MatIconModule,
+    MatProgressBarModule,
+    ParseBytes,
+  ],
   templateUrl: './upload-box-metadata-alignment.html',
 })
 export class UploadBoxMetadataAlignment {
@@ -40,6 +47,9 @@ export class UploadBoxMetadataAlignment {
 
   /** The name of the currently loaded metadata file, if any */
   fileName = signal<string | undefined>(undefined);
+
+  /** The size in bytes of the currently loaded metadata file, if any */
+  fileSize = signal<number | undefined>(undefined);
 
   /**
    * Files in the upload box (excluding deleted and failed ones).
@@ -78,23 +88,65 @@ export class UploadBoxMetadataAlignment {
     if (!file) return;
 
     this.fileName.set(file.name);
+    this.fileSize.set(file.size);
+
+    // Reading and parsing fail for different reasons and need different fixes,
+    // so report them separately, each with the browser's own explanation.
+    let text: string;
+    try {
+      text = await file.text();
+    } catch (error) {
+      this.#reject(
+        `The file could not be read (${errorMessage(error)}).` +
+          ' If it is still being copied or was changed, select it again.',
+      );
+      return;
+    }
+    if (!text.trim()) {
+      this.#reject('The file is empty.');
+      return;
+    }
     let data: unknown;
     try {
-      data = JSON.parse(await file.text());
-    } catch {
-      this.uploadedMetadata.set(undefined);
-      this.parseError.set('The file does not contain valid JSON.');
+      data = JSON.parse(text);
+    } catch (error) {
+      this.#reject(`The file does not contain valid JSON: ${errorMessage(error)}`);
       return;
     }
 
     const result = parseUploadedMetadata(data);
     if (!result.ok) {
-      this.uploadedMetadata.set(undefined);
-      this.parseError.set(result.error);
+      this.#reject(result.error);
       return;
     }
 
     this.parseError.set(undefined);
     this.uploadedMetadata.set(result.metadata);
   }
+
+  /**
+   * Drop any previously loaded metadata and show why the file was rejected.
+   * @param error - the message to show
+   */
+  #reject(error: string): void {
+    this.uploadedMetadata.set(undefined);
+    this.parseError.set(error);
+  }
+}
+
+/**
+ * Get a readable message from a caught error.
+ *
+ * Checks for a message property rather than `instanceof Error`, because a
+ * `DOMException` from reading the file need not be an `Error` instance.
+ * @param error - the caught value
+ * @returns the error's message, or its string form if it has none
+ */
+function errorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const { message, name } = error as { message: unknown; name?: unknown };
+    if (typeof message === 'string' && message) return message;
+    if (typeof name === 'string' && name) return name;
+  }
+  return String(error);
 }

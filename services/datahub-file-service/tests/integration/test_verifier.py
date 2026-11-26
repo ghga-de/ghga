@@ -15,23 +15,40 @@
 
 """Integration tests for run_dhfs_verification setup and teardown.
 
-The core interrogation logic (prepare_interrogator / interrogate_file) is mocked
-so these tests focus exclusively on inbox upload and cleanup behavior.
+Most tests mock the core interrogation logic (prepare_interrogator /
+interrogate_new_files) to focus on inbox upload and cleanup behavior; one runs the
+real interrogator.
 """
 
+import hashlib
+import io
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from unittest.mock import AsyncMock, patch
+from math import ceil
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import crypt4gh.lib
+import httpx2
 import pytest
 import pytest_asyncio
 
 from dhfs.adapters.outbound.central import CentralClient
+from dhfs.adapters.outbound.s3 import S3Client
 from dhfs.config import Config
-from dhfs.core.verifier import OBJECT_ID_UUID, run_dhfs_verification
+from dhfs.core.verifier import (
+    INTERROGATION_OBJECT_ID,
+    OBJECT_ID_STR,
+    OBJECT_ID_UUID,
+    _upload_inbox_dummy_file,
+    run_dhfs_verification,
+)
 from hexkit.providers.s3.testutils import S3Fixture
-from tests.fixtures.utils import DHFS_CRYPT4GH_PUBLIC_KEY_PATH
+from tests.fixtures.utils import (
+    DHFS_CRYPT4GH_PUBLIC_KEY_PATH,
+    get_crypt4gh_private_key,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -76,15 +93,25 @@ async def verifier_fixture(
 
 @asynccontextmanager
 async def _succeeding_interrogator(*, config):
-    """Drop-in for prepare_interrogator that simulates a successful interrogation."""
-    yield AsyncMock()
+    """Drop-in for prepare_interrogator that simulates a successful interrogation,
+    reported to Central the way the real one reports it.
+    """
+
+    async def interrogate_new_files():
+        await CentralClient.submit_interrogation_report(
+            MagicMock(), report=MagicMock(passed=True)
+        )
+
+    mock = AsyncMock()
+    mock.interrogate_new_files.side_effect = interrogate_new_files
+    yield mock
 
 
 @asynccontextmanager
 async def _failing_interrogator(*, config):
     """Drop-in for prepare_interrogator that simulates a failed interrogation."""
     mock = AsyncMock()
-    mock.interrogate_file.side_effect = RuntimeError("Simulated failure")
+    mock.interrogate_new_files.side_effect = RuntimeError("Simulated failure")
     yield mock
 
 
@@ -106,6 +133,37 @@ async def test_fresh_run_cleans_up_on_success(verifier_fixture: VerifierFixture)
     )
 
 
+async def test_real_interrogator_processes_the_dummy_file(
+    verifier_fixture: VerifierFixture, caplog: pytest.LogCaptureFixture
+):
+    """Verify that the dummy file passes the real interrogator and that its report
+    reaches the verifier the way a real file's report reaches Central.
+    """
+    with caplog.at_level(logging.INFO, logger="dhfs.core.verifier"):
+        await run_dhfs_verification(verifier_fixture.config, file_size=SMALL_FILE_SIZE)
+
+    # A failed setup is only logged, so success has to be read from the log
+    assert "File processing succeeded." in caplog.messages
+    assert not await _inbox_has_object(verifier_fixture)
+    assert not await verifier_fixture.s3.storage.does_object_exist(
+        bucket_id=verifier_fixture.config.interrogation_bucket_id,
+        object_id=str(INTERROGATION_OBJECT_ID),
+    )
+
+
+async def test_inconclusive_run_names_the_cause(verifier_fixture: VerifierFixture):
+    """An inconclusive attempt of the real interrogator must fail the verification
+    with the cause DHFS found, not only log it.
+    """
+    with (
+        patch.object(S3Client, "get_is_file_in_inbox", AsyncMock(return_value=False)),
+        pytest.raises(RuntimeError, match="was not found in the inbox"),
+    ):
+        await run_dhfs_verification(verifier_fixture.config, file_size=SMALL_FILE_SIZE)
+
+    assert not await _inbox_has_object(verifier_fixture)
+
+
 async def test_failure_cleans_up(verifier_fixture: VerifierFixture):
     """Verify that the inbox object is removed during cleanup when interrogation fails."""
     with pytest.raises(RuntimeError, match="Simulated failure"):
@@ -116,4 +174,42 @@ async def test_failure_cleans_up(verifier_fixture: VerifierFixture):
 
     assert not await _inbox_has_object(verifier_fixture), (
         "Inbox object should be removed even when interrogation fails"
+    )
+
+
+async def test_dummy_file_is_uploaded_in_parts(verifier_fixture: VerifierFixture):
+    """The dummy file must arrive in parts of the given size and decrypt to plaintext
+    of the stated size and checksum.
+    """
+    part_size = 5 * 1024**2  # the smallest part S3 accepts before the last one
+    file_size = 2 * part_size + 12345
+
+    file_upload = await _upload_inbox_dummy_file(
+        config=verifier_fixture.config,
+        inbox_write_storage=verifier_fixture.s3.storage,
+        public_key_path=DHFS_CRYPT4GH_PUBLIC_KEY_PATH,
+        file_size=file_size,
+        part_size=part_size,
+    )
+
+    assert file_upload.part_size == part_size
+    storage = verifier_fixture.s3.storage
+    # A multipart ETag ends in the part count
+    etag = await storage.get_object_etag(
+        bucket_id=INBOX_BUCKET_ID, object_id=OBJECT_ID_STR
+    )
+    part_count = ceil(file_upload.encrypted_size / part_size)
+    assert etag.strip('"').endswith(f"-{part_count}")
+    url = await storage.get_object_download_url(
+        bucket_id=INBOX_BUCKET_ID, object_id=OBJECT_ID_STR
+    )
+    encrypted = httpx2.get(url).content
+    assert len(encrypted) == file_upload.encrypted_size
+
+    plaintext = io.BytesIO()
+    keys = [(0, get_crypt4gh_private_key().get_secret_value(), None)]
+    crypt4gh.lib.decrypt(keys, io.BytesIO(encrypted), plaintext)
+    assert len(plaintext.getvalue()) == file_upload.decrypted_size == file_size
+    assert (
+        hashlib.sha256(plaintext.getvalue()).hexdigest() == file_upload.decrypted_sha256
     )

@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2025-01-07
+amended: 2026-10-09
 tags: [backend, data]
 ---
 
@@ -51,6 +52,12 @@ Managing these migrations is critical for data integrity and avoiding runtime er
 For each service, we will include migration logic for each model that is stored in the database.
 The migration logic for a service will run when the service is started so that any outdated documents are updated before any business logic is performed.
 
+**Amended 2026-10-09:** The migrations no longer run when the service starts.
+Each service has a `migrate-db` command, which its chart runs in a migration init container before every pod starts, so a release still needs no extra step to migrate.
+Before any other command, the service's CLI checks the database version with hexkit's `check_db_version()` and stops unless it equals the version the release expects.
+This keeps migration failures and their logs apart from the service's own, and leaves the service with only a read of the version records at startup.
+The check is an equality on purpose: a pod of the old release that restarts after the new one has migrated fails instead of working on a schema it does not know.
+
 ### Consequences
 
 **Advantages**:
@@ -82,6 +89,10 @@ Some services have both a Kafka consumer and a REST API, which run in separate c
 Both instances require the database to be up to date, but it's not efficient to run the migration script more than once.
 If we run migrations automatically at startup, we should add a mechanism to ensure that a migration script is only triggered once for such services.
 
+**Amended 2026-10-09:** The consequences above describe the original decision, in which every service instance migrated at startup.
+With the `migrate-db` init container, every pod of the service runs the migration step before its containers start, and the lock lets only one of them migrate.
+After a database restore, the init container migrates the documents when the pods next start.
+
 ### Alternatives
 
 The main alternative was to store migration scripts in a dedicated repository.
@@ -99,6 +110,6 @@ Other Python projects in this realm include [mongodb-migrations](https://github.
 ### Addendum
 
 The approach described here has since been implemented in `hexkit`, which provides a `MigrationManager` along with helpers for defining the migrations of a service.
-The database version reached is recorded in a separate versioning collection and checked when a service starts up.
+The database version reached is recorded in a separate versioning collection, which the `migrate-db` command reads to decide what to migrate and the service reads at startup to check that the version matches.
 
 This also covers the open point mentioned above, namely ensuring that a migration is only triggered once for services that run more than one container: the `MigrationManager` acquires a lock in a dedicated collection before applying migrations, so that only one instance carries them out.

@@ -13,7 +13,7 @@ Feature: 302 TOTP Reset After Deactivation
 
     When "Dr. John Doe" attempts TOTP verification with wrong codes
     And "Dr. John Doe" tries to log in
-    Then the response status code is "401"
+    Then the response status code is "403"
     And the response error message is "User account is disabled"
 
   Scenario: The data steward reactivates the user account

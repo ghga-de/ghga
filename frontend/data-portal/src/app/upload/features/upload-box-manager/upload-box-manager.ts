@@ -4,37 +4,52 @@
  * @license Apache-2.0
  */
 
-import { Component, inject, OnInit } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  OnInit,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { HasPendingEdits } from '@app/shared/features/pending-edits';
 import { Notifier } from '@app/shared/services/notification';
 import { RefreshButton } from '@app/shared/ui/refresh-button/refresh-button';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { UploadBoxCreationDialog } from '../upload-box-creation-dialog/upload-box-creation-dialog';
 import { UploadBoxManagerFilter } from '../upload-box-manager-filter/upload-box-manager-filter';
 import { UploadBoxManagerList } from '../upload-box-manager-list/upload-box-manager-list';
+import { UploadBoxPriorityEditor } from '../upload-box-priority-editor/upload-box-priority-editor';
 
 /**
  * Upload Box Manager component.
  *
  * This component is the data steward entry point for upload box management.
+ * It shows the list of upload boxes, or in reorder mode the priority order.
  */
 @Component({
   selector: 'app-upload-box-manager',
   imports: [
     UploadBoxManagerFilter,
     UploadBoxManagerList,
+    UploadBoxPriorityEditor,
     MatButtonModule,
     MatIconModule,
     RefreshButton,
   ],
   templateUrl: './upload-box-manager.html',
 })
-export class UploadBoxManager implements OnInit {
+export class UploadBoxManager implements OnInit, HasPendingEdits {
   #uploadBoxService = inject(UploadBoxService);
   #dialog = inject(MatDialog);
   #notificationService = inject(Notifier);
+  #injector = inject(Injector);
 
   /**
    * Fetch all upload boxes when the component is initialized. File counts and
@@ -48,6 +63,40 @@ export class UploadBoxManager implements OnInit {
 
   /** Whether the upload boxes are currently being fetched. */
   protected isLoading = this.#uploadBoxService.boxRetrievalResults.isLoading;
+
+  /** Whether the page is in reorder mode, where the steward changes the priority order */
+  protected reordering = signal(false);
+
+  private priorityEditor = viewChild(UploadBoxPriorityEditor);
+
+  private changeOrderButton = viewChild('changeOrderButton', { read: ElementRef });
+
+  /** Whether the boxes and their priority order are loaded, so that the order can be changed */
+  protected canChangePriority = computed(
+    () =>
+      !this.isLoading() &&
+      !this.#uploadBoxService.boxRetrievalResults.error() &&
+      this.#uploadBoxService.prioritizedUploadBoxes() !== undefined,
+  );
+
+  /**
+   * Check if reorder mode has unsaved changes (implements the HasPendingEdits interface)
+   * @returns true if there are pending edits, false otherwise
+   */
+  hasPendingEdits(): boolean {
+    return this.priorityEditor()?.hasChanges() ?? false;
+  }
+
+  /**
+   * Leave reorder mode after Cancel or a save. The focus moves back to Change
+   * order, since leaving reorder mode removed the button that had it.
+   */
+  protected stopReordering(): void {
+    this.reordering.set(false);
+    afterNextRender(() => this.changeOrderButton()?.nativeElement.focus(), {
+      injector: this.#injector,
+    });
+  }
 
   /**
    * Fetch the upload boxes again on request. File counts and sizes advance as

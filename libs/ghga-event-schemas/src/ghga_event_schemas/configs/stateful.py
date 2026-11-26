@@ -27,6 +27,7 @@ __all__ = [
     "FileUploadEventsConfig",
     "ResearchDataUploadBoxEventsConfig",
     "ResourceEventsConfig",
+    "UploadBoxPriorityEventsConfig",
     "UserEventsConfig",
 ]
 
@@ -148,6 +149,19 @@ class ResearchDataUploadBoxEventsConfig(BaseSettings):
         default=...,
         description="Name of the event topic containing research data upload box events",
         examples=["research-data-upload-boxes"],
+    )
+
+
+class UploadBoxPriorityEventsConfig(BaseSettings):
+    """Config for events communicating changes in the upload box priority order.
+
+    The event types are hardcoded by `hexkit`.
+    """
+
+    upload_box_priority_topic: str = Field(
+        default=...,
+        description="Name of the event topic containing upload box priority events",
+        examples=["upload-box-priority"],
     )
 
 

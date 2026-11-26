@@ -109,6 +109,8 @@ class TokenGenerator:
         self.totp_digits = config.totp_digits
         self.totp_interval = config.totp_interval
         self.totp_tolerance = config.totp_tolerance
+        # the last time step in which a code was generated for each token
+        self.used_totp_steps: dict[str, int] = {}
 
     @classmethod
     def split_title(cls, full_name: str) -> tuple[str | None, str]:
@@ -320,7 +322,34 @@ class TokenGenerator:
         )
         if for_time is None:
             for_time = now_as_utc()
-        return totp.at(for_time, offset)
+        return totp.at(for_time, counter_offset=offset)
+
+    def generate_unused_totp(self, token: str) -> str:
+        """Generate a TOTP code that is accepted for the given token.
+
+        The auth service accepts only one code per token and time step, so this
+        waits for the next time step if a code has already been generated in the
+        current one. It also waits if the step ends in less than 3 seconds, so
+        that the code is verified in the same step in which it was generated.
+        After a wait, it leaves a second for a server clock that runs behind.
+        """
+        interval = self.totp_interval
+        now = now_as_utc().timestamp()
+        step = int(now // interval)
+        step_end = (step + 1) * interval
+        if self.used_totp_steps.get(token, -1) >= step or step_end - now < 3:
+            sleep(step_end - now + 1)
+            step += 1
+        self.used_totp_steps[token] = step
+        return self.generate_totp(token)
+
+    def forget_used_totp(self, token: str) -> None:
+        """Forget the time step in which a code was last generated for the token.
+
+        Call this when the usage counters of the stored token have been reset,
+        since the auth service then accepts a code of the same step again.
+        """
+        self.used_totp_steps.pop(token, None)
 
     def generate_wrong_totp(self, totp_token: str) -> str:
         """Generate valid TOTP but with the wrong time window."""
@@ -376,7 +405,7 @@ class TokenGenerator:
         assert not totp_token.startswith("error:"), (
             f"Cannot authenticate {session.name}: {totp_token}"
         )
-        totp = self.generate_totp(totp_token)
+        totp = self.generate_unused_totp(totp_token)
         return self.verify_totp(totp, session_headers)
 
     @property

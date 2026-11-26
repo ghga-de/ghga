@@ -70,7 +70,9 @@ describe('AccessRequestManagerFilter', () => {
   });
 
   it('should set the filter after typing a name', async () => {
-    const textbox = screen.getByRole('textbox', { name: 'Name or email of requester' });
+    const textbox = screen.getByRole('textbox', {
+      name: 'Name or contact email of requester',
+    });
 
     await userEvent.type(textbox, 'Doe');
     await fixture.whenStable();

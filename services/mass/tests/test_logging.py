@@ -115,7 +115,7 @@ async def test_event_sub_logging(
     # get all the documents in the collection
     all_results = await joint_fixture.handle_query(class_name="NestedData")
 
-    assert all_results.count > 0
+    assert all_results.total_count > 0
 
     event_to_use = (
         joint_fixture.config.resource_upsertion_type

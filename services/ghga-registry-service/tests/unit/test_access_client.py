@@ -21,11 +21,12 @@ from uuid import UUID, uuid4
 import httpx2
 import pytest
 
+from ghga_service_commons.http.mock_api import fail_to_connect, respond
 from hexkit.utils import now_utc_ms_prec
 from rs.adapters.outbound.http import AccessClient
 from rs.config import Config
 from rs.core.models import GrantId
-from tests.fixtures.external_apis import AccessApiMock, fail_to_connect, respond
+from tests.fixtures.external_apis import AccessApiMock
 
 pytestmark = pytest.mark.asyncio
 
@@ -161,12 +162,20 @@ async def test_check_box_access(
     """Test the check_box_access function"""
     access_client = AccessClient(config=config, httpx_client=httpx_client)
 
-    # Happy path - user has access
-    access_api.on_check_box_access = respond(200)
+    # Happy path - user has access until the returned date
+    valid_until = now_utc_ms_prec() + timedelta(days=7)
+    access_api.on_check_box_access = respond(200, json=valid_until.isoformat())
     result = await access_client.check_box_access(
         user_id=TEST_USER_ID, box_id=TEST_BOX_ID
     )
     assert result is True
+
+    # Happy path - active user without a valid grant gets 200 with a null body
+    access_api.on_check_box_access = respond(200, content=b"null")
+    result = await access_client.check_box_access(
+        user_id=TEST_USER_ID, box_id=TEST_BOX_ID
+    )
+    assert result is False
 
     # Happy path - user does not have access (403)
     access_api.on_check_box_access = respond(403, json={"error": "Forbidden"})
@@ -195,6 +204,14 @@ async def test_check_box_access(
     )
     with pytest.raises(AccessClient.AccessAPIError):
         await access_client.check_box_access(user_id=TEST_USER_ID, box_id=TEST_BOX_ID)
+
+    # Check 200 with a body that is neither a date nor null
+    for body in (b"", b'"not-a-date"', b"true"):
+        access_api.on_check_box_access = respond(200, content=body)
+        with pytest.raises(AccessClient.AccessAPIError):
+            await access_client.check_box_access(
+                user_id=TEST_USER_ID, box_id=TEST_BOX_ID
+            )
 
     access_api.on_check_box_access = fail_to_connect("Network error")
     with pytest.raises(AccessClient.AccessAPIError):
