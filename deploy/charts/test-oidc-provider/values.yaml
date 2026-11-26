@@ -144,7 +144,7 @@ kafkaUser:
   caCertSecretName: kafka-cluster-ca-cert
 mongodb:
   dbName: ""
-apiBasePath: /op.test/
+apiBasePath: /test/op/
 serviceName: test-oidc-provider
 serviceInstanceId:
   fromPodName: false

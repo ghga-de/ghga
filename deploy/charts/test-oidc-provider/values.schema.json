@@ -711,7 +711,7 @@
     "apiBasePath": {
       "type": "string",
       "description": "Public API path prefix; combined with apiBasePathPrefix (set by an aliasing umbrella) and injected into config.yaml as api_root_path",
-      "default": "/op.test/"
+      "default": "/test/op/"
     },
     "serviceName": {
       "type": "string",
