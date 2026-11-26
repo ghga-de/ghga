@@ -64,6 +64,8 @@ This is performed with the following steps:
    Please see [this section](#metadata-amend) for further details.
    If the study was promised a flat accession before its metadata arrived, use the `ghga-datasteward-kit metadata submit-legacy` command instead, so that the study gets that accession.
    Please see [this section](#metadata-submit-legacy) for further details.
+   If the study needs its PID before its metadata arrives, reserve it with `ghga-datasteward-kit metadata reserve-study-pid`, and submit the metadata later with `ghga-datasteward-kit metadata submit-pending` instead of `submit`.
+   Please see [this section](#metadata-reserve-study-pid-and-submit-pending) for further details.
 4. **Produce Metadata Artifacts**: A transformation workflow is run on all submissions in the submission registry to produce multiple query-specific metadata artifacts using the `ghga-datasteward-kit metadata transform` command.
    Please see [this section](#metadata) for further details.
 5. **Publish Metadata**: To publish all metadata artifacts of all submissions to the running system so that they are available on the GHGA website, the `ghga-datasteward-kit load` command can be used.
@@ -125,6 +127,52 @@ A run that is refused for its metadata, or cannot write the submission, stores n
 If the command fails after that, while publishing the source event, it prints no ID, and a rerun is refused because the stored submission holds the study accession.
 The refusal names that submission; `grep -l <study accession> <submission_store_dir>/*.json` finds it as well.
 Run `metadata amend --submission-id <id>` with the same metadata path to publish its source event; it keeps every accession and asks nothing.
+
+#### metadata reserve-study-pid and submit-pending
+
+Gives a study its study PID before its metadata arrives, so that the PID can be handed to the submitter.
+
+First reserve the PID, with the internal name of the study as title:
+
+```text
+ghga-datasteward-kit metadata reserve-study-pid \
+  --submission-title <internal name> \
+  --config-path <metadata config YAML>
+```
+
+The command stores a new pending submission without content that holds a new study PID, such as `GHGA.26.ABC.1`, and prints `Study PID <pid> reserved in submission <id>.` as its last line.
+Hand the PID to the submitter and keep the submission ID: both are needed once the metadata arrives.
+A description can be given with `--submission-description`, but is optional.
+The PID keeps the year it was reserved in, even when the metadata arrives in a later year.
+
+Once the metadata arrives, submit it to that submission:
+
+```text
+ghga-datasteward-kit metadata submit-pending \
+  --submission-id <id> \
+  --study-pid <pid> \
+  --submission-title <title> \
+  --submission-description <description> \
+  --metadata-path <metadata JSON> \
+  --config-path <metadata config YAML>
+```
+
+The study gets the reserved PID and the datasets get PIDs derived from it, as with `metadata submit`.
+The title and description replace the internal name, and the submission is stored as completed.
+The command prints `Submission <id> ('<title>') submitted.` as its last line.
+The title is the one the submission had before this run: the internal name, which shows which reservation was filled, or the real title when a failed run is repeated.
+
+Before writing, the command shows the current title of the submission and asks whether the metadata belongs there; it has to run in a terminal to be answered.
+The command refuses, before writing anything:
+
+- a submission ID that does not exist;
+- a submission that does not hold the given study PID (`StudyPidMismatchError`), such as the ID of another reservation;
+- a submission that is not pending, such as one already submitted;
+- metadata that fails validation; the reservation then stays as it was, and the corrected metadata can be submitted to it.
+
+If the command fails after the metadata is stored but before the submission is completed, run it again with the same arguments: it keeps every PID and completes the submission.
+A `metadata submit` run that stopped before completing can be finished the same way, with the ID and study PID of its stored submission, where running `metadata submit` again would mint a second study PID.
+Do not run `metadata submit` for a study with a reserved PID, since it mints a second PID for the study; use `submit-pending` with the reserved PID instead.
 
 #### metadata amend
 

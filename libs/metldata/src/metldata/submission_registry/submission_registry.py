@@ -27,8 +27,13 @@ from metldata.submission_registry.event_publisher import SourceEventPublisher
 from metldata.submission_registry.identifiers import (
     generate_accession_map,
     generate_submission_id,
+    lookup_study_pid,
 )
 from metldata.submission_registry.submission_store import SubmissionStore
+
+# a Submission is a SubmissionHeader too, so a header argument may carry the other
+# fields of a submission, which must not be copied with the header
+HEADER_FIELDS = set(models.SubmissionHeader.model_fields)
 
 
 class SubmissionRegistryConfig(MetadataModelConfig):
@@ -49,7 +54,7 @@ class SubmissionRegistry:
             self, *, submission_id: str, current_status: str, expected_status: str
         ):
             message = (
-                f"The submission with id '{submission_id} has the status"
+                f"The submission with id '{submission_id}' has the status"
                 + f" '{current_status}' but expected '{expected_status}'."
             )
             super().__init__(message)
@@ -59,8 +64,18 @@ class SubmissionRegistry:
 
         def __init__(self, *, submission_id: str):
             message = (
-                f"The content for the submission with id '{submission_id} has not yet"
+                f"The content for the submission with id '{submission_id}' has not yet"
                 + " been specified."
+            )
+            super().__init__(message)
+
+    class StudyPidMismatchError(RuntimeError):
+        """Raised when a submission does not hold the study PID it is expected to."""
+
+        def __init__(self, *, submission_id: str, study_pid: str):
+            message = (
+                f"The submission '{submission_id}' does not hold the study PID"
+                + f" '{study_pid}'."
             )
             super().__init__(message)
 
@@ -80,6 +95,9 @@ class SubmissionRegistry:
         self._anchor_points_by_target = get_anchors_points_by_target(
             model=config.metadata_model
         )
+        self._study_anchor = self._anchor_points_by_target[
+            config.study_class_name
+        ].root_slot
 
     def _get_submission_with_status(
         self, *, id_: str, expected_status: models.SubmissionStatus
@@ -98,8 +116,8 @@ class SubmissionRegistry:
         if submission.current_status != expected_status:
             raise self.StatusError(
                 submission_id=id_,
-                current_status=str(submission.current_status),
-                expected_status=str(expected_status),
+                current_status=submission.current_status.value,
+                expected_status=expected_status.value,
             )
 
         return submission
@@ -110,10 +128,38 @@ class SubmissionRegistry:
         submission content is still empty.
         """
         id_ = generate_submission_id()
-        submission_creation = models.Submission(id=id_, **header.model_dump())
+        submission_creation = models.Submission(
+            id=id_, **header.model_dump(include=HEADER_FIELDS)
+        )
         self._submission_store.insert_new(submission=submission_creation)
 
         return id_
+
+    def reserve_study_pid(self, *, header: models.SubmissionHeader) -> tuple[str, str]:
+        """Initialize a new submission that holds a new study PID, so the PID can be
+        handed out before the metadata exists. Returns the ID of the created
+        submission and the study PID. No source event is published, since the
+        submission content is still empty.
+
+        The PID is filed under itself as alias, since the study alias is not known
+        yet. Upserting the content keeps it, whatever its alias, and files it under
+        the alias of the study in the content.
+
+        Raises:
+            AccessionRegistry.AccessionGenerationError:
+                when every study PID of the year is taken.
+        """
+        # minted before the submission is stored, so a failure leaves at most an
+        # unused PID, never a submission without one
+        study_pid = self._accession_registry.generate_study_accession()
+        submission_creation = models.Submission(
+            id=generate_submission_id(),
+            **header.model_dump(include=HEADER_FIELDS),
+            accession_map={self._study_anchor: {study_pid: study_pid}},
+        )
+        self._submission_store.insert_new(submission=submission_creation)
+
+        return submission_creation.id, study_pid
 
     def get_submission(self, *, id_: str) -> models.Submission:
         """Get details on the existing submission with the specified id.
@@ -123,6 +169,30 @@ class SubmissionRegistry:
                 when no submission with the specified ID exists.
         """
         return self._submission_store.get_by_id(id_)
+
+    def check_study_pid(self, *, submission_id: str, study_pid: str) -> None:
+        """Check that the existing submission with the specified id is pending and holds
+        the provided study PID, so that content meant for one study is not added to
+        another, and a submission that cannot take content is refused up front.
+
+        Raises:
+            SubmissionRegistry.SubmissionDoesNotExistError:
+                when no submission with the specified ID exists.
+            SubmissionRegistry.StatusError:
+                when the status of the specified submission is not pending.
+            SubmissionRegistry.StudyPidMismatchError:
+                when the submission does not hold the provided study PID.
+        """
+        submission = self._get_submission_with_status(
+            id_=submission_id, expected_status=models.SubmissionStatus.PENDING
+        )
+        held_study_pid = lookup_study_pid(
+            anchor=self._study_anchor, accession_map=submission.accession_map
+        )
+        if held_study_pid != study_pid:
+            raise self.StudyPidMismatchError(
+                submission_id=submission_id, study_pid=study_pid
+            )
 
     def upsert_submission_content(
         self, *, submission_id: str, content: SubmissionContent
@@ -162,6 +232,28 @@ class SubmissionRegistry:
         self._submission_store.update_existing(submission=updated_submission)
 
         self._event_publisher.publish_submission(updated_submission)
+
+    def update_submission_header(
+        self, *, submission_id: str, header: models.SubmissionHeader
+    ) -> None:
+        """Replace the title and description of a pending submission. No source event
+        is published, since the event does not carry them.
+
+        Raises:
+            SubmissionRegistry.SubmissionDoesNotExistError:
+                when no submission exists for the specified id.
+            SubmissionRegistry.StatusError:
+                when the status of the specified submission is not pending.
+        """
+        submission = self._get_submission_with_status(
+            id_=submission_id,
+            expected_status=models.SubmissionStatus.PENDING,
+        )
+
+        updated_submission = submission.model_copy(
+            update=header.model_dump(include=HEADER_FIELDS)
+        )
+        self._submission_store.update_existing(submission=updated_submission)
 
     def complete_submission(self, *, id_: str) -> None:
         """Declare an existing submission as complete. The content of the submission

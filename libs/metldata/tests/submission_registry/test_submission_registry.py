@@ -45,20 +45,8 @@ def test_happy(
 ):
     """Test the happy path of using the submission registry."""
     config = config_sub_fixture
-
-    # inject dependencies:
-    submission_store = SubmissionStore(config=config)
-    provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
-    event_publisher = SourceEventPublisher(config=config, provider=provider)
-    accession_store = AccessionStore(config=config)
-    accession_registry = AccessionRegistry(
-        config=config, accession_store=accession_store
-    )
-    submission_registry = SubmissionRegistry(
-        config=config,
-        submission_store=submission_store,
-        event_publisher=event_publisher,
-        accession_registry=accession_registry,
+    submission_store, accession_store, submission_registry = build_submission_registry(
+        config=config, event_fixture=file_system_event_fixture
     )
 
     # create a new submission:
@@ -149,19 +137,8 @@ def test_failed_content_validation(
     """Test that invalid content cannot be upserted, and that no study PID is minted
     for it.
     """
-    # inject dependencies:
-    submission_store = SubmissionStore(config=config_sub_fixture)
-    provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
-    event_publisher = SourceEventPublisher(config=config_sub_fixture, provider=provider)
-    accession_store = AccessionStore(config=config_sub_fixture)
-    accession_registry = AccessionRegistry(
-        config=config_sub_fixture, accession_store=accession_store
-    )
-    submission_registry = SubmissionRegistry(
-        config=config_sub_fixture,
-        submission_store=submission_store,
-        event_publisher=event_publisher,
-        accession_registry=accession_registry,
+    submission_store, accession_store, submission_registry = build_submission_registry(
+        config=config_sub_fixture, event_fixture=file_system_event_fixture
     )
 
     # create a new submission:
@@ -189,21 +166,8 @@ def test_update_after_completion(
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test no updates can be carried out after completion."""
-    config = config_sub_fixture
-
-    # inject dependencies:
-    submission_store = SubmissionStore(config=config)
-    provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
-    event_publisher = SourceEventPublisher(config=config, provider=provider)
-    accession_store = AccessionStore(config=config)
-    accession_registry = AccessionRegistry(
-        config=config, accession_store=accession_store
-    )
-    submission_registry = SubmissionRegistry(
-        config=config,
-        submission_store=submission_store,
-        event_publisher=event_publisher,
-        accession_registry=accession_registry,
+    submission_store, _, submission_registry = build_submission_registry(
+        config=config_sub_fixture, event_fixture=file_system_event_fixture
     )
 
     # create a new submission:
@@ -232,3 +196,129 @@ def test_update_after_completion(
     # check that the submission content did not change:
     observed_submission = submission_store.get_by_id(submission_id)
     assert observed_submission.content == submission_content
+
+
+def build_submission_registry(
+    *, config: SubmissionConfig, event_fixture: FileSystemEventFixture
+) -> tuple[SubmissionStore, AccessionStore, SubmissionRegistry]:
+    """Build the submission registry with its stores, which are returned too."""
+    submission_store = SubmissionStore(config=config)
+    provider = FileSystemEventPublisher(config=event_fixture.config)
+    accession_store = AccessionStore(config=config)
+    submission_registry = SubmissionRegistry(
+        config=config,
+        submission_store=submission_store,
+        event_publisher=SourceEventPublisher(config=config, provider=provider),
+        accession_registry=AccessionRegistry(
+            config=config, accession_store=accession_store
+        ),
+    )
+    return submission_store, accession_store, submission_registry
+
+
+def test_reserve_study_pid(
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
+    file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
+):
+    """Test that a reserved study PID is registered and held by a pending submission
+    without content, and that upserting the content keeps it under the study alias.
+    """
+    submission_store, accession_store, submission_registry = build_submission_registry(
+        config=config_sub_fixture, event_fixture=file_system_event_fixture
+    )
+
+    submission_header = models.SubmissionHeader(title="internal name")
+    submission_id, study_pid = submission_registry.reserve_study_pid(
+        header=submission_header
+    )
+
+    observed_submission = submission_store.get_by_id(submission_id)
+    assert observed_submission.title == submission_header.title
+    assert observed_submission.content is None
+    assert observed_submission.current_status == models.SubmissionStatus.PENDING
+    assert observed_submission.accession_map == {"studies": {study_pid: study_pid}}
+    _, year, random_block, _ = study_pid.split(".")
+    assert accession_store.get_random_blocks(year=year) == {random_block}
+
+    submission_registry.upsert_submission_content(
+        submission_id=submission_id,
+        content=VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES[0],
+    )
+
+    accession_map = submission_store.get_by_id(submission_id).accession_map
+    assert accession_map["studies"] == {"test_study": study_pid}
+    # no second study PID was minted
+    assert accession_store.get_random_blocks(year=year) == {random_block}
+
+
+def test_check_study_pid(
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
+    file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
+):
+    """Test that the check passes for the study PID a pending submission holds,
+    refuses the study PID of another submission, and refuses the submission once it
+    is completed.
+    """
+    _, _, submission_registry = build_submission_registry(
+        config=config_sub_fixture, event_fixture=file_system_event_fixture
+    )
+    header = models.SubmissionHeader(title="internal name")
+    submission_id, study_pid = submission_registry.reserve_study_pid(header=header)
+    _, other_study_pid = submission_registry.reserve_study_pid(header=header)
+
+    submission_registry.check_study_pid(
+        submission_id=submission_id, study_pid=study_pid
+    )
+    with pytest.raises(SubmissionRegistry.StudyPidMismatchError):
+        submission_registry.check_study_pid(
+            submission_id=submission_id, study_pid=other_study_pid
+        )
+
+    submission_registry.upsert_submission_content(
+        submission_id=submission_id,
+        content=VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES[0],
+    )
+    submission_registry.complete_submission(id_=submission_id)
+    with pytest.raises(SubmissionRegistry.StatusError):
+        submission_registry.check_study_pid(
+            submission_id=submission_id, study_pid=study_pid
+        )
+
+
+def test_update_submission_header(
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
+    file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
+):
+    """Test that the header of a pending submission can be replaced, and that of a
+    completed one cannot.
+    """
+    submission_store, _, submission_registry = build_submission_registry(
+        config=config_sub_fixture, event_fixture=file_system_event_fixture
+    )
+    submission_id = submission_registry.init_submission(
+        header=models.SubmissionHeader(title="old", description="old")
+    )
+
+    new_header = models.SubmissionHeader(title="new", description="new")
+    submission_registry.update_submission_header(
+        submission_id=submission_id, header=new_header
+    )
+
+    observed_submission = submission_store.get_by_id(submission_id)
+    assert observed_submission.title == new_header.title
+    assert observed_submission.description == new_header.description
+
+    submission_registry.upsert_submission_content(
+        submission_id=submission_id,
+        content=VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES[0],
+    )
+    submission_registry.complete_submission(id_=submission_id)
+    completed_submission = submission_store.get_by_id(submission_id)
+
+    with pytest.raises(SubmissionRegistry.StatusError):
+        submission_registry.update_submission_header(
+            submission_id=submission_id,
+            header=models.SubmissionHeader(title="newer"),
+        )
+
+    assert submission_store.get_by_id(submission_id) == completed_submission
