@@ -2,13 +2,10 @@
 # `just testbed [pytest args...]`: run the test-bed suite against the demo on kind.
 #
 # Harvests tokens and keys from the cluster secrets, port-forwards the services the suite
-# reaches directly (mailhog, lox24 — MinIO is published by kind), then runs pytest.
+# reaches directly (mailhog, lox24 — MinIO is published by kind), then runs the suite
+# through `just testbed-remote` with tb.kind.yaml, so every kind run exercises that lane too.
 set -euo pipefail
 
-# The suite shells out to ghga-datasteward-kit and ghga-connector and expects them
-# on PATH. The testbed venv holds them as editable workspace installs (see
-# testbed-install), so the CLIs are the very install the suite also imports.
-export PATH="$PWD/.venv-testbed/bin:$PATH"
 K="kubectl --context kind-ghga"
 # Fail in seconds, not in 300 s timeouts per scenario, when the platform is broken:
 # e.g. a crash-looping service, or Vault not letting ekss log in (its readiness
@@ -19,7 +16,6 @@ if ! $K wait --for=condition=Available deploy --all --timeout=60s > /dev/null 2>
     exit 1
 fi
 secret() { $K get secret "$1" -o jsonpath="{.data.$2}" | base64 -d; }
-export TB_CONFIG_YAML="$PWD/testbed/tb.kind.yaml"
 # assigned before the export, which would otherwise hide a failed lookup from `set -e`
 TB_STATE_MANAGEMENT_TOKEN=$(secret ghga-harness-tokens SMS_TOKEN)
 TB_PURGE_CONTROLLER_TOKEN=$(secret ghga-harness-tokens PCS_TOKEN)
@@ -28,7 +24,6 @@ TB_UPLOAD_TOKEN=$(secret ghga-harness-tokens METLDATA_TOKEN)
 TB_FIS_PUBKEY=$(secret ghga-c4gh-files 'crypt4gh\.pub' | sed -n 2p)
 export TB_STATE_MANAGEMENT_TOKEN TB_PURGE_CONTROLLER_TOKEN TB_DLQ_TOKEN TB_UPLOAD_TOKEN \
   TB_FIS_PUBKEY
-printf '%s' "$TB_UPLOAD_TOKEN" > "$HOME/.ghga_data_steward_token.txt"
 # per-run test-user crypt4gh keypair (any fresh pair works)
 # the connector needs the RAW 32-byte secret (export_private is PEM-ish and
 # fails with "PrivateKey must be created from a 32 bytes long raw secret key")
@@ -46,4 +41,4 @@ $K port-forward svc/ghga-lox24-mock 18080:8080 > /dev/null 2>&1 &
 # (deploy/kind-config.yaml), which is the authority the pre-signed URLs carry —
 # forwarding here would collide with that published port and fail to bind.
 sleep 2
-cd testbed && ../.venv-testbed/bin/pytest -v "$@"
+just testbed-remote testbed/tb.kind.yaml "$@"

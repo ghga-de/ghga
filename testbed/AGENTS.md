@@ -3,7 +3,7 @@
 How we work on the integration test bed.
 The repo-wide rules are in the root [AGENTS.md](../AGENTS.md), how to run it in the root README's [walkthrough](../README.md#run-the-test-bed-locally), and [docs/agent-instructions.md](../docs/agent-instructions.md) says what belongs in which file.
 
-The local [README](README.md) covers the test structure, the black-box and white-box modes, and the configuration keys; take the commands from the root README.
+The local [README](README.md) covers the test structure, the configuration keys and running against a cluster; take the commands from the root README.
 The standalone `archive-test-bed` repo it came from is archived, so changes land here only.
 
 ## Not a workspace member

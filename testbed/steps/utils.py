@@ -24,7 +24,6 @@ from pathlib import Path
 from typing import Any
 
 from fixtures import Config, JointFixture, MongoFixture, Response
-from fixtures.config import S3StorageConfig
 from fixtures.state import StateStorage
 from fixtures.utils import write_data_to_yaml
 from ghga_datasteward_kit.loading import LoadConfig

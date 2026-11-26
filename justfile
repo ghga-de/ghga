@@ -685,10 +685,21 @@ testbed-reset:
     @scripts/just/testbed-reset.sh
 
 # Harvests tokens/keys from the cluster secrets, port-forwards the services the suite
-# reaches directly, runs pytest.
+# reaches directly (mailhog, lox24 — MinIO is published by kind), then runs the suite
+# through `testbed-remote` with tb.kind.yaml, so every kind run exercises that lane too.
 # Run the testbed suite (optionally scoped, e.g. `just testbed steps/test_001_health_check.py`).
 testbed *args:
     @scripts/just/testbed.sh "$@"
+
+# Run the suite against a deployment reached through its gateway alone, as a remote
+# cluster is: no kubectl, no port-forward, no /etc/hosts edit. The configuration holds
+# the URLs and database names; every secret comes from the environment, in the same
+# TB_* variables `testbed` harvests from the cluster, and a missing one fails here by
+# name instead of as a scenario timeout. The suite resets shared state, so run it
+# against one deployment only once at a time.
+# Run the testbed suite against a tb.*.yaml deployment without the kind prelude (e.g. `just testbed-remote testbed/tb.<env>.yaml steps/test_001_health_check.py`).
+testbed-remote config *args:
+    @INVOCATION_DIR={{quote(invocation_directory())}} scripts/just/testbed-remote.sh "$@"
 
 # The name is matched loosely, so the `ghga-` prefix is optional and a substring is enough.
 # `just logs` with no argument lists the deployments and their ready counts.
