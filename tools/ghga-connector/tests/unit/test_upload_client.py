@@ -29,9 +29,21 @@ from tenacity import RetryError
 
 from ghga_connector import exceptions
 from ghga_connector.constants import UPLOAD_LISTING_PAGE_SIZE
-from ghga_connector.core.client import async_client
-from ghga_connector.core.uploading.api_calls import UploadClient
+from ghga_connector.core.client import (
+    OpenUploadLimitReached,
+    OpenUploadLimitTransport,
+    async_client,
+)
+from ghga_connector.core.uploading.api_calls import (
+    PART_BODY_CHUNK_SIZE,
+    PartBody,
+    UploadClient,
+)
 from ghga_service_commons.http.mock_api import respond
+from ghga_service_commons.transports import (
+    CompositeTransportFactory,
+    TransportConfig,
+)
 from tests.fixtures import set_runtime_test_config  # noqa: F401
 from tests.fixtures.mock_api.apis import (
     UPLOAD_URL,
@@ -277,11 +289,41 @@ async def test_get_part_upload_url(
     )
 
 
+@pytest.mark.parametrize("content", [b"abc123", bytearray(b"abc123")])
 async def test_upload_file_part(
     upload_client: UploadClient,
     mock_apis: MockApis,  # noqa: F811
+    content: bytes | bytearray,
 ):
-    """Test that upload_file_part fetches the presigned URL and PUTs the content to S3."""
+    """Test that upload_file_part fetches the presigned URL and PUTs the content to S3,
+    announcing its length up front rather than sending it chunked.
+    """
+    uploaded: list[tuple[bytes, httpx2.Headers]] = []
+
+    def upload_part(request: httpx2.Request) -> httpx2.Response:
+        """Accept the part content at the presigned URL."""
+        uploaded.append((request.read(), request.headers))
+        return httpx2.Response(200)
+
+    mock_apis.storage.on_upload_part = upload_part
+
+    await upload_client.upload_file_part(
+        file_id=TEST_FILE_ID, content=content, part_no=1
+    )
+    [(body, headers)] = uploaded
+    assert body == b"abc123"
+    assert headers["Content-Length"] == "6"
+    assert "Transfer-Encoding" not in headers
+
+
+async def test_upload_file_part_uses_given_url(
+    upload_client: UploadClient,
+    upload_api: UploadApiMock,
+    mock_apis: MockApis,  # noqa: F811
+):
+    """Test that upload_file_part sends to a URL fetched beforehand without asking the
+    Upload API for one.
+    """
     uploaded: list[bytes] = []
 
     def upload_part(request: httpx2.Request) -> httpx2.Response:
@@ -292,9 +334,195 @@ async def test_upload_file_part(
     mock_apis.storage.on_upload_part = upload_part
 
     await upload_client.upload_file_part(
-        file_id=TEST_FILE_ID, content=b"abc123", part_no=1
+        file_id=TEST_FILE_ID, content=b"abc123", part_no=1, url=UPLOAD_URL
     )
     assert uploaded == [b"abc123"]
+    assert upload_api.requests == []
+
+
+S3_NO_SUCH_UPLOAD = (
+    '<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchUpload</Code>'
+    "<Message>The specified multipart upload does not exist.</Message></Error>"
+)
+S3_ACCESS_DENIED = (
+    '<?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code>'
+    "<Message>Request has expired</Message></Error>"
+)
+
+
+@pytest.mark.parametrize(
+    "status_code, body, error, text",
+    [
+        (
+            404,
+            S3_NO_SUCH_UPLOAD,
+            exceptions.S3UploadMissingError,
+            "The expected multipart upload wasn't found in S3",
+        ),
+        (
+            403,
+            S3_ACCESS_DENIED,
+            exceptions.S3PartUploadError,
+            "AccessDenied: Request has expired",
+        ),
+        (502, "Bad Gateway", exceptions.S3PartUploadError, "status code 502"),
+    ],
+)
+async def test_upload_file_part_reads_s3_errors(
+    upload_client: UploadClient,
+    mock_apis: MockApis,  # noqa: F811
+    status_code: int,
+    body: str,
+    error: type[Exception],
+    text: str,
+):
+    """Test that a failed part upload reports S3's own error, read from its XML body,
+    instead of reading it as an answer of the Upload API.
+    """
+    mock_apis.storage.on_upload_part = lambda request: httpx2.Response(
+        status_code, text=body, headers={"Content-Type": "application/xml"}
+    )
+
+    with pytest.raises(error, match=text):
+        await upload_client.upload_file_part(
+            file_id=TEST_FILE_ID, content=b"abc123", part_no=1
+        )
+
+
+async def test_part_body_chunks():
+    """Test that a part body yields chunks of at most the chunk size, every time."""
+    data = bytearray(range(256)) * 10
+    body = PartBody(data, chunk_size=1000)
+
+    for _ in range(2):
+        chunks = [chunk async for chunk in body]
+        assert [len(chunk) for chunk in chunks] == [1000, 1000, 560]
+        assert b"".join(chunks) == data
+    assert len(body) == len(data)
+
+
+class _DropFirstAttempt(httpx2.AsyncBaseTransport):
+    """Reads each request body chunk by chunk, losing the connection after the first
+    chunk of the first attempt.
+    """
+
+    def __init__(self) -> None:
+        self.received: list[bytes] = []
+        self.content_lengths: list[str] = []
+
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
+        """Fail the first attempt in the middle of its body, accept the others."""
+        self.content_lengths.append(request.headers["Content-Length"])
+        chunks = []
+        async for chunk in request.stream:  # type: ignore[union-attr]
+            chunks.append(chunk)
+            if not self.received:
+                self.received.append(b"".join(chunks))
+                raise httpx2.WriteError("connection lost")
+        self.received.append(b"".join(chunks))
+        return httpx2.Response(200)
+
+
+def _retrying_client(
+    base: httpx2.AsyncBaseTransport, *, retries: int
+) -> httpx2.AsyncClient:
+    """A client that sends through the retry transport to `base`, without backoff."""
+    config = TransportConfig(
+        client_num_retries=retries, client_exponential_backoff_max=0
+    )
+    transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
+        config, make_base_transport=lambda proxy: base
+    )
+    return httpx2.AsyncClient(transport=transport)
+
+
+async def test_retried_part_put_sends_whole_part():
+    """Test that the retry transport sends the whole part again after a failure
+    in the middle of the body.
+    """
+    data = bytes(range(256)) * 9000  # a little over 2 MiB, so three chunks
+    base = _DropFirstAttempt()
+    async with _retrying_client(base, retries=2) as client:
+        response = await client.put(
+            "https://s3.invalid/part",
+            content=PartBody(data),
+            headers={"Content-Length": str(len(data))},
+        )
+
+    assert response.status_code == 200
+    assert len(base.received[0]) == PART_BODY_CHUNK_SIZE
+    assert base.received[1] == data
+    assert base.content_lengths == [str(len(data))] * 2
+
+
+_OPEN_UPLOAD_LIMIT_ANSWER = {
+    "exception_id": "tooManyOpenUploads",
+    "description": "",
+    "data": {},
+}
+
+
+def _count_answers(posts: list[httpx2.Request], answer: dict) -> httpx2.MockTransport:
+    """A mock Upload API that answers every request with this 429 and counts them."""
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        posts.append(request)
+        return httpx2.Response(429, json=answer)
+
+    return httpx2.MockTransport(handler)
+
+
+async def test_open_upload_limit_is_not_retried():
+    """The Upload API's tooManyOpenUploads answer reaches the caller after one request,
+    since only an upload that ends frees room.
+    """
+    posts: list[httpx2.Request] = []
+    base = OpenUploadLimitTransport(_count_answers(posts, _OPEN_UPLOAD_LIMIT_ANSWER))
+    async with _retrying_client(base, retries=3) as client:
+        with pytest.raises(OpenUploadLimitReached):
+            await client.post(f"{UPLOAD_URL}/boxes/{TEST_FUB_ID}/uploads", json={})
+
+    assert len(posts) == 1
+
+
+async def test_other_429_answers_are_retried_and_readable():
+    """A 429 from a rate limit is still retried, and its body stays readable."""
+    posts: list[httpx2.Request] = []
+    retries = 3
+    base = OpenUploadLimitTransport(_count_answers(posts, {"detail": "slow down"}))
+    async with _retrying_client(base, retries=retries) as client:
+        with pytest.raises(RetryError) as exc_info:
+            await client.post(f"{UPLOAD_URL}/boxes/{TEST_FUB_ID}/uploads", json={})
+
+    assert len(posts) == retries
+    assert exc_info.value.last_attempt.result().json() == {"detail": "slow down"}
+
+
+async def test_upload_client_stops_the_open_upload_limit(monkeypatch):
+    """The upload client sends a create refused for the open-upload limit only once."""
+    posts: list[httpx2.Request] = []
+    monkeypatch.setattr(
+        "ghga_connector.core.client.default_base_transport_factory",
+        lambda limits: lambda proxy: _count_answers(posts, _OPEN_UPLOAD_LIMIT_ANSWER),
+    )
+    async with async_client(purpose="upload") as client:
+        with pytest.raises(OpenUploadLimitReached):
+            await client.post(f"{UPLOAD_URL}/boxes/{TEST_FUB_ID}/uploads", json={})
+
+    assert len(posts) == 1
+
+
+async def test_create_file_upload_reports_the_open_upload_limit(
+    upload_client: UploadClient, monkeypatch
+):
+    """A create refused for the open-upload limit raises TooManyOpenUploadsError."""
+    monkeypatch.setattr(
+        upload_client._client, "post", AsyncMock(side_effect=OpenUploadLimitReached())
+    )
+    with pytest.raises(exceptions.TooManyOpenUploadsError):
+        await upload_client.create_file_upload(
+            file_alias=FILE_ALIAS, decrypted_size=1, encrypted_size=153, part_size=8
+        )
 
 
 async def test_complete_file_upload(
@@ -554,10 +782,10 @@ async def test_error_status_triggers_error_translation(
             TEST_FILE_ID,
             exceptions.UploadBoxSizeExceededError,
         ),
-        # 429 status code
+        # 429 status code - any other answer, e.g. a rate limit
         (
             429,
-            {"exception_id": "tooManyOpenUploads"},
+            {"detail": "slow down"},
             TEST_FUB_ID,
             FILE_ALIAS,
             TEST_FILE_ID,

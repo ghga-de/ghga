@@ -57,6 +57,18 @@ def make_file_info_for_upload(
     )
 
 
+def make_mock_uploader(
+    *,
+    upload_raises: BaseException | None = None,
+) -> AsyncMock:
+    """Create a mock Uploader with configurable upload_file side effect."""
+    uploader = AsyncMock()
+    uploader.initiate_file_upload.return_value = TEST_FILE_ID, TEST_STORAGE_ALIAS1
+    if upload_raises is not None:
+        uploader.upload_file.side_effect = upload_raises
+    return uploader
+
+
 @pytest.fixture()
 def patch_work_package_functions(monkeypatch):
     """Patches work package functions for up and download as well as input"""

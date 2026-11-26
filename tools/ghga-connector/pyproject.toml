@@ -24,13 +24,14 @@ classifiers = [
     "Intended Audience :: Science/Research",
 ]
 name = "ghga_connector"
-version = "4.0.3"
+version = "4.1.0"
 description = "GHGA Connector - A CLI client application for interacting with the GHGA system."
 license = "Apache-2.0"
 dependencies = [
     "typer~=0.19",
     "crypt4gh>=1.8.6, <2",
-    "ghga-service-commons[crypt, transports]==9.1.0",
+    "cryptography>=47",
+    "ghga-service-commons[crypt, transports]==9.2.0",
     "httpx2>=2.9.1, <3",
     "hexkit[s3]==11.0.0",
     "rich>=14.0, <15",

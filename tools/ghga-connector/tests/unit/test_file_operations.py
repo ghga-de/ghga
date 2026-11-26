@@ -25,39 +25,11 @@ import crypt4gh.keys
 import pytest
 from pydantic import SecretStr
 
-from ghga_connector.core import is_file_encrypted, read_file_parts
+from ghga_connector.core import is_file_encrypted
 from ghga_connector.core.crypt import Crypt4GHEncryptor
 from ghga_connector.core.main import decrypt_file
 from ghga_connector.core.utils import get_private_key
-from ghga_service_commons.utils.temp_files import big_temp_file
 from tests.fixtures.utils import TEST_STORAGE_ALIAS1
-
-
-@pytest.mark.parametrize("from_part", (None, 3))
-def test_read_file_parts(from_part: int | None):
-    """Test reading a full file with the `read_file_parts` function."""
-    file_size = 20 * 1024 * 1024
-    part_size = 5 * 1024 * 1024
-
-    with big_temp_file(file_size) as file:
-        # Get the expected content:
-        initial_offset = 0 if from_part is None else part_size * (from_part - 1)
-        file.seek(initial_offset)
-        expected_content = file.read()
-        file.seek(0)
-
-        # read the file in parts:
-        obtained_content = b""
-        file_parts = (
-            read_file_parts(file, part_size=part_size)  # type: ignore
-            if from_part is None
-            else read_file_parts(file, part_size=part_size, from_part=from_part)  # type: ignore
-        )
-
-        for part in file_parts:
-            obtained_content += part
-
-        assert expected_content == obtained_content
 
 
 @pytest.mark.parametrize(

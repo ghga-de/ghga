@@ -15,17 +15,32 @@
 #
 """Contains progress bar related code for a better user experience"""
 
+from types import TracebackType
 from typing import Literal
 
 from rich.progress import (
     BarColumn,
     DownloadColumn,
     Progress,
+    ProgressColumn,
     TaskID,
     TextColumn,
     TimeRemainingColumn,
     TransferSpeedColumn,
 )
+
+
+def _transfer_columns(
+    description: str, *, binary_units: bool = False
+) -> list[ProgressColumn]:
+    """The columns of a transfer row: description, bar, time, speed and amount."""
+    return [
+        TextColumn(description),
+        BarColumn(),
+        TimeRemainingColumn(compact=True, elapsed_when_finished=True),
+        TransferSpeedColumn(),
+        DownloadColumn(binary_units=binary_units),
+    ]
 
 
 class _ProgressBar:
@@ -39,11 +54,10 @@ class _ProgressBar:
         self._file_size = file_size
 
         self._progress = Progress(
-            TextColumn(f"{self.activity}ing file '{self._file_name}'"),
-            BarColumn(),
-            TimeRemainingColumn(compact=True, elapsed_when_finished=True),
-            TransferSpeedColumn(),
-            DownloadColumn(binary_units=binary_units),
+            *_transfer_columns(
+                f"{self.activity}ing file '{self._file_name}'",
+                binary_units=binary_units,
+            ),
             auto_refresh=False,
         )
 
@@ -83,7 +97,70 @@ class DownloadProgressBar(_ProgressBar):
     activity = "Download"
 
 
-class UploadProgressBar(_ProgressBar):
-    """A progress bar for file uploads. To be used as context manager."""
+class BatchUploadProgress:
+    """One live progress display for a batch upload, with a row per file in flight.
 
-    activity = "Upload"
+    rich allows one live display at a time, so the files of a batch share this one.
+    To be used as context manager around the batch; `file_row` gives each file its row.
+    """
+
+    def __init__(self):
+        self._progress = Progress(
+            *_transfer_columns("{task.description}"), auto_refresh=False
+        )
+
+    def __enter__(self):
+        """Start the live display."""
+        self._progress.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Stop the live display."""
+        self._progress.stop()
+        # add a newline so next output is always printed on a separate line
+        print()
+
+    def file_row(self, file_name: str, file_size: int) -> "FileProgressRow":
+        """Return the row for one file, to be entered when its upload starts."""
+        return FileProgressRow(self._progress, file_name=file_name, file_size=file_size)
+
+
+class FileProgressRow:
+    """A file's row in a `BatchUploadProgress`. To be used as context manager.
+
+    The row leaves the display when the upload ends, finished or failed, so the display
+    shows only the files in flight; the batch's messages say how each file ended.
+    """
+
+    def __init__(self, progress: Progress, *, file_name: str, file_size: int):
+        self._progress = progress
+        self._file_name = file_name
+        self._file_size = file_size
+        self._task_id = TaskID(-1)
+        self._completed = 0
+
+    def __enter__(self):
+        """Add the file's row to the display."""
+        self._task_id = self._progress.add_task(
+            description=f"Uploading file '{self._file_name}'", total=self._file_size
+        )
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ):
+        """Take the row out of the display."""
+        self._progress.remove_task(self._task_id)
+        self._progress.refresh()
+
+    def advance(self, size: int):
+        """Advance the row by the given number of bytes and refresh the display."""
+        if self._task_id < 0:
+            raise ValueError("FileProgressRow has to be used as a context manager.")
+        # clamp progress bar to 100%
+        self._completed = min(self._completed + size, self._file_size)
+        self._progress.update(self._task_id, completed=self._completed)
+        self._progress.refresh()

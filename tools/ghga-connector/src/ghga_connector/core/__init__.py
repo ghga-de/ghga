@@ -19,12 +19,7 @@ It should not contain any service API-related code.
 """
 
 from .client import async_client  # noqa: F401
-from .file_operations import (  # noqa: F401
-    calc_part_ranges,
-    get_segments,
-    is_file_encrypted,
-    read_file_parts,
-)
+from .file_operations import calc_part_ranges, is_file_encrypted  # noqa: F401
 from .http_translation import ResponseExceptionTranslator  # noqa: F401
 from .message_display import CLIMessageDisplay, MessageColors  # noqa: F401
 from .structs import PartRange  # noqa: F401

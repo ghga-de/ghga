@@ -69,3 +69,10 @@ async def test_set_runtime_config(mock_apis: MockApis):  # noqa: F811
                 value = func()  # type: ignore[operator]
                 assert isinstance(value, str)
                 assert len(value) > 0
+
+
+async def test_upload_concurrency_defaults():
+    """By default 4 files upload at once and share 10 parts in flight."""
+    defaults = type(get_test_config()).model_fields
+    assert defaults["max_concurrent_files"].default == 4
+    assert defaults["max_concurrent_uploads"].default == 10
