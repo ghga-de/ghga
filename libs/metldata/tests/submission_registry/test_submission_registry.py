@@ -285,6 +285,46 @@ def test_check_study_pid(
         )
 
 
+def test_get_pending_submissions(
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
+    file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
+):
+    """Test that every pending submission is listed with the study PID it holds, or
+    None, and that a completed one is left out.
+    """
+    submission_store, _, submission_registry = build_submission_registry(
+        config=config_sub_fixture, event_fixture=file_system_event_fixture
+    )
+    header = models.SubmissionHeader(title="test")
+    content = VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES[0]
+
+    reserved_id, reserved_pid = submission_registry.reserve_study_pid(header=header)
+    empty_id = submission_registry.init_submission(header=header)
+    stopped_id = submission_registry.init_submission(header=header)
+    submission_registry.upsert_submission_content(
+        submission_id=stopped_id, content=content
+    )
+    completed_id = submission_registry.init_submission(header=header)
+    submission_registry.upsert_submission_content(
+        submission_id=completed_id, content=content
+    )
+    submission_registry.complete_submission(id_=completed_id)
+    stopped_pid = submission_store.get_by_id(stopped_id).accession_map["studies"][
+        "test_study"
+    ]
+
+    observed = {
+        submission.id: study_pid
+        for submission, study_pid in submission_registry.get_pending_submissions()
+    }
+
+    assert observed == {
+        reserved_id: reserved_pid,
+        empty_id: None,
+        stopped_id: stopped_pid,
+    }
+
+
 def test_update_submission_header(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811

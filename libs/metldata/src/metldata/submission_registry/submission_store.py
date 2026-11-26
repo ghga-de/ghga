@@ -103,8 +103,9 @@ class SubmissionStore:
             ]
         )
 
-    def get_by_id(self, submission_id: str) -> models.Submission:
-        """Get an existing submission by its ID.
+    def _load(self, *, submission_id: str) -> dict:
+        """Load the JSON of an existing submission.
+
         Raises:
             SubmissionDoesNotExistError: Raised when the submission does not exist.
         """
@@ -114,9 +115,23 @@ class SubmissionStore:
             raise self.SubmissionDoesNotExistError(submission_id=submission_id)
 
         with open(json_path, encoding="utf-8") as file:
-            submission_dict = json.load(file)
+            return json.load(file)
 
-        return models.Submission(**submission_dict)
+    def get_by_id(self, submission_id: str) -> models.Submission:
+        """Get an existing submission by its ID.
+        Raises:
+            SubmissionDoesNotExistError: Raised when the submission does not exist.
+        """
+        return models.Submission(**self._load(submission_id=submission_id))
+
+    def get_summary_by_id(self, *, submission_id: str) -> models.SubmissionSummary:
+        """Get an existing submission by its ID without its metadata content, which
+        is then neither validated nor kept.
+
+        Raises:
+            SubmissionDoesNotExistError: Raised when the submission does not exist.
+        """
+        return models.SubmissionSummary(**self._load(submission_id=submission_id))
 
     def insert_new(self, *, submission: models.Submission) -> None:
         """Save a new submission.
