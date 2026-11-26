@@ -36,8 +36,7 @@ from ghga_connector.core.termination import (
     termination_requested,
 )
 from ghga_connector.core.uploading.batch_processing import upload_files_from_list
-from tests.fixtures.utils import make_file_info_for_upload
-from tests.unit.test_batch_processing import make_mock_uploader
+from tests.fixtures.utils import make_file_info_for_upload, make_mock_uploader
 
 
 async def _signal_then_clean_up(signum: signal.Signals, steps: list[str]) -> None:

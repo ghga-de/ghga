@@ -59,11 +59,16 @@ def patch_ghga_pubkey(monkeypatch):
     )
 
 
-def make_encryptor(private_key, file_size: int) -> Crypt4GHEncryptor:
-    """Create a Crypt4GHEncryptor with part_size set to half the file size, if possible."""
-    # Keep part_size within the min and max aligned boundaries
-    part_size = max(MIN_ALIGNED_PART_SIZE, file_size // 2)
-    part_size = min(part_size, MAX_ALIGNED_PART_SIZE)
+def make_encryptor(
+    private_key, file_size: int, part_size: int | None = None
+) -> Crypt4GHEncryptor:
+    """Create a Crypt4GHEncryptor with the given part_size, else with part_size set
+    to half the file size, if possible.
+    """
+    if part_size is None:
+        # Keep part_size within the min and max aligned boundaries
+        part_size = max(MIN_ALIGNED_PART_SIZE, file_size // 2)
+        part_size = min(part_size, MAX_ALIGNED_PART_SIZE)
     return Crypt4GHEncryptor(
         part_size=part_size,
         my_private_key=private_key,
@@ -156,12 +161,7 @@ def test_process_file_yields_sequential_part_numbers(private_key):
     part_size = 2 * CIPHER_SEGMENT_SIZE  # 131 128 bytes
     file_size = part_size + 1  # 131 129 bytes
 
-    encryptor = Crypt4GHEncryptor(
-        part_size=part_size,
-        my_private_key=private_key,
-        file_size=file_size,
-        storage_alias=TEST_STORAGE_ALIAS1,
-    )
+    encryptor = make_encryptor(private_key, file_size=file_size, part_size=part_size)
     yielded_part_numbers = [
         pn for pn, _ in run_process_file(encryptor, b"x" * file_size)
     ]
@@ -176,13 +176,6 @@ def test_process_file_yields_sequential_part_numbers(private_key):
 
 # A part of exactly two cipher segments, as the regression test above uses
 SMALL_PART_SIZE = 2 * CIPHER_SEGMENT_SIZE
-SEGMENT_SIZE = crypt4gh.lib.SEGMENT_SIZE
-
-
-def encrypted_size_of(file_size: int) -> int:
-    """Return the size of the Crypt4GH object for a file of the given size."""
-    segments = -(-file_size // SEGMENT_SIZE)
-    return ENVELOPE_SIZE + file_size + segments * (CIPHER_SEGMENT_SIZE - SEGMENT_SIZE)
 
 
 def decrypt_parts(private_key, parts: list[tuple[int, bytearray]]) -> bytes:
@@ -224,16 +217,15 @@ def test_process_file_decrypts_to_input(private_key, file_size: int, file_class)
     is full, and that the parts and the plaintext checksum add up.
     """
     file_data = os.urandom(file_size)
-    encryptor = Crypt4GHEncryptor(
-        part_size=SMALL_PART_SIZE,
-        my_private_key=private_key,
-        file_size=file_size,
-        storage_alias=TEST_STORAGE_ALIAS1,
+    encryptor = make_encryptor(
+        private_key, file_size=file_size, part_size=SMALL_PART_SIZE
     )
     parts = list(encryptor.process_file(file=file_class(file_data)))
 
     assert decrypt_parts(private_key, parts) == file_data
-    total = encrypted_size_of(file_size)
+    total = CoreFileInfo(
+        alias="x", path=Path("/dev/null"), decrypted_size=file_size
+    ).encrypted_size
     sizes = [len(part) for _, part in parts]
     assert sum(sizes) == total
     assert sizes[:-1] == [SMALL_PART_SIZE] * (len(sizes) - 1)
@@ -248,11 +240,8 @@ def test_process_file_decrypts_to_input(private_key, file_size: int, file_class)
 def test_process_file_raises_when_file_is_longer_than_announced(private_key):
     """Make sure a file that grew after its size was taken fails the size check."""
     file_data = os.urandom(3 * SEGMENT_SIZE)
-    encryptor = Crypt4GHEncryptor(
-        part_size=SMALL_PART_SIZE,
-        my_private_key=private_key,
-        file_size=len(file_data) - 10,
-        storage_alias=TEST_STORAGE_ALIAS1,
+    encryptor = make_encryptor(
+        private_key, file_size=len(file_data) - 10, part_size=SMALL_PART_SIZE
     )
     with pytest.raises(exceptions.CiphertextSizeMismatch):
         run_process_file(encryptor, file_data)

@@ -16,6 +16,7 @@
 """Unit tests for upload_files_from_list in batch_processing"""
 
 import asyncio
+import math
 import os
 import signal
 from pathlib import Path
@@ -41,26 +42,18 @@ from ghga_connector.core.uploading.batch_processing import (
     run_batch_upload,
     upload_files_from_list,
 )
-from ghga_connector.core.uploading.structs import FileInfoForUpload, UploadedFileInfo
+from ghga_connector.core.uploading.structs import (
+    CoreFileInfo,
+    FileInfoForUpload,
+    UploadedFileInfo,
+)
 from tests.fixtures.utils import (
-    TEST_FILE_ID,
     TEST_STORAGE_ALIAS1,
     make_file_info_for_upload,
+    make_mock_uploader,
 )
 
 pytestmark = pytest.mark.asyncio
-
-
-def make_mock_uploader(
-    *,
-    upload_raises: BaseException | None = None,
-) -> AsyncMock:
-    """Create a mock Uploader with configurable upload_file side effect."""
-    uploader = AsyncMock()
-    uploader.initiate_file_upload.return_value = TEST_FILE_ID, TEST_STORAGE_ALIAS1
-    if upload_raises is not None:
-        uploader.upload_file.side_effect = upload_raises
-    return uploader
 
 
 async def test_upload_files_from_list_success_does_not_call_delete():
@@ -187,8 +180,7 @@ async def test_stop_during_a_failing_deletion_leaves_no_loop_error():
         cleanup = asyncio.create_task(perform_cleanup(uploader=uploader, alias="f0"))
         await asyncio.sleep(0.01)
         cleanup.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await cleanup
+        assert await cleanup
     finally:
         loop.set_exception_handler(previous_handler)
 
@@ -1307,8 +1299,10 @@ def make_files_in_flight(
 
 def fake_encryptor(**kwargs) -> MagicMock:
     """An encryptor that yields as many small parts as the file is to have."""
-    part_size, file_size = kwargs["part_size"], kwargs["file_size"]
-    part_count = -(-(file_size + 1024) // part_size)  # the overhead adds a little
+    file_info = CoreFileInfo(
+        alias="x", path=Path("/dev/null"), decrypted_size=kwargs["file_size"]
+    )
+    part_count = math.ceil(file_info.encrypted_size / kwargs["part_size"])
     encryptor = MagicMock()
     encryptor.checksums = Checksums()
     encryptor.process_file.return_value = iter(

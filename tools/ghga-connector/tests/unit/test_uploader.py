@@ -34,6 +34,7 @@ from ghga_connector.constants import (
 )
 from ghga_connector.core.crypt.checksums import Checksums, md5_hex, sha256_hex
 from ghga_connector.core.crypt.encryption import FileProcessor
+from ghga_connector.core.progress_bar import BatchUploadProgress
 from ghga_connector.core.tasks import TaskHandler
 from ghga_connector.core.uploading.uploader import FairSlots, Uploader
 from tests.fixtures.utils import (
@@ -83,6 +84,7 @@ def make_uploader(
         upload_client=upload_client,
         file_info=file_info,
         part_slots=asyncio.Semaphore(part_slots),
+        progress=MagicMock(),
     )
 
 
@@ -98,6 +100,7 @@ async def test_new_progress_bar_uses_display_name():
             upload_client=AsyncMock(),
             file_info=file_info,
             part_slots=asyncio.Semaphore(1),
+            progress=BatchUploadProgress(),
         )
         assert default.new_progress_bar()._file_name == FILE_ALIAS
 
@@ -106,6 +109,7 @@ async def test_new_progress_bar_uses_display_name():
             upload_client=AsyncMock(),
             file_info=file_info,
             part_slots=asyncio.Semaphore(1),
+            progress=BatchUploadProgress(),
             display_name="short … name",
         )
         assert custom.new_progress_bar()._file_name == "short … name"
@@ -144,6 +148,7 @@ async def test_initiate_file_upload_forwards_overwrite():
             upload_client=upload_client,
             file_info=file_info,
             part_slots=asyncio.Semaphore(1),
+            progress=MagicMock(),
             overwrite=True,
         )
 
@@ -261,6 +266,7 @@ async def test_upload_file_calls_complete_after_all_parts():
             upload_client=upload_client,
             file_info=mock_file_info,
             part_slots=asyncio.Semaphore(1),
+            progress=MagicMock(),
         )
         uploader._file_id = FILE_ID
         uploader.new_progress_bar = MagicMock(return_value=MagicMock())
@@ -285,6 +291,7 @@ async def test_upload_file_complete_error_raises_complete_file_upload_error():
             upload_client=upload_client,
             file_info=mock_file_info,
             part_slots=asyncio.Semaphore(1),
+            progress=MagicMock(),
         )
         uploader._file_id = FILE_ID
         uploader.new_progress_bar = MagicMock(return_value=MagicMock())
@@ -362,28 +369,21 @@ async def test_initiate_file_upload_raises_after_exhausted_429_retries():
 
 async def test_upload_file_part_holds_a_part_slot():
     """Make sure each part holds one of the uploader's part slots while it uploads."""
-    slots = asyncio.Semaphore(2)
     held: list[int] = []
-
-    async def upload_file_part(**kwargs):
-        held.append(slots._value)
-
     upload_client = AsyncMock()
-    upload_client.upload_file_part.side_effect = upload_file_part
     with NamedTemporaryFile() as f:
-        file_info = make_file_info_for_upload(path=Path(f.name), alias=FILE_ALIAS)
-        uploader = Uploader(
-            upload_client=upload_client, file_info=file_info, part_slots=slots
-        )
-        uploader._file_id = FILE_ID
-        uploader._progress_bar = MagicMock()
-        uploader._checksums = Checksums()
-        await uploader._upload_file_part(
-            make_dummy_file_processor(part_count=1), ThreadPoolExecutor(max_workers=1)
-        )
+        uploader, pool = make_prefetch_uploader(Path(f.name), upload_client)
+        slots = uploader._part_slots
+        assert isinstance(slots, asyncio.Semaphore)
 
-    assert held == [1]
-    assert slots._value == 2
+        async def upload_file_part(**kwargs):
+            held.append(slots._value)
+
+        upload_client.upload_file_part.side_effect = upload_file_part
+        await uploader._upload_file_part(make_dummy_file_processor(part_count=1), pool)
+
+    assert held == [2]
+    assert slots._value == 3
 
 
 async def test_upload_file_part_raises_when_processor_is_exhausted():
@@ -417,6 +417,7 @@ async def test_upload_file_raises_when_processor_yields_a_surplus_part():
             upload_client=AsyncMock(),
             file_info=mock_file_info,
             part_slots=asyncio.Semaphore(1),
+            progress=MagicMock(),
         )
         uploader._file_id = FILE_ID
         uploader.new_progress_bar = MagicMock(return_value=MagicMock())
@@ -429,7 +430,7 @@ async def test_upload_file_raises_when_processor_yields_a_surplus_part():
             await uploader.upload_file(encryptor=encryptor)
 
 
-def make_parts(file_info, numbers: list[int]) -> list[tuple[int, bytearray]]:
+def make_parts(numbers: list[int]) -> list[tuple[int, bytearray]]:
     """Make distinct part contents for the given part numbers."""
     return [(number, bytearray(f"part {number}".encode())) for number in numbers]
 
@@ -444,7 +445,7 @@ async def test_upload_file_sends_part_hashes_in_part_order():
         )
         part_count = file_info.part_count
         assert part_count > 2
-        parts = make_parts(file_info, list(range(1, part_count + 1)))
+        parts = make_parts(list(range(1, part_count + 1)))
         finished: list[int] = []
 
         async def upload_file_part(*, file_id, content, part_no, url=None):
@@ -458,6 +459,7 @@ async def test_upload_file_sends_part_hashes_in_part_order():
             upload_client=upload_client,
             file_info=file_info,
             part_slots=asyncio.Semaphore(part_count),
+            progress=MagicMock(),
         )
         uploader._file_id = FILE_ID
         uploader.new_progress_bar = MagicMock(return_value=MagicMock())
@@ -482,12 +484,13 @@ async def test_upload_file_stops_before_complete_when_a_part_hash_is_missing():
         )
         part_count = file_info.part_count
         # the last part comes with a number one too high, so its own is missing
-        parts = make_parts(file_info, [*range(1, part_count), part_count + 1])
+        parts = make_parts([*range(1, part_count), part_count + 1])
         upload_client = AsyncMock()
         uploader = Uploader(
             upload_client=upload_client,
             file_info=file_info,
             part_slots=asyncio.Semaphore(part_count),
+            progress=MagicMock(),
         )
         uploader._file_id = FILE_ID
         uploader.new_progress_bar = MagicMock(return_value=MagicMock())

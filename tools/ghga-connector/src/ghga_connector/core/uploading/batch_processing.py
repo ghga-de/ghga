@@ -16,7 +16,6 @@
 """Batch processing for the upload process"""
 
 import asyncio
-import contextlib
 import enum
 import logging
 import math
@@ -229,12 +228,14 @@ class _SigintDeferred:
 _defer_sigint = _SigintDeferred()
 
 
-async def perform_cleanup(*, uploader: Uploader, alias: str) -> None:
+async def perform_cleanup(*, uploader: Uploader, alias: str) -> bool:
     """Perform file cleanup after an error or user cancellation.
 
     Prevents a keyboard cancellation from disrupting the cleanup itself by swallowing
     SIGINT for the duration of the cleanup, then restoring the previous handler so that
     subsequent files in the batch can still be aborted with Ctrl+C.
+
+    Returns True if the batch was stopped during the cleanup.
 
     Note: ``signal.signal()`` only works on the main thread, which is where the CLI runs
     (via ``asyncio.run``), so this is safe here.
@@ -261,9 +262,7 @@ async def perform_cleanup(*, uploader: Uploader, alias: str) -> None:
                 "Upload process stopped. If applicable, any previously completed"
                 + " file uploads remain uploaded."
             )
-    if stopped:
-        # The batch was stopped during the cleanup: pass that on
-        raise asyncio.CancelledError
+    return stopped
 
 
 @dataclass
@@ -305,14 +304,9 @@ class _FileUploadContext:
 
     upload_client: UploadClient
     my_private_key: SecretBytes
-    budget: asyncio.Semaphore
-    parts: int
-    per_file: int
     progress: BatchUploadProgress
     shorten: bool
     overwrite: bool
-    # Run from the ubox shell, whose user frees the box with `rm`
-    in_shell: bool = False
     # The aliases of the files whose upload UCS created and that have not ended yet
     created: set[str] = field(default_factory=set)
     # UCS checks the box's limits before it records an upload, so creates sent together
@@ -320,7 +314,7 @@ class _FileUploadContext:
     create_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
-async def _upload_one_file(  # noqa: C901, PLR0911
+async def _upload_one_file(  # noqa: PLR0911
     file_info: FileInfoForUpload, context: _FileUploadContext, part_slots: FairSlots
 ) -> _Outcome:
     """Upload one file of a batch and report how it ended.
@@ -417,8 +411,7 @@ async def _upload_one_file(  # noqa: C901, PLR0911
         CLIMessageDisplay.failure(
             f"Upload aborted for {display_alias}, (file ID {file_id}), deleting."
         )
-        with contextlib.suppress(asyncio.CancelledError):
-            await perform_cleanup(uploader=uploader, alias=display_alias)
+        await perform_cleanup(uploader=uploader, alias=display_alias)
         return _Outcome.ABORTED
     except BaseException as err:
         # All other errors are handled here
@@ -426,12 +419,12 @@ async def _upload_one_file(  # noqa: C901, PLR0911
         CLIMessageDisplay.failure(
             f"Failed to upload {display_alias}, (file ID {file_id}), deleting."
         )
-        try:
-            await perform_cleanup(uploader=uploader, alias=display_alias)
-        except asyncio.CancelledError:
-            # Stopped during the cleanup: start no further file
-            return _Outcome.ABORTED
-        return _Outcome.FAILED
+        # Stopped during the cleanup: start no further file
+        return (
+            _Outcome.ABORTED
+            if await perform_cleanup(uploader=uploader, alias=display_alias)
+            else _Outcome.FAILED
+        )
 
     CLIMessageDisplay.success(f"Successfully uploaded {display_alias}.")
     return _Outcome.UPLOADED
@@ -481,18 +474,13 @@ async def upload_files_from_list(  # noqa: PLR0913
             _FileUploadContext(
                 upload_client=upload_client,
                 my_private_key=my_private_key,
-                budget=asyncio.Semaphore(max_concurrent_uploads),
-                parts=max_concurrent_uploads,
-                per_file=math.ceil(
-                    max_concurrent_uploads
-                    / max(1, min(max_concurrent_files, len(file_info_list)))
-                ),
                 progress=progress,
                 shorten=shorten,
                 overwrite=overwrite,
-                in_shell=in_shell,
             ),
+            parts=max_concurrent_uploads,
             restart=restart,
+            in_shell=in_shell,
         )
         await batch_pass.run(max_concurrent_files)
     return batch_pass.result()
@@ -505,10 +493,18 @@ class _BatchPass:
         self,
         file_info_list: list[FileInfoForUpload],
         context: _FileUploadContext,
-        restart: Collection[str] = (),
+        *,
+        parts: int,
+        restart: Collection[str],
+        in_shell: bool,
     ):
         self._file_info_list = file_info_list
         self._context = context
+        # The most parts in flight at once, which the files share
+        self._parts = parts
+        self._budget = asyncio.Semaphore(parts)
+        # Run from the ubox shell, whose user frees the box with `rm`
+        self._in_shell = in_shell
         # Restarted files first, then largest first, so the largest file does not end
         #  the pass alone; the sort keeps the input order among files of equal size
         self._queue = sorted(
@@ -518,19 +514,24 @@ class _BatchPass:
         )
         self._outcomes: dict[int, _Outcome] = {}
         self._workers: list[asyncio.Task] = []
-        # The part slots of the files in flight
+        # The part slots of the files in flight; a file waiting for room in the box
+        #  is not in flight
         self._in_flight: set[FairSlots] = set()
         self._stopped = False
-        # Workers uploading a file; those that wait for room in the box are not
-        self._busy = 0
         self._file_ended = asyncio.Condition()
         # Files whose wait for room the user was told about, so it is said once
         self._announced: set[str] = set()
 
+    def _share(self, files: int) -> int:
+        """Return each file's equal share of the parts when `files` are in flight."""
+        return math.ceil(self._parts / max(1, files))
+
     async def run(self, max_concurrent_files: int) -> None:
         """Upload the files with up to `max_concurrent_files` workers."""
-        for _ in range(min(max_concurrent_files, len(self._file_info_list))):
-            self._workers.append(asyncio.create_task(self._work()))
+        workers = min(max_concurrent_files, len(self._file_info_list))
+        per_file = self._share(workers)
+        for _ in range(workers):
+            self._workers.append(asyncio.create_task(self._work(per_file)))
         try:
             await asyncio.gather(*self._workers)
         except asyncio.CancelledError:
@@ -544,17 +545,18 @@ class _BatchPass:
             await asyncio.gather(*self._workers, return_exceptions=True)
             raise
 
-    async def _work(self) -> None:
-        """Upload files from the queue until it is empty or the pass stops."""
+    async def _work(self, per_file: int) -> None:
+        """Upload files from the queue until it is empty or the pass stops.
+
+        Each file starts with `per_file` of the parts.
+        """
         while self._queue and not self._stopped:
             index, file_info = self._queue.pop(0)
-            self._busy += 1
-            slots = FairSlots(self._context.budget, self._context.per_file)
+            slots = FairSlots(self._budget, per_file)
             self._in_flight.add(slots)
             try:
                 outcome = await _upload_one_file(file_info, self._context, slots)
             finally:
-                self._busy -= 1
                 self._in_flight.discard(slots)
                 self._context.created.discard(file_info.alias)
             if outcome is _Outcome.AT_UPLOAD_LIMIT:
@@ -573,7 +575,7 @@ class _BatchPass:
                     if worker is not asyncio.current_task():
                         worker.cancel()
         # With fewer files left in flight, each may take a larger share of the parts
-        share = math.ceil(self._context.parts / max(1, len(self._in_flight)))
+        share = self._share(len(self._in_flight))
         for slots in self._in_flight:
             slots.widen(share)
         # A worker that leaves ends no further file, so it wakes every file waiting
@@ -588,12 +590,9 @@ class _BatchPass:
         box, and nothing here can free them: the pass stops and names them.
         """
         async with self._file_ended:
-            if not self._busy:
-                self._stopped = True
-                self._file_ended.notify_all()
-            else:
-                # Busy files may still be in their own create and be refused alike:
-                #  announce the wait only while one of them holds an open upload
+            if self._in_flight:
+                # Files in flight may still be in their own create and be refused
+                #  alike: announce the wait only while one of them holds an open upload
                 if file_info.alias not in self._announced and self._context.created:
                     self._announced.add(file_info.alias)
                     display_alias = _display_name(
@@ -610,6 +609,8 @@ class _BatchPass:
                     # The batch was stopped while this file waited
                     self._stopped = True
                 return
+            self._stopped = True
+            self._file_ended.notify_all()
         await self._report_upload_limit()
 
     async def _report_upload_limit(self) -> None:
@@ -632,7 +633,7 @@ class _BatchPass:
             + " If no other Connector is uploading them,"
             + (
                 " remove them with `rm ALIAS`."
-                if self._context.in_shell
+                if self._in_shell
                 else " remove them by running `ghga-connector ubox`, or run the command"
                 + " again with --overwrite to restart those that belong to this batch."
             )
@@ -674,11 +675,14 @@ def _select_pending(
     file_info_list: list[FileInfoForUpload],
     *,
     uploaded: set[str],
-    unfinished: set[str],
+    unfinished: list[FileInfoForUpload],
     overwrite: bool,
     shorten: bool,
 ) -> list[FileInfoForUpload]:
-    """Return the files to upload, telling the user which ones are left out and why."""
+    """Return the files to upload, telling the user which ones are left out and why.
+
+    ``unfinished`` holds the files of the list whose upload in the box is unfinished.
+    """
     skipped = [fi.alias for fi in file_info_list if fi.alias in uploaded]
     if skipped:
         CLIMessageDisplay.display(
@@ -686,13 +690,14 @@ def _select_pending(
             + _summarize_aliases([_display_name(a, shorten=shorten) for a in skipped])
         )
 
-    interrupted = [fi.alias for fi in file_info_list if fi.alias in unfinished]
-    if interrupted:
-        _report_unfinished(interrupted, overwrite=overwrite, shorten=shorten)
+    if unfinished:
+        _report_unfinished(
+            [fi.alias for fi in unfinished], overwrite=overwrite, shorten=shorten
+        )
 
-    left_out = uploaded if overwrite else uploaded | unfinished
+    left_out = uploaded if overwrite else uploaded | {fi.alias for fi in unfinished}
     pending = [fi for fi in file_info_list if fi.alias not in left_out]
-    if not pending and not interrupted:
+    if not pending and not unfinished:
         CLIMessageDisplay.success("All files are already uploaded. Nothing to do.")
     return pending
 
@@ -765,7 +770,7 @@ def _report_batch_outcome(  # noqa: PLR0913
     halted: bool,
     max_retries: int,
     shorten: bool,
-    left_unfinished: list[FileInfoForUpload] | None = None,
+    left_unfinished: list[FileInfoForUpload],
 ) -> None:
     """Print the final summary of a batch upload run.
 
@@ -853,10 +858,11 @@ async def run_batch_upload(  # noqa: PLR0913
         CLIMessageDisplay.failure(f"Batch upload failed: {err!s}")
         return
 
+    unfinished_files = [fi for fi in file_info_list if fi.alias in unfinished]
     pending = _select_pending(
         file_info_list,
         uploaded=uploaded,
-        unfinished=unfinished,
+        unfinished=unfinished_files,
         overwrite=overwrite,
         shorten=shorten,
     )
@@ -867,9 +873,6 @@ async def run_batch_upload(  # noqa: PLR0913
         _report_dry_run(pending, shorten=shorten)
         return
 
-    left_unfinished = (
-        [] if overwrite else [fi for fi in file_info_list if fi.alias in unfinished]
-    )
     CLIMessageDisplay.display(f"Uploading {len(pending)} file(s)...")
     attempt = 0
     halted = False
@@ -883,7 +886,7 @@ async def run_batch_upload(  # noqa: PLR0913
             max_concurrent_files=max_concurrent_files,
             shorten=shorten,
             overwrite=overwrite,
-            restart=unfinished if overwrite else (),
+            restart=unfinished,
         )
         pending = result.failed
         rejected.extend(result.rejected)
@@ -913,5 +916,5 @@ async def run_batch_upload(  # noqa: PLR0913
         halted=halted,
         max_retries=max_retries,
         shorten=shorten,
-        left_unfinished=left_unfinished,
+        left_unfinished=[] if overwrite else unfinished_files,
     )

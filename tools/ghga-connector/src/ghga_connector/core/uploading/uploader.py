@@ -29,11 +29,7 @@ from ghga_connector.constants import (
 )
 from ghga_connector.core.crypt.checksums import Checksums, md5_hex, sha256_hex
 from ghga_connector.core.crypt.encryption import Crypt4GHEncryptor, FileProcessor
-from ghga_connector.core.progress_bar import (
-    BatchUploadProgress,
-    FileProgressRow,
-    UploadProgressBar,
-)
+from ghga_connector.core.progress_bar import BatchUploadProgress, FileProgressRow
 from ghga_connector.core.tasks import TaskHandler
 from ghga_connector.core.uploading.api_calls import UploadClient
 from ghga_connector.core.uploading.structs import FileInfoForUpload
@@ -100,9 +96,9 @@ class Uploader:
         upload_client: UploadClient,
         file_info: FileInfoForUpload,
         part_slots: AbstractAsyncContextManager[Any],
+        progress: BatchUploadProgress,
         display_name: str | None = None,
         overwrite: bool = False,
-        progress: BatchUploadProgress | None = None,
     ):
         """Instantiate the Uploader.
 
@@ -110,9 +106,9 @@ class Uploader:
         upload and hashes are done, which bounds the parts in memory. A batch passes
         its `FairSlots`; a semaphore works too.
 
-        ``display_name`` is used only for the progress bar label; if omitted, the file
-        alias is used. The alias sent to the Upload API is always the full alias. With
-        ``progress``, the file gets a row in that shared display instead of its own bar.
+        The file gets a row in the batch's shared ``progress`` display.
+        ``display_name`` is used only for that row's label; if omitted, the file alias
+        is used. The alias sent to the Upload API is always the full alias.
 
         If `overwrite` is True, each uploaded file replaces any existing FileUpload for
         its alias as long as it has not reached the "interrogated" state (re-encrypted).
@@ -128,14 +124,10 @@ class Uploader:
         # How many parts were handed to the encryption worker; see `_upload_file_part`
         self._parts_submitted = 0
 
-    def new_progress_bar(self) -> UploadProgressBar | FileProgressRow:
-        """Create a new progress bar, or a row in the batch's shared display"""
-        if self._progress is not None:
-            return self._progress.file_row(
-                self._display_name, self._file_info.decrypted_size
-            )
-        return UploadProgressBar(
-            file_name=self._display_name, file_size=self._file_info.decrypted_size
+    def new_progress_bar(self) -> FileProgressRow:
+        """Create the file's row in the batch's shared progress display"""
+        return self._progress.file_row(
+            self._display_name, self._file_info.decrypted_size
         )
 
     async def initiate_file_upload(
@@ -240,20 +232,14 @@ class Uploader:
                     next_part = await self._encrypt_next_part(
                         file_processor, encryption_pool
                     )
-                except BaseException:
-                    _discard(url_task)
-                    raise
-                if next_part is None:
-                    _discard(url_task)
-                    raise RuntimeError(
-                        "The file processor ran out of parts before all scheduled part"
-                        + " uploads were performed."
-                    )
-                part_number, part = next_part
-                url = None
-                if part_number == expected_number:
-                    url = await url_task
-                else:
+                    if next_part is None:
+                        raise RuntimeError(
+                            "The file processor ran out of parts before all scheduled"
+                            + " part uploads were performed."
+                        )
+                    part_number, part = next_part
+                    url = await url_task if part_number == expected_number else None
+                finally:
                     _discard(url_task)
                 md5, sha256, _ = await asyncio.gather(
                     asyncio.to_thread(md5_hex, part),

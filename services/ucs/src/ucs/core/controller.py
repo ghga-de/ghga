@@ -915,24 +915,24 @@ class UploadController(UploadControllerPort):
         if file_upload.state in ("inbox", "failed_interrogation"):
             await self._remove_completed_file_upload(file_upload=file_upload)
         # Abort the upload if it still hasn't completed
-        elif file_upload.state == "init" and not (
-            await self._remove_incomplete_file_upload(file_upload=file_upload)
-        ):
-            # The DB expects this S3 multipart upload to exist. Part URLs are issued
-            #  without asking S3, so this is where its loss shows.
-            log.warning(
-                "S3 multipart upload %s for file ID %s could not be found, but"
-                " the FileUpload is still in the 'init' state.",
-                file_upload.s3_upload_id,
-                file_id,
-                extra={
-                    "s3_upload_id": file_upload.s3_upload_id,
-                    "file_id": file_id,
-                    "bucket_id": file_upload.bucket_id,
-                    "storage_alias": file_upload.storage_alias,
-                    "state": file_upload.state,
-                },
-            )
+        elif file_upload.state == "init":
+            aborted = await self._remove_incomplete_file_upload(file_upload=file_upload)
+            if not aborted:
+                # The DB expects this S3 multipart upload to exist. Part URLs are
+                #  issued without asking S3, so this is where its loss shows.
+                log.warning(
+                    "S3 multipart upload %s for file ID %s could not be found, but"
+                    " the FileUpload is still in the 'init' state.",
+                    file_upload.s3_upload_id,
+                    file_id,
+                    extra={
+                        "s3_upload_id": file_upload.s3_upload_id,
+                        "file_id": file_id,
+                        "bucket_id": file_upload.bucket_id,
+                        "storage_alias": file_upload.storage_alias,
+                        "state": file_upload.state,
+                    },
+                )
 
         # Update the file_upload to 'cancelled'
         file_upload.state = "cancelled"

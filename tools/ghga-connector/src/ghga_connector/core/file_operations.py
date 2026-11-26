@@ -17,8 +17,7 @@
 """Contains calls of the Presigned URLs in order to Up- and Download Files"""
 
 import math
-from collections.abc import Generator, Iterator
-from io import BufferedReader
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 
@@ -65,39 +64,3 @@ def calc_part_ranges(
         )
 
     yield from part_ranges
-
-
-def get_segments(part: bytes, segment_size: int):
-    """Chunk file part into cipher segments"""
-    full_segments = len(part) // segment_size
-    segments = [
-        part[i * segment_size : (i + 1) * segment_size] for i in range(full_segments)
-    ]
-    # get potential remainder of bytes that we need to handle
-    # for non-matching boundaries between part and cipher segment size
-    incomplete_segment = part[full_segments * segment_size :]
-    return segments, incomplete_segment
-
-
-def read_file_parts(
-    file: BufferedReader, *, part_size: int, from_part: int = 1
-) -> Iterator[bytes]:
-    """
-    Returns an iterator to iterate through file parts of the given size (in bytes).
-
-    By default it start with the first part but you may also start from a specific part
-    in the middle of the file using the `from_part` argument. This might be useful to
-    resume an interrupted reading process.
-
-    Please note: opening and closing of the file MUST happen outside of this function.
-    """
-    initial_offset = part_size * (from_part - 1)
-    file.seek(initial_offset)
-
-    while True:
-        file_part = file.read(part_size)
-
-        if len(file_part) == 0:
-            return
-
-        yield file_part

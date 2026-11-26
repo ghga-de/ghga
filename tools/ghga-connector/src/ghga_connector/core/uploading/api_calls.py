@@ -119,8 +119,6 @@ class UploadClient:
                     file_alias=file_alias,
                 )
             case 429:
-                if _exception_id(response) == "tooManyOpenUploads":
-                    raise exceptions.TooManyOpenUploadsError(file_alias=file_alias)
                 raise exceptions.TooManyRequestsError()
             case 507:
                 if response.json()["exception_id"] == "boxMaxSizeExceeded":
@@ -467,17 +465,6 @@ def _s3_part_error(response: httpx2.Response) -> Exception:
         code=code.group(1) if code else None,
         message=message.group(1) if message else None,
     )
-
-
-def _exception_id(response: httpx2.Response) -> str | None:
-    """Return the Upload API's exception ID, or None if the body carries none.
-
-    A 429 may also come from a rate limit in front of the API, without such a body.
-    """
-    try:
-        return response.json().get("exception_id")
-    except (ValueError, AttributeError):
-        return None
 
 
 def _handle_400(*, exception_id: str, work_package_id: UUID4):

@@ -37,7 +37,7 @@ FileProcessor = Generator[tuple[int, bytearray], Any, None]
 SEGMENT_SIZE = crypt4gh.lib.SEGMENT_SIZE
 # Each encrypted segment carries its nonce in front and its MAC behind
 NONCE_SIZE = 12
-SEGMENT_OVERHEAD = crypt4gh.lib.CIPHER_SEGMENT_SIZE - SEGMENT_SIZE
+SEGMENT_OVERHEAD = crypt4gh.lib.CIPHER_DIFF
 # How much plaintext is read at a time: whole segments, so that only the file's last
 #  segment can be short
 READ_SEGMENTS = 64
@@ -73,10 +73,12 @@ class Crypt4GHEncryptor:
         self._file_secret = os.urandom(32)
         self.checksums = Checksums()  # Updated as encryption takes place
         self._ciphertext_size = 0  # Updated as encryption takes place
-        num_segments = math.ceil(file_size / crypt4gh.lib.SEGMENT_SIZE)
+        num_segments = math.ceil(file_size / SEGMENT_SIZE)
 
         # Expected ciphertext size is used to verify the final object size
-        self.expected_ciphertext_size = file_size + num_segments * 28 + ENVELOPE_SIZE
+        self.expected_ciphertext_size = (
+            file_size + num_segments * SEGMENT_OVERHEAD + ENVELOPE_SIZE
+        )
 
         # Decode the Data Hub public key
         self._data_hub_public_key = base64.b64decode(
