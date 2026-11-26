@@ -23,9 +23,53 @@ from ghga_connector.config import get_config
 from ghga_connector.constants import KEEPALIVE_EXPIRY, POOL_HEADROOM, TIMEOUT
 from ghga_service_commons.http.correlation import attach_correlation_id_to_requests
 from ghga_service_commons.transports import (
+    BaseTransportFactory,
     client_routes,
     default_base_transport_factory,
 )
+
+
+class OpenUploadLimitReached(Exception):
+    """The Upload API refused a new upload: the box holds the most open uploads it
+    accepts.
+    """
+
+
+class OpenUploadLimitTransport(httpx2.AsyncBaseTransport):
+    """Turns the Upload API's `tooManyOpenUploads` answer into `OpenUploadLimitReached`.
+
+    It sits below the retry transport, which retries every 429 but no exception of
+    this kind. Only an upload that ends frees room, so retries would only delay the
+    batch's wait for room.
+    """
+
+    def __init__(self, transport: httpx2.AsyncBaseTransport):
+        self._transport = transport
+
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
+        """Send the request; raise `OpenUploadLimitReached` for that refusal."""
+        response = await self._transport.handle_async_request(request)
+        if request.method == "POST" and response.status_code == 429:
+            await response.aread()
+            try:
+                exception_id = response.json().get("exception_id")
+            except (ValueError, AttributeError):
+                exception_id = None
+            if exception_id == "tooManyOpenUploads":
+                await response.aclose()
+                raise OpenUploadLimitReached()
+        return response
+
+    async def aclose(self) -> None:
+        """Close the wrapped transport."""
+        await self._transport.aclose()
+
+
+def _with_open_upload_limit(
+    make_base_transport: BaseTransportFactory,
+) -> BaseTransportFactory:
+    """Put an `OpenUploadLimitTransport` on each transport the factory makes."""
+    return lambda proxy: OpenUploadLimitTransport(make_base_transport(proxy))
 
 
 @asynccontextmanager
@@ -46,9 +90,10 @@ async def async_client(*, purpose: Literal["upload", "download"]):
         max_keepalive_connections=max_concurrent_parts + POOL_HEADROOM,
         keepalive_expiry=KEEPALIVE_EXPIRY,
     )
-    routes = client_routes(
-        config, make_base_transport=default_base_transport_factory(limits=limits)
-    )
+    make_base_transport = default_base_transport_factory(limits=limits)
+    if purpose == "upload":
+        make_base_transport = _with_open_upload_limit(make_base_transport)
+    routes = client_routes(config, make_base_transport=make_base_transport)
     async with httpx2.AsyncClient(timeout=TIMEOUT, **routes) as client:
         attach_correlation_id_to_requests(client)
         yield client

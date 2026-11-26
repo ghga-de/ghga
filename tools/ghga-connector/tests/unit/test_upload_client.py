@@ -29,7 +29,11 @@ from tenacity import RetryError
 
 from ghga_connector import exceptions
 from ghga_connector.constants import UPLOAD_LISTING_PAGE_SIZE
-from ghga_connector.core.client import async_client
+from ghga_connector.core.client import (
+    OpenUploadLimitReached,
+    OpenUploadLimitTransport,
+    async_client,
+)
 from ghga_connector.core.uploading.api_calls import (
     PART_BODY_CHUNK_SIZE,
     PartBody,
@@ -440,6 +444,82 @@ async def test_retried_part_put_sends_whole_part():
     assert len(base.received[0]) == PART_BODY_CHUNK_SIZE
     assert base.received[1] == data
     assert base.content_lengths == [str(len(data))] * 2
+
+
+def _count_answers(posts: list[httpx2.Request], answer: dict) -> httpx2.MockTransport:
+    """A mock Upload API that answers every request with this 429 and counts them."""
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        posts.append(request)
+        return httpx2.Response(429, json=answer)
+
+    return httpx2.MockTransport(handler)
+
+
+async def test_open_upload_limit_is_not_retried():
+    """The Upload API's tooManyOpenUploads answer reaches the caller after one request,
+    since only an upload that ends frees room.
+    """
+    posts: list[httpx2.Request] = []
+    answer = {"exception_id": "tooManyOpenUploads", "description": "", "data": {}}
+    config = TransportConfig(client_num_retries=3, client_exponential_backoff_max=0)
+    transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
+        config,
+        make_base_transport=lambda proxy: OpenUploadLimitTransport(
+            _count_answers(posts, answer)
+        ),
+    )
+    async with httpx2.AsyncClient(transport=transport) as client:
+        with pytest.raises(OpenUploadLimitReached):
+            await client.post(f"{UPLOAD_URL}/boxes/{TEST_FUB_ID}/uploads", json={})
+
+    assert len(posts) == 1
+
+
+async def test_other_429_answers_are_retried_and_readable():
+    """A 429 from a rate limit is still retried, and its body stays readable."""
+    posts: list[httpx2.Request] = []
+    config = TransportConfig(client_num_retries=3, client_exponential_backoff_max=0)
+    transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
+        config,
+        make_base_transport=lambda proxy: OpenUploadLimitTransport(
+            _count_answers(posts, {"detail": "slow down"})
+        ),
+    )
+    async with httpx2.AsyncClient(transport=transport) as client:
+        with pytest.raises(RetryError) as exc_info:
+            await client.post(f"{UPLOAD_URL}/boxes/{TEST_FUB_ID}/uploads", json={})
+
+    assert len(posts) == config.client_num_retries
+    assert exc_info.value.last_attempt.result().json() == {"detail": "slow down"}
+
+
+async def test_upload_client_stops_the_open_upload_limit(monkeypatch):
+    """The upload client sends a create refused for the open-upload limit only once."""
+    posts: list[httpx2.Request] = []
+    answer = {"exception_id": "tooManyOpenUploads", "description": "", "data": {}}
+    monkeypatch.setattr(
+        "ghga_connector.core.client.default_base_transport_factory",
+        lambda limits: lambda proxy: _count_answers(posts, answer),
+    )
+    async with async_client(purpose="upload") as client:
+        with pytest.raises(OpenUploadLimitReached):
+            await client.post(f"{UPLOAD_URL}/boxes/{TEST_FUB_ID}/uploads", json={})
+
+    assert len(posts) == 1
+
+
+async def test_create_file_upload_reports_the_open_upload_limit(
+    upload_client: UploadClient, monkeypatch
+):
+    """A create refused for the open-upload limit raises TooManyOpenUploadsError."""
+    monkeypatch.setattr(
+        upload_client._client, "post", AsyncMock(side_effect=OpenUploadLimitReached())
+    )
+    with pytest.raises(exceptions.TooManyOpenUploadsError):
+        await upload_client.create_file_upload(
+            file_alias=FILE_ALIAS, decrypted_size=1, encrypted_size=153, part_size=8
+        )
 
 
 async def test_complete_file_upload(

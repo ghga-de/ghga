@@ -78,6 +78,16 @@ class UploadControllerPort(ABC):
             )
             super().__init__(msg)
 
+    class UploadSessionNotFoundError(UploadError):
+        """Raised when the tracked upload session can no longer be found."""
+
+        def __init__(self, *, bucket_id: str, s3_upload_id: str):
+            msg = (
+                f"Upload session with ID {s3_upload_id} could not be found in"
+                + f" bucket ID {bucket_id}."
+            )
+            super().__init__(msg)
+
     class UploadCompletionError(UploadError):
         """Raised when completing a file upload results in an error."""
 
@@ -307,6 +317,8 @@ class UploadControllerPort(ABC):
         Raises:
         - `FileUploadNotFound` if the FileUpload is not found.
         - `UnknownStorageAliasError` if the storage alias is not known.
+        - `UploadSessionNotFoundError` if the FileUpload is no longer in the 'init'
+          state, so its multipart upload is gone.
         - `BucketMissingError` if the configured bucket does not exist in S3.
         - `S3OperationError` if S3 returns any other unexpected error.
         """

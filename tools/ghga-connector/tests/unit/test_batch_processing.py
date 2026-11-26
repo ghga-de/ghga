@@ -20,6 +20,7 @@ import os
 import signal
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -167,6 +168,34 @@ async def test_perform_cleanup_restores_sigint_handler(delete_raises):
     assert signal.getsignal(signal.SIGINT) is sentinel_handler
 
 
+async def test_stop_during_a_failing_deletion_leaves_no_loop_error():
+    """A stop while the deletion runs lets it finish, and its error leaves nothing
+    for asyncio to report as unhandled.
+    """
+
+    async def failing_delete() -> None:
+        await asyncio.sleep(0.1)
+        raise RuntimeError("DELETE failed")
+
+    uploader = AsyncMock()
+    uploader.delete_file.side_effect = failing_delete
+    errors: list[str] = []
+    loop = asyncio.get_running_loop()
+    previous_handler = loop.get_exception_handler()
+    loop.set_exception_handler(lambda _loop, context: errors.append(context["message"]))
+    try:
+        cleanup = asyncio.create_task(perform_cleanup(uploader=uploader, alias="f0"))
+        await asyncio.sleep(0.01)
+        cleanup.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await cleanup
+    finally:
+        loop.set_exception_handler(previous_handler)
+
+    uploader.delete_file.assert_awaited_once()
+    assert errors == []
+
+
 async def test_upload_files_from_list_halts_on_abort_during_init():
     """Test that keyboard cancel during initiate_file_upload() stops batch processing
     and performs cleanup. The current and remaining files should be listed as failed.
@@ -181,6 +210,8 @@ async def test_upload_files_from_list_halts_on_abort_during_init():
         # Rig a mock uploader to error during initiation
         aborting_uploader = AsyncMock()
         aborting_uploader.initiate_file_upload.side_effect = KeyboardInterrupt
+        # The abort comes before UCS created anything, so there is nothing to delete
+        aborting_uploader.created = False
         second_uploader = make_mock_uploader()
 
         # Patch in the exploding mock uploader
@@ -682,6 +713,47 @@ async def test_run_batch_upload_restarts_unfinished_only_with_overwrite(
         mock_display.success.assert_not_called()
 
 
+async def test_run_batch_upload_names_the_unfinished_files_it_left():
+    """Without overwrite, the summary names the files skipped for an unfinished upload
+    and reports no success, even when every other file was uploaded.
+    """
+    with NamedTemporaryFile() as f1, NamedTemporaryFile() as f2:
+        file_infos = [
+            make_file_info_for_upload(path=Path(f1.name), alias="interrupted"),
+            make_file_info_for_upload(path=Path(f2.name), alias="fresh"),
+        ]
+        upload_client = _make_upload_client(
+            [UploadedFileInfo(file_id=uuid4(), alias="interrupted", state="init")]
+        )
+
+        async def fake_batch_cycle(**_kwargs):
+            return BatchPassResult(failed=[], halted=False)
+
+        with (
+            patch(
+                "ghga_connector.core.uploading.batch_processing.upload_files_from_list",
+                fake_batch_cycle,
+            ),
+            patch(
+                "ghga_connector.core.uploading.batch_processing.CLIMessageDisplay"
+            ) as mock_display,
+        ):
+            await run_batch_upload(
+                upload_client=upload_client,
+                file_info_list=file_infos,
+                my_private_key=SecretBytes(b"\x00" * 32),
+                max_concurrent_uploads=1,
+                max_retries=0,
+            )
+
+    failures = " ".join(
+        str(call.args[0]) for call in mock_display.failure.call_args_list
+    )
+    assert "were not uploaded because their upload in the box is unfinished" in failures
+    assert "interrupted" in failures
+    mock_display.success.assert_not_called()
+
+
 @pytest.mark.parametrize("overwrite", [True, False])
 async def test_run_batch_upload_applies_overwrite(overwrite: bool):
     """Test that the user-supplied overwrite flag is applied to each upload pass.
@@ -1100,6 +1172,11 @@ class RecordingUploadClient:
 
     Each part upload takes `part_seconds`. A file whose alias is in `failing` fails on
     its first part, and one in `box_full` is refused on create as too large for the box.
+    A create takes `create_seconds`, also when refused; an accepted upload is opened
+    first, as UCS answers after it has created the upload. A file in `conflict` is
+    refused after that time, as an alias that has an upload already. An overwrite
+    replaces the alias's upload in `others_open`, which UCS allows at its limit. A
+    deletion counts only once its `delete_seconds` passed.
     """
 
     def __init__(
@@ -1111,10 +1188,16 @@ class RecordingUploadClient:
         open_limit: int | None = None,
         others_open: tuple[str, ...] = (),
         busy_once: tuple[str, ...] = (),
+        conflict: tuple[str, ...] = (),
+        create_seconds: float = 0,
+        delete_seconds: float = 0,
     ):
         self._part_seconds = part_seconds
+        self._create_seconds = create_seconds
+        self._delete_seconds = delete_seconds
         self._failing = failing
         self._box_full = box_full
+        self._conflict = conflict
         # UCS's limit of open uploads per box, which also counts other uploads
         self._open_limit = open_limit
         self._others_open = others_open
@@ -1130,8 +1213,10 @@ class RecordingUploadClient:
         self.max_total = 0
         self.max_per_file = 0
         self.parts_started = asyncio.Event()
+        self.creates_started = asyncio.Event()
+        self.deletes_started = asyncio.Event()
 
-    async def create_file_upload(self, *, file_alias, **_kwargs):
+    async def create_file_upload(self, *, file_alias, overwrite=False, **_kwargs):
         """Open an upload, or refuse it if the box is full."""
         if file_alias in self._box_full:
             raise exceptions.UploadBoxSizeExceededError(
@@ -1140,16 +1225,27 @@ class RecordingUploadClient:
         if file_alias in self._busy_once:
             self._busy_once.discard(file_alias)
             raise exceptions.TooManyRequestsError()
+        if file_alias in self._conflict:
+            self.creates_started.set()
+            await asyncio.sleep(self._create_seconds)
+            raise exceptions.UploadAlreadyExistsError(work_package_id=uuid4())
+        if overwrite and file_alias in self._others_open:
+            self._others_open = tuple(a for a in self._others_open if a != file_alias)
         if (
             self._open_limit is not None
             and len(self._others_open) + self.open_now >= self._open_limit
         ):
+            if self._create_seconds:
+                await asyncio.sleep(self._create_seconds)
             raise exceptions.TooManyOpenUploadsError(file_alias=file_alias)
         file_id = uuid4()
         self.aliases[file_id] = file_alias
         self.created.append(file_alias)
         self.open_now += 1
         self.max_open = max(self.max_open, self.open_now)
+        self.creates_started.set()
+        if self._create_seconds:
+            await asyncio.sleep(self._create_seconds)
         return file_id, TEST_STORAGE_ALIAS1
 
     async def get_box_uploads(self):
@@ -1184,6 +1280,9 @@ class RecordingUploadClient:
 
     async def delete_file(self, *, file_id, file_alias):
         """Record the deleted file."""
+        self.deletes_started.set()
+        if self._delete_seconds:
+            await asyncio.sleep(self._delete_seconds)
         self.deleted.append(file_alias)
         self.open_now -= 1
 
@@ -1216,7 +1315,7 @@ def fake_encryptor(**kwargs) -> MagicMock:
     return encryptor
 
 
-async def upload_in_flight(client, file_infos, *, parts: int, files: int):
+async def upload_in_flight(client, file_infos, *, parts: int, files: int, **options):
     """Run one pass with the recording client and the fake encryptor."""
     with patch(
         "ghga_connector.core.uploading.batch_processing.Crypt4GHEncryptor",
@@ -1228,6 +1327,7 @@ async def upload_in_flight(client, file_infos, *, parts: int, files: int):
             my_private_key=SecretBytes(b"\x00" * 32),
             max_concurrent_uploads=parts,
             max_concurrent_files=files,
+            **options,
         )
 
 
@@ -1289,7 +1389,7 @@ async def test_full_box_lets_files_in_flight_finish(tmp_path: Path):
     halts the batch with the rest failed.
     """
     file_infos = make_files_in_flight(
-        tmp_path, {"first": 4, "second": 3, "refused": 2, "never": 1}
+        tmp_path, {"first": 8, "second": 3, "refused": 2, "never": 1}
     )
     client = RecordingUploadClient(box_full=("refused",))
 
@@ -1305,7 +1405,7 @@ async def test_full_box_lets_files_in_flight_finish(tmp_path: Path):
 async def test_sigterm_deletes_every_file_in_flight(tmp_path: Path):
     """SIGTERM stops a pass with several files in flight as Ctrl+C does."""
     file_infos = make_files_in_flight(tmp_path, {f"file-{i}": 3 for i in range(4)})
-    client = RecordingUploadClient(part_seconds=10)
+    client = RecordingUploadClient(part_seconds=10, delete_seconds=0.05)
 
     async def send_sigterm_once_parts_fly():
         await client.parts_started.wait()
@@ -1321,6 +1421,84 @@ async def test_sigterm_deletes_every_file_in_flight(tmp_path: Path):
 
     assert len(client.created) == 3
     assert sorted(client.deleted) == sorted(client.created)
+
+
+async def test_sigterm_during_a_cleanup_lets_it_finish(tmp_path: Path):
+    """SIGTERM while a failed file's upload is deleted lets the deletion finish and
+    starts no further file.
+    """
+    file_infos = make_files_in_flight(tmp_path, {"failing": 2, "next": 2})
+    client = RecordingUploadClient(failing=("failing",), delete_seconds=0.2)
+
+    async def send_sigterm_once_the_deletion_starts():
+        await client.deletes_started.wait()
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    sender = asyncio.create_task(send_sigterm_once_the_deletion_starts())
+    with pytest.raises(TerminatedError):
+        await cancel_on_termination(
+            upload_in_flight(client, file_infos, parts=2, files=1)
+        )
+    await sender
+
+    assert client.created == ["failing"]
+    assert client.deleted == ["failing"]
+
+
+async def test_sigterm_during_creation_deletes_the_created_uploads(tmp_path: Path):
+    """SIGTERM while UCS creates the uploads deletes those it created."""
+    file_infos = make_files_in_flight(tmp_path, {f"file-{i}": 2 for i in range(3)})
+    client = RecordingUploadClient(create_seconds=0.5)
+
+    async def send_sigterm_once_creates_start():
+        await client.creates_started.wait()
+        await asyncio.sleep(0.05)
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    sender = asyncio.create_task(send_sigterm_once_creates_start())
+    with pytest.raises(TerminatedError):
+        await cancel_on_termination(
+            upload_in_flight(client, file_infos, parts=6, files=3)
+        )
+    await sender
+
+    assert len(client.created) == 3
+    assert sorted(client.deleted) == sorted(client.created)
+
+
+async def test_box_with_one_free_upload_slot_ends_the_batch(tmp_path: Path):
+    """With four other uploads open in a box that accepts five, the batch uploads its
+    files one at a time and then ends.
+    """
+    file_infos = make_files_in_flight(tmp_path, {f"file-{i}": 1 for i in range(6)})
+    client = RecordingUploadClient(
+        open_limit=5,
+        others_open=tuple(f"stale-{i}" for i in range(4)),
+        create_seconds=0.01,
+    )
+
+    # Waits without cancelling, since a cancelled pass returns as if it had ended
+    batch = asyncio.create_task(upload_in_flight(client, file_infos, parts=10, files=4))
+    done, _ = await asyncio.wait({batch}, timeout=5)
+    if not done:
+        batch.cancel()
+        await asyncio.wait({batch})
+    assert done, "the batch is still running after its last file"
+    result = batch.result()
+
+    assert sorted(client.completed) == sorted(fi.alias for fi in file_infos)
+    assert result.failed == []
+    assert client.max_open == 1
+
+
+async def test_lone_file_gets_every_part_slot(tmp_path: Path):
+    """A batch of one file uploads it with all the parts the budget allows."""
+    file_infos = make_files_in_flight(tmp_path, {"lone": 12})
+    client = RecordingUploadClient()
+
+    await upload_in_flight(client, file_infos, parts=10, files=4)
+
+    assert client.max_per_file == 10
 
 
 async def test_box_at_its_upload_limit_holds_files_back(tmp_path: Path):
@@ -1368,3 +1546,133 @@ async def test_other_429_keeps_its_retries(tmp_path: Path):
 
     assert result == BatchPassResult()
     assert sorted(client.completed) == ["one", "two"]
+
+
+async def test_last_file_takes_the_part_slots_the_others_free(tmp_path: Path):
+    """Once the small files of a batch end, the large file left sends as many parts
+    as the budget allows, not only the share it started with.
+    """
+    file_infos = make_files_in_flight(
+        tmp_path, {"large": 24, "small-1": 1, "small-2": 1, "small-3": 1}
+    )
+    client = RecordingUploadClient()
+
+    await upload_in_flight(client, file_infos, parts=10, files=4)
+
+    assert client.max_per_file == 10
+
+
+async def test_stop_during_a_create_that_then_fails_halts_the_batch(tmp_path: Path):
+    """A stop while UCS creates an upload stays a stop when the create then fails,
+    so no further file starts.
+    """
+    file_infos = make_files_in_flight(tmp_path, {"first": 2, "second": 1})
+    client = RecordingUploadClient(conflict=("first",), create_seconds=0.2)
+
+    batch = asyncio.create_task(upload_in_flight(client, file_infos, parts=2, files=1))
+    await asyncio.wait_for(client.creates_started.wait(), timeout=5)
+    batch.cancel()
+    result = await batch
+
+    assert result.halted
+    assert client.created == []
+    assert [fi.alias for fi in result.failed] == ["first", "second"]
+
+
+async def test_overwrite_restarts_unfinished_files_first(tmp_path: Path):
+    """With overwrite into a box at its limit, the batch's unfinished uploads restart
+    first, since UCS lets them replace their upload at the limit. The other files
+    follow as they end.
+    """
+    file_infos = make_files_in_flight(
+        tmp_path, {"s1": 1, "s2": 1, "n1": 2, "n2": 2, "n3": 2, "n4": 2}
+    )
+    client: Any = RecordingUploadClient(
+        open_limit=5, others_open=("s1", "s2", "other-1", "other-2", "other-3")
+    )
+
+    with (
+        patch(
+            "ghga_connector.core.uploading.batch_processing.Crypt4GHEncryptor",
+            side_effect=fake_encryptor,
+        ),
+        patch("ghga_connector.core.uploading.batch_processing.CLIMessageDisplay"),
+    ):
+        await run_batch_upload(
+            upload_client=client,
+            file_info_list=file_infos,
+            my_private_key=SecretBytes(b"\x00" * 32),
+            max_concurrent_uploads=10,
+            max_concurrent_files=4,
+            max_retries=0,
+            overwrite=True,
+        )
+
+    assert client.created[:2] == ["s1", "s2"]
+    assert sorted(client.completed) == sorted(fi.alias for fi in file_infos)
+
+
+async def test_box_full_of_other_uploads_in_the_shell_advises_rm(tmp_path: Path):
+    """In the ubox shell, the halt advises the shell's `rm`, not the commands of the
+    command line.
+    """
+    file_infos = make_files_in_flight(tmp_path, {"one": 1})
+    others = tuple(f"stale-{i}" for i in range(5))
+    client = RecordingUploadClient(open_limit=5, others_open=others)
+
+    with patch(
+        "ghga_connector.core.uploading.batch_processing.CLIMessageDisplay"
+    ) as display:
+        result = await upload_in_flight(
+            client, file_infos, parts=4, files=1, in_shell=True
+        )
+
+    assert result.halted
+    [message] = [call.args[0] for call in display.failure.call_args_list]
+    assert "`rm ALIAS`" in message
+    assert "--overwrite" not in message
+    assert "ghga-connector ubox" not in message
+
+
+def _wait_notices(display: MagicMock) -> list[str]:
+    """Return the messages that told the user a file waits for room in the box."""
+    messages = [str(call.args[0]) for call in display.display.call_args_list]
+    return [message for message in messages if "waits for another file" in message]
+
+
+async def test_creates_refused_together_halt_without_wait_notices(tmp_path: Path):
+    """When every create of the batch is refused for the open-upload limit, the pass
+    halts without first telling the user that files wait.
+    """
+    file_infos = make_files_in_flight(tmp_path, {f"file-{i}": 1 for i in range(4)})
+    others = tuple(f"stale-{i}" for i in range(5))
+    client = RecordingUploadClient(
+        open_limit=5, others_open=others, create_seconds=0.01
+    )
+
+    with patch(
+        "ghga_connector.core.uploading.batch_processing.CLIMessageDisplay"
+    ) as display:
+        result = await upload_in_flight(client, file_infos, parts=10, files=4)
+
+    assert result.halted
+    assert _wait_notices(display) == []
+
+
+async def test_files_waiting_for_an_upload_of_the_batch_are_announced(tmp_path: Path):
+    """A file that waits for a file of the batch to end is announced once."""
+    file_infos = make_files_in_flight(tmp_path, {f"file-{i}": 1 for i in range(4)})
+    others = ("stale-0", "stale-1", "stale-2")
+    client = RecordingUploadClient(
+        open_limit=5, others_open=others, create_seconds=0.01
+    )
+
+    with patch(
+        "ghga_connector.core.uploading.batch_processing.CLIMessageDisplay"
+    ) as display:
+        result = await upload_in_flight(client, file_infos, parts=10, files=4)
+
+    assert result == BatchPassResult()
+    notices = _wait_notices(display)
+    assert notices
+    assert len(notices) == len(set(notices))

@@ -529,6 +529,8 @@ class UploadController(UploadControllerPort):
         Raises:
         - `FileUploadNotFound` if the FileUpload is not found.
         - `UnknownStorageAliasError` if the storage alias is not known.
+        - `UploadSessionNotFoundError` if the FileUpload is no longer in the 'init'
+          state, so its multipart upload is gone.
         """
         try:
             file_upload = await self._file_upload_dao.get_by_id(file_id)
@@ -539,6 +541,21 @@ class UploadController(UploadControllerPort):
                 extra={"file_id": file_id, "part_no": part_no},
             )
             raise error from err
+
+        # S3 is not asked whether the multipart upload exists, so the state must tell
+        if file_upload.state != "init":
+            session_error = self.UploadSessionNotFoundError(
+                bucket_id=file_upload.bucket_id, s3_upload_id=file_upload.s3_upload_id
+            )
+            log.info(
+                session_error,
+                extra={
+                    "file_id": file_id,
+                    "part_no": part_no,
+                    "state": file_upload.state,
+                },
+            )
+            raise session_error
 
         try:
             return await self._s3_client.get_part_upload_url(

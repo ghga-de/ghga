@@ -120,8 +120,10 @@ class _FileUploadError(RuntimeError):
         # Make sure we only use one period at the end of the error message
         reason = reason.rstrip(". \n")
 
-        # Make first character of 'reason' lowercase
-        reason = reason[0].lower() + reason[1:]
+        # Make first character of 'reason' lowercase, unless it starts an acronym
+        #  such as S3
+        if not reason[1:2].isupper() and not reason[1:2].isdigit():
+            reason = reason[0].lower() + reason[1:]
 
         # Calculate whether to show the file ID and if so format it
         file_id_portion = f" ({file_id=})" if file_id else ""

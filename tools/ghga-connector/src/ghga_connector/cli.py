@@ -29,7 +29,7 @@ from ghga_connector.core.main import (
     async_ubox,
     decrypt_file,
 )
-from ghga_connector.core.termination import TerminatedError, cancel_on_termination
+from ghga_connector.core.termination import TerminatedError
 from ghga_connector.core.utils import modify_for_debug
 
 cli = typer.Typer(no_args_is_help=True)
@@ -44,8 +44,8 @@ _SIGNAL_EXIT_CODE_BASE = 128
 def _catch_cancellations(coroutine) -> None:
     """Run an async command, exiting cleanly if the user aborts with Ctrl+C.
 
-    A command wrapped in `cancel_on_termination` also exits cleanly on SIGTERM or
-    SIGHUP, with the exit code a shell reports for that signal.
+    A command whose uploads run in `cancel_on_termination` also exits cleanly on
+    SIGTERM or SIGHUP, with the exit code a shell reports for that signal.
     """
     try:
         asyncio.run(coroutine)
@@ -114,16 +114,14 @@ def batch_upload(  # noqa: PLR0913
     """
     modify_for_debug(debug)
     _catch_cancellations(
-        cancel_on_termination(
-            async_batch_upload(
-                tsv=tsv,
-                my_public_key_path=my_public_key_path,
-                my_private_key_path=my_private_key_path,
-                max_retries=max_retries,
-                dry_run=dry_run,
-                shorten=shorten_names,
-                overwrite=overwrite,
-            )
+        async_batch_upload(
+            tsv=tsv,
+            my_public_key_path=my_public_key_path,
+            my_private_key_path=my_private_key_path,
+            max_retries=max_retries,
+            dry_run=dry_run,
+            shorten=shorten_names,
+            overwrite=overwrite,
         )
     )
 
@@ -147,11 +145,9 @@ def ubox(
     """Open an interactive shell to manage an upload box (upload, ls, rm)."""
     modify_for_debug(debug)
     _catch_cancellations(
-        cancel_on_termination(
-            async_ubox(
-                my_public_key_path=my_public_key_path,
-                my_private_key_path=my_private_key_path,
-            )
+        async_ubox(
+            my_public_key_path=my_public_key_path,
+            my_private_key_path=my_private_key_path,
         )
     )
 

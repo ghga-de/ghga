@@ -55,3 +55,35 @@ def test_messages_have_no_color_off_a_terminal(capsys):
     """A message to a stream that is no terminal carries no color codes."""
     CLIMessageDisplay.success("Uploaded the file.")
     assert capsys.readouterr().out == "Uploaded the file.\n"
+
+
+def test_messages_reach_a_redirected_stream_during_a_live_display(monkeypatch):
+    """With stderr redirected, e.g. to a log file, a failure goes to that file, not
+    through the live display's proxy to the terminal.
+    """
+    printed = io.StringIO()
+    console = Console(file=printed, force_terminal=True, color_system="standard")
+    log_file = io.StringIO()
+    monkeypatch.setattr(sys, "stderr", FileProxy(console, log_file))
+
+    CLIMessageDisplay.failure("Failed to upload the file.")
+
+    assert log_file.getvalue() == "Failed to upload the file.\n"
+    assert "Failed to upload the file." not in printed.getvalue()
+
+
+class BrokenPipe(io.StringIO):
+    """A stream whose reader is gone, such as a pipe to `tee` after a hangup."""
+
+    def write(self, text: str) -> int:
+        """Fail as a pipe without a reader does."""
+        raise BrokenPipeError(32, "Broken pipe")
+
+
+def test_a_message_that_cannot_be_written_is_dropped(monkeypatch):
+    """A message to a stream that fails is dropped, so it cannot cut off the cleanup
+    that follows it.
+    """
+    monkeypatch.setattr(sys, "stderr", BrokenPipe())
+
+    CLIMessageDisplay.failure("Upload aborted for a, deleting.")

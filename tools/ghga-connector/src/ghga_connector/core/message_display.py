@@ -16,6 +16,7 @@
 
 """Contains abstract message display base class"""
 
+import contextlib
 import enum
 import sys
 
@@ -40,10 +41,18 @@ def _echo(message: str, color: MessageColors, *, err: bool = False):
     The stream is passed explicitly: a live progress display swaps it for a proxy
     that prints above the display, which click would otherwise bypass. The proxy is
     no terminal itself, so the colors follow the stream behind it.
+
+    A message that cannot be written, e.g. to a terminal that hung up or a pipe whose
+    reader is gone, is dropped: the error would otherwise cut off the cleanup that
+    follows many messages and leave an upload open in the box.
     """
     stream = sys.stderr if err else sys.stdout
     target = getattr(stream, "rich_proxied_file", stream)
-    typer.secho(message, fg=color, file=stream, color=target.isatty())
+    if not target.isatty():
+        # The proxy prints to the display's terminal, not to a redirected stream
+        stream = target
+    with contextlib.suppress(OSError):
+        typer.secho(message, fg=color, file=stream, color=target.isatty())
 
 
 class CLIMessageDisplay:

@@ -15,6 +15,7 @@
 """Upload functionality"""
 
 import asyncio
+import contextlib
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import AbstractAsyncContextManager
@@ -68,6 +69,13 @@ class FairSlots:
     def __init__(self, budget: asyncio.Semaphore, per_file: int):
         self._budget = budget
         self._own = asyncio.Semaphore(per_file)
+        self._per_file = per_file
+
+    def widen(self, per_file: int) -> None:
+        """Raise the file's share, for when fewer files are left in flight."""
+        for _ in range(per_file - self._per_file):
+            self._own.release()
+        self._per_file = max(self._per_file, per_file)
 
     async def __aenter__(self) -> None:
         """Take one of the file's slots, then one of the batch's."""
@@ -120,6 +128,8 @@ class Uploader:
         self._progress = progress
         # How many parts were handed to the encryption worker; see `_upload_file_part`
         self._parts_submitted = 0
+        # Set once UCS has created the upload, even if the creation was then stopped
+        self._created = False
 
     def new_progress_bar(self) -> UploadProgressBar | FileProgressRow:
         """Create a new progress bar, or a row in the batch's shared display"""
@@ -141,13 +151,31 @@ class Uploader:
         """
         # Establish the file expectation and open the multipart upload
         try:
-            self._file_id, storage_alias = await self._upload_client.create_file_upload(
-                file_alias=self._file_alias,
-                decrypted_size=self._file_info.decrypted_size,
-                encrypted_size=self._file_info.encrypted_size,
-                part_size=self._file_info.part_size,
-                overwrite=self._overwrite,
+            creation = asyncio.ensure_future(
+                self._upload_client.create_file_upload(
+                    file_alias=self._file_alias,
+                    decrypted_size=self._file_info.decrypted_size,
+                    encrypted_size=self._file_info.encrypted_size,
+                    part_size=self._file_info.part_size,
+                    overwrite=self._overwrite,
+                )
             )
+            # `asyncio.wait` neither cancels the creation nor raises its error, so a
+            #  stop stays a stop even if the creation then fails
+            try:
+                await asyncio.wait({creation})
+            except asyncio.CancelledError:
+                # UCS may create the upload anyway: take its answer, so that
+                #  the caller can delete the upload
+                while not creation.done():
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await asyncio.wait({creation})
+                if not creation.cancelled() and creation.exception() is None:
+                    self._file_id = creation.result()[0]
+                    self._created = True
+                raise
+            self._file_id, storage_alias = creation.result()
+            self._created = True
             return self._file_id, storage_alias
         except TooManyRequestsError as exc:
             # UCS limits the open uploads per box, which counts this run's files in
@@ -172,6 +200,11 @@ class Uploader:
                 file_alias=self._file_alias,
                 exception=exc,
             ) from exc
+
+    @property
+    def created(self) -> bool:
+        """Whether UCS created the upload, even if the creation was then stopped."""
+        return self._created
 
     async def delete_file(self) -> None:
         """Delete a file from its FileUploadBox

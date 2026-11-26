@@ -19,6 +19,7 @@ The shell offers ``upload``, ``ls`` and ``rm`` commands that reuse a single
 authenticated session, so the access token only has to be entered once.
 """
 
+import asyncio
 import glob
 import logging
 import shlex
@@ -319,7 +320,13 @@ class UboxShell:
             my_private_key=self._my_private_key,
             max_concurrent_uploads=config.max_concurrent_uploads,
             max_concurrent_files=config.max_concurrent_files,
+            in_shell=True,
         )
+        # Ctrl+C stopped the upload and the shell goes on, so the stop must not end
+        #  the command with "aborted by the user" when the user leaves later
+        task = asyncio.current_task()
+        while task is not None and task.cancelling():
+            task.uncancel()
 
     async def _do_ls(self, args: list[str]) -> None:
         """Handle the 'ls' command."""

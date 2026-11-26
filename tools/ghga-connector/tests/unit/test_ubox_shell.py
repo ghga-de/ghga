@@ -15,6 +15,8 @@
 
 """Unit tests for the interactive upload box shell."""
 
+import asyncio
+import contextlib
 import re
 from pathlib import Path
 from uuid import uuid4
@@ -24,6 +26,7 @@ import typer
 from prompt_toolkit.document import Document
 from pydantic import SecretBytes
 
+from ghga_connector.core.termination import cancel_on_termination
 from ghga_connector.core.uploading import ubox_shell
 from ghga_connector.core.uploading.api_calls import UploadClient
 from ghga_connector.core.uploading.structs import UploadedFileInfo
@@ -311,6 +314,42 @@ async def test_run_ends_after_termination_signal(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_shell_ends_normally_after_a_stopped_upload(monkeypatch, tmp_path: Path):
+    """Ctrl+C stops an upload and the shell goes on, so leaving the shell later ends
+    the command normally, not as aborted by the user.
+    """
+    target = tmp_path / "data.bam"
+    target.write_text("plaintext content")
+    lines = iter([f"upload {target}", "exit"])
+
+    class FakeSession:
+        def __init__(self, **_kwargs):
+            pass
+
+        async def prompt_async(self, prompt: str) -> str:
+            return next(lines)
+
+    async def stopped_upload(**_kwargs) -> None:
+        # Ctrl+C cancels the command's task; the upload deletes its files and returns
+        task = asyncio.current_task()
+        assert task is not None
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await asyncio.sleep(10)
+
+    monkeypatch.setattr(ubox_shell, "PromptSession", FakeSession)
+    monkeypatch.setattr(ubox_shell, "upload_files_from_list", stopped_upload)
+    shell = UboxShell(
+        upload_client=FakeUploadClient(), my_private_key=SecretBytes(b"key")
+    )
+
+    command = asyncio.create_task(cancel_on_termination(shell.run()))
+    await asyncio.wait({command})
+
+    assert not command.cancelled()
+
+
+@pytest.mark.asyncio
 async def test_do_upload_glob(monkeypatch, tmp_path: Path):
     """The upload command with a glob uploads each match using its file name."""
     for name in ("one.bam", "two.bam"):
@@ -325,7 +364,9 @@ async def test_do_upload_glob(monkeypatch, tmp_path: Path):
         my_private_key,
         max_concurrent_uploads,
         max_concurrent_files,
+        in_shell,
     ):
+        assert in_shell
         captured.append([(fi.alias, Path(fi.path).name) for fi in file_info_list])
 
     monkeypatch.setattr(
@@ -356,7 +397,9 @@ async def test_do_upload_with_alias(monkeypatch, tmp_path: Path):
         my_private_key,
         max_concurrent_uploads,
         max_concurrent_files,
+        in_shell,
     ):
+        assert in_shell
         captured.append([(fi.alias, Path(fi.path).name) for fi in file_info_list])
 
     monkeypatch.setattr(

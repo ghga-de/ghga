@@ -1380,6 +1380,36 @@ async def test_get_part_upload_url_skips_upload_check(rig: JointRig):
     assert call["verify_upload"] is False
 
 
+@pytest.mark.parametrize("state", ["cancelled", "failed", "inbox"])
+async def test_get_part_upload_url_refuses_upload_not_in_progress(
+    rig: JointRig, state: str
+):
+    """Test that no part URL is issued once the FileUpload left the 'init' state,
+    since its multipart upload is gone, and that S3 is not asked.
+    """
+    controller = rig.controller
+    box_id = await rig.create_default_box()
+    file_id, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    file_upload = rig.file_upload_dao.latest
+    file_upload.state = state
+    await rig.file_upload_dao.update(file_upload)
+    storage = rig.object_storages.for_alias("test")[1]
+
+    async def fail(**kwargs):
+        raise AssertionError("S3 must not be asked")
+
+    storage.get_part_upload_url = fail
+
+    with pytest.raises(UploadControllerPort.UploadSessionNotFoundError):
+        await controller.get_part_upload_url(file_id=file_id, part_no=1)
+
+
 @pytest.mark.parametrize("s3_has_upload", [True, False])
 async def test_remove_file_upload_warns_when_s3_upload_is_gone(
     rig: JointRig, caplog: pytest.LogCaptureFixture, s3_has_upload: bool

@@ -133,6 +133,20 @@ class HttpOrphanedMultipartUploadError(HttpCustomExceptionBase):
         )
 
 
+class HttpS3UploadNotFoundError(HttpCustomExceptionBase):
+    """Thrown when an S3 multipart upload cannot be found."""
+
+    exception_id = "s3UploadNotFound"
+
+    def __init__(self, *, status_code: int = 404):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description="",
+            data={},
+        )
+
+
 class HttpFileUploadNotFoundError(HttpCustomExceptionBase):
     """Thrown when a FileUpload with given ID could not be found."""
 

@@ -27,6 +27,7 @@ from ghga_connector import exceptions
 from ghga_connector.config import get_upload_api_url
 from ghga_connector.constants import UPLOAD_LISTING_PAGE_SIZE
 from ghga_connector.core.api_calls.utils import is_service_healthy
+from ghga_connector.core.client import OpenUploadLimitReached
 from ghga_connector.core.uploading.structs import UploadedFileInfo
 from ghga_connector.core.work_package import WorkPackageClient
 
@@ -238,6 +239,8 @@ class UploadClient:
         try:
             log.debug("Requesting file upload creation at url %s", url)
             response = await self._client.post(url, headers=headers, json=body)
+        except OpenUploadLimitReached:
+            raise exceptions.TooManyOpenUploadsError(file_alias=file_alias) from None
         except exceptions.REQUEST_FAILURES as exc:
             response = exceptions.handle_request_error(exc, url=url)
 

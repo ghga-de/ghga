@@ -30,6 +30,7 @@ from ghga_connector.core.downloading.downloader import (
     Downloader,
     handle_download_errors,
 )
+from ghga_connector.core.termination import cancel_on_termination
 from ghga_connector.core.uploading.api_calls import UploadClient
 from ghga_connector.core.uploading.batch_processing import (
     load_file_info_from_tsv,
@@ -118,16 +119,19 @@ async def upload_files(  # noqa: PLR0913
         for cfi in core_file_info_list
     ]
 
-    await run_batch_upload(
-        upload_client=upload_client,
-        file_info_list=full_file_info,
-        my_private_key=my_private_key,
-        max_concurrent_uploads=config.max_concurrent_uploads,
-        max_concurrent_files=config.max_concurrent_files,
-        max_retries=max_retries,
-        dry_run=dry_run,
-        shorten=shorten,
-        overwrite=overwrite,
+    # Not around the prompts above: they block the loop that runs the signal handler
+    await cancel_on_termination(
+        run_batch_upload(
+            upload_client=upload_client,
+            file_info_list=full_file_info,
+            my_private_key=my_private_key,
+            max_concurrent_uploads=config.max_concurrent_uploads,
+            max_concurrent_files=config.max_concurrent_files,
+            max_retries=max_retries,
+            dry_run=dry_run,
+            shorten=shorten,
+            overwrite=overwrite,
+        )
     )
 
 
@@ -155,7 +159,8 @@ async def async_ubox(
             client=client, work_package_client=work_package_client
         )
         shell = UboxShell(upload_client=upload_client, my_private_key=my_private_key)
-        await shell.run()
+        # Not around the prompts above: they block the loop that runs the signal handler
+        await cancel_on_termination(shell.run())
 
 
 async def async_download(
