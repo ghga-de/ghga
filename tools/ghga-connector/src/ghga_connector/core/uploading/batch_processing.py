@@ -315,6 +315,9 @@ class _FileUploadContext:
     in_shell: bool = False
     # The aliases of the files whose upload UCS created and that have not ended yet
     created: set[str] = field(default_factory=set)
+    # UCS checks the box's limits before it records an upload, so creates sent together
+    #  all pass: they go one at a time
+    create_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
 async def _upload_one_file(  # noqa: C901, PLR0911
@@ -352,14 +355,21 @@ async def _upload_one_file(  # noqa: C901, PLR0911
     log.info("Initializing upload for %s", file_info.alias)
     log.debug("Full file path is %s", str(file_info.path.resolve()))
 
+    sent = False
     try:
-        file_id, storage_alias = await uploader.initiate_file_upload()
+        async with context.create_lock:
+            sent = True
+            file_id, storage_alias = await uploader.initiate_file_upload()
     except USER_ABORT_EXCEPTIONS:
-        if uploader.created:
-            # UCS created the upload before the abort: delete it again
-            with contextlib.suppress(asyncio.CancelledError):
-                await perform_cleanup(uploader=uploader, alias=display_alias)
+        if not sent:
+            # Stopped while another file's create ran: nothing was sent
             return _Outcome.ABORTED
+        # Ctrl+C during initiation (before any bytes flow) halts the batch cleanly,
+        # mirroring the abort handling around upload_file() below. Note: initiation
+        # may already have created a server-side FileUpload before the interrupt;
+        # because no file_id was returned, we can't delete it here, so an orphan may
+        # be left in the "init" state. A rerun with --overwrite restarts it, and
+        # `ubox rm` removes it.
         CLIMessageDisplay.failure(
             f"Cancelled upload for {display_alias}. It is possible that the server-"
             + "side upload was created anyway. If you are unable to create a new"
