@@ -114,8 +114,9 @@ class MongoDbInterrogationQueue(InterrogationQueuePort):
         """Return up to `limit` matching documents, ranked by the priority list first
         and by `sort` within a rank, with `_id` renamed to `id`.
 
-        Each document returned contains a `rank` field, which is its box's index in
-        the priority list, or -1 if the box isn't listed (an edge case).
+        Each item is a `(rank, document)` pair. The rank is taken out of the document
+        and is its box's index in the priority list, or -1 if the box isn't listed
+        (an edge case).
         """
         pipeline: list[dict] = [
             {"$match": match},
