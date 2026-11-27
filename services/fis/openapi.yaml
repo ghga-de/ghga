@@ -51,6 +51,19 @@ components:
       - part_size
       title: BaseFileInformation
       type: object
+    Claimant:
+      description: Identifies the DHFS instance that claims, renews or releases a
+        file
+      properties:
+        claimant_id:
+          description: The ID the DHFS instance generated at startup
+          format: uuid4
+          title: Claimant Id
+          type: string
+      required:
+      - claimant_id
+      title: Claimant
+      type: object
     HTTPValidationError:
       properties:
         detail:
@@ -212,6 +225,46 @@ paths:
               schema: {}
           description: Successful Response
       summary: health
+      tags:
+      - FileIngestService
+  /rpc/storages/{storage_alias}/uploads/claim:
+    post:
+      description: Serve at most one file of the Data Hub (storage_alias) and lease
+        it to the caller. Files of the highest-priority upload box go first.
+      operationId: claimUpload
+      parameters:
+      - in: path
+        name: storage_alias
+        required: true
+        schema:
+          title: Storage Alias
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Claimant'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseFileInformation'
+          description: Successful Response
+        '204':
+          description: No file is waiting
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '503':
+          description: The claim could not be completed
+      security:
+      - HTTPBearer: []
+      summary: Lease the next waiting file to the caller
       tags:
       - FileIngestService
   /storages/{storage_alias}/interrogation-reports:

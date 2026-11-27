@@ -20,6 +20,7 @@ from collections import Counter
 from collections.abc import AsyncGenerator, Callable
 from dataclasses import dataclass
 from typing import Any
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
@@ -145,6 +146,50 @@ async def test_list_uploads_records_spans(otel, rig: OtelRig):
 
     # Without the parent link the manual span would be detached from the trace.
     route_span = otel.assert_has_span("routes.list_uploads")
+    assert route_span.parent is not None
+    assert route_span.parent.span_id == server_span.context.span_id
+
+
+async def test_claim_upload_records_spans(otel, rig: OtelRig, kafka: KafkaFixture):
+    """A claim that leases a file should produce route, server and MongoDB spans."""
+    file = create_file_under_interrogation(HUB)
+    await kafka.publish_event(
+        payload=file.model_dump(),
+        type_="upserted",
+        topic=rig.config.file_upload_topic,
+        key=str(file.id),
+    )
+    await rig.outbox_consumer.run(forever=False)  # type: ignore[attr-defined]
+
+    otel.reset()
+    response = await rig.rest_client.post(
+        f"/rpc/storages/{HUB}/uploads/claim",
+        json={"claimant_id": str(uuid4())},
+        headers=rig.auth_header,
+    )
+    assert response.status_code == 200
+
+    route = "POST /rpc/storages/{storage_alias}/uploads/claim"
+    assert_recorded_spans(
+        otel,
+        [
+            # Manual span wrapping the route handler
+            "routes.claim_upload",
+            # REST server span plus its ASGI receive and send sub-spans; the POST
+            #  body adds the receive spans
+            route,
+            f"{route} http receive",
+            f"{route} http receive",
+            f"{route} http send",
+            f"{route} http send",
+            # Autoinstrumented MongoDB query for the candidates and the lease write
+            "test.aggregate",
+            "test.update",
+        ],
+    )
+
+    server_span = otel.assert_has_span(route)
+    route_span = otel.assert_has_span("routes.claim_upload")
     assert route_span.parent is not None
     assert route_span.parent.span_id == server_span.context.span_id
 

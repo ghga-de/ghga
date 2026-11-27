@@ -91,6 +91,14 @@ class Config(
         description="Upper bound on the backoff after a release, in seconds.",
     )
 
+    times_claimed_warning_threshold: PositiveInt = Field(
+        default=5,
+        description=(
+            "Once a file has been claimed this many times, FIS logs a warning at that"
+            + " claim and at every later one."
+        ),
+    )
+
     @field_validator("dhfs_version_constraint")
     @classmethod
     def validate_dhfs_version_constraint(cls, value: str) -> str:

@@ -58,6 +58,26 @@ class InterrogationHandlerPort(ABC):
             )
             super().__init__(msg)
 
+    class FileClaimError(RuntimeError):
+        """Raised when other claims keep winning the race for the next waiting file."""
+
+        def __init__(self, *, storage_alias: str):
+            msg = (
+                f"Failed to claim a file for storage alias {storage_alias} because"
+                + " other claims kept changing the file first."
+            )
+            super().__init__(msg)
+
+    class FileUpdateError(RuntimeError):
+        """Raised when other writes keep changing a file before FIS can update it."""
+
+        def __init__(self, *, file_id: UUID4):
+            msg = (
+                f"Failed to update file {file_id} because other writes kept changing"
+                + " it first."
+            )
+            super().__init__(msg)
+
     @abstractmethod
     async def check_if_removable(self, *, object_id: UUID4) -> bool:
         """Return `True` if an object can be removed from the interrogation bucket and
@@ -102,6 +122,10 @@ class InterrogationHandlerPort(ABC):
         interest of the FIS and has no functional difference from 'interrogated' from
         the perspective of the FIS. Therefore, the only states of interest in this
         method are 'cancelled', 'failed', and 'archived'.
+
+        Raises:
+        - FileUpdateError if other writes keep changing the file before its missing
+          box ID is filled in.
         """
 
     @abstractmethod
@@ -110,6 +134,25 @@ class InterrogationHandlerPort(ABC):
     ) -> list[models.BaseFileInformation]:
         """Return up to `MAX_FILES_PER_REQUEST` not-yet-interrogated files for a Data
         Hub, highest priority first.
+        """
+
+    @abstractmethod
+    async def claim_file(
+        self, *, storage_alias: str, claimant_id: UUID4
+    ) -> models.BaseFileInformation | None:
+        """Lease the next waiting file of a Data Hub to the caller.
+
+        Files are claimed in this order:
+        1. By box priority. All files of the top box go first, then the next box's,
+           and so on.
+        2. Within a box, files not yet claimed go first. Then come files whose lease
+           ran out, earliest first.
+
+        One of the first few files of the top box is picked at random.
+        Returns `None` if no file is waiting.
+
+        Raises:
+        - FileClaimError if other claims keep changing the chosen file first.
         """
 
     @abstractmethod

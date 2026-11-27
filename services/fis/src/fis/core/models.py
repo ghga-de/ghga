@@ -108,6 +108,14 @@ class FileUnderInterrogation(BaseFileInformation):
         return self
 
 
+class Claimant(BaseModel):
+    """Identifies the DHFS instance that claims, renews or releases a file"""
+
+    claimant_id: UUID4 = Field(
+        default=..., description="The ID the DHFS instance generated at startup"
+    )
+
+
 class UploadBoxPriorityEntry(BaseModel):
     """One file upload box in the upload box priority list"""
 

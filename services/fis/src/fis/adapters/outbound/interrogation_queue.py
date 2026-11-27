@@ -15,11 +15,14 @@
 
 """MongoDB adapter for getting the files that wait for interrogation."""
 
+from typing import Any
+
 from pymongo import AsyncMongoClient
 
 from fis.constants import BOX_PRIORITY_EVENT_KEY
-from fis.core.models import BaseFileInformation
+from fis.core.models import BaseFileInformation, FileUnderInterrogation
 from fis.ports.outbound.interrogation_queue import InterrogationQueuePort
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 
 class MongoDbInterrogationQueue(InterrogationQueuePort):
@@ -49,14 +52,74 @@ class MongoDbInterrogationQueue(InterrogationQueuePort):
         Files of boxes in the upload box priority list come first, in list order.
         Files of the same box, and files without a listed box, come in `id` order.
         """
-        pipeline: list[dict] = [
-            {
-                "$match": {
-                    "storage_alias": storage_alias,
-                    "state": "inbox",
-                    "interrogated": False,
-                }
+        ranked_documents = await self._rank(
+            match={
+                "storage_alias": storage_alias,
+                "state": "inbox",
+                "interrogated": False,
             },
+            sort={"_id": 1},
+            limit=limit,
+        )
+        return [
+            BaseFileInformation.model_validate(document)
+            for _, document in ranked_documents
+        ]
+
+    async def get_claimable_files(
+        self, *, storage_alias: str, claim_time: UTCDatetime, limit: int
+    ) -> list[FileUnderInterrogation]:
+        """Return up to `limit` waiting and not leased files for the specified storage
+        alias. All of them come from the highest-priority box that has a claimable
+        file. While that box has files not yet claimed, only those are returned.
+
+        Boxes go by the upload box priority list. Within the box, files not yet claimed
+        come first. Then come files whose lease ran out, earliest first. Ties go by
+        `state_updated`.
+
+        If for any reason a file can't be ranked (problem with the prio list, or
+        box ID is missing, etc.), it gets lumped into a placeholder box with lowest
+        priority.
+        """
+        ranked_documents = await self._rank(
+            match={
+                "storage_alias": storage_alias,
+                "state": "inbox",
+                "interrogated": False,
+                "$or": [{"leased_until": None}, {"leased_until": {"$lt": claim_time}}],
+            },
+            # Null sorts before any date, so never-claimed files come first
+            sort={"leased_until": 1, "state_updated": 1, "_id": 1},
+            limit=limit,
+        )
+        if not ranked_documents:
+            return []
+
+        # Drop lower-ranked files, so that a random pick can't skip a higher-ranked box
+        top_rank, top_document = ranked_documents[0]
+        top_box = [document for rank, document in ranked_documents if rank == top_rank]
+
+        # Never-claimed files sort first, so the top file shows whether any wait. While
+        #  they do, drop the expired leases too, so a random pick can't skip them either
+        if top_document.get("leased_until") is None:
+            top_box = [
+                document for document in top_box if document.get("leased_until") is None
+            ]
+
+        return [FileUnderInterrogation.model_validate(document) for document in top_box]
+
+    async def _rank(
+        self, *, match: dict[str, Any], sort: dict[str, int], limit: int
+    ) -> list[tuple[int, dict[str, Any]]]:
+        """Return up to `limit` matching documents, ranked by the priority list first
+        and by `sort` within a rank, with `_id` renamed to `id`.
+
+        Each item is a `(rank, document)` pair. The rank is taken out of the document
+        and is its box's index in the priority list, or -1 if the box isn't listed
+        (an edge case).
+        """
+        pipeline: list[dict] = [
+            {"$match": match},
             # Doesn't depend on the file, so MongoDB runs it once per query
             {
                 "$lookup": {
@@ -80,13 +143,13 @@ class MongoDbInterrogationQueue(InterrogationQueuePort):
                 }
             },
             {"$set": {"unprioritized": {"$eq": ["$rank", -1]}}},
-            {"$sort": {"unprioritized": 1, "rank": 1, "_id": 1}},
+            {"$sort": {"unprioritized": 1, "rank": 1, **sort}},
             {"$limit": limit},
-            {"$project": {"priority": 0, "rank": 0, "unprioritized": 0}},
+            {"$project": {"priority": 0, "unprioritized": 0}},
         ]
         cursor = await self._collection.aggregate(pipeline)
-        files: list[BaseFileInformation] = []
+        documents: list[tuple[int, dict[str, Any]]] = []
         async for document in cursor:
             document["id"] = document.pop("_id")
-            files.append(BaseFileInformation.model_validate(document))
-        return files
+            documents.append((document.pop("rank"), document))
+        return documents

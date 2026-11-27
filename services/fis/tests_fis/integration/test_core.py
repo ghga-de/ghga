@@ -15,18 +15,25 @@
 
 """Integration tests for the core"""
 
+import asyncio
 import logging
+from datetime import timedelta
+from uuid import uuid4
 
 import pytest
 
+from fis.constants import CLAIM_CANDIDATE_COUNT, FILES_COLLECTION
 from fis.core import models
 from fis.ports.outbound.dao import ResourceNotFoundError
+from hexkit.providers.mongodb import ConfiguredMongoClient
 from hexkit.utils import now_utc_ms_prec
 from tests_fis.fixtures.ekss_api import DEPOSITED_SECRET_ID
 from tests_fis.fixtures.joint import JointFixture
 from tests_fis.fixtures.utils import create_file_under_interrogation
 
 pytestmark = pytest.mark.asyncio
+
+HUB1 = "HUB1"
 
 
 async def test_typical_journey(joint_fixture: JointFixture):
@@ -187,3 +194,103 @@ async def test_failure_before_inbox(
         record.levelno == expected_log_level and expected_msg_fragment in record.message
         for record in caplog.records
     )
+
+
+async def test_concurrent_claims(joint_fixture: JointFixture):
+    """Twice as many concurrent claims as waiting files lease each file exactly once,
+    and the other claims get nothing.
+
+    Only MongoDB can prove that the precondition stops two claims from leasing the
+    same file.
+    """
+    files = [
+        create_file_under_interrogation(HUB1) for _ in range(CLAIM_CANDIDATE_COUNT)
+    ]
+    for file in files:
+        await joint_fixture.file_dao.insert(file)
+    handler = joint_fixture.interrogation_handler
+    claimant_ids = [uuid4() for _ in range(2 * len(files))]
+
+    claimed_files = await asyncio.gather(
+        *(
+            handler.claim_file(storage_alias=HUB1, claimant_id=claimant_id)
+            for claimant_id in claimant_ids
+        )
+    )
+
+    holders = {
+        claimed_file.id: claimant_id
+        for claimant_id, claimed_file in zip(claimant_ids, claimed_files, strict=True)
+        if claimed_file
+    }
+    assert claimed_files.count(None) == len(files)
+    assert sorted(holders) == sorted(file.id for file in files)
+    # A second lease of a file would have overwritten `leased_by`
+    for file_id, claimant_id in holders.items():
+        stored_file = await joint_fixture.file_dao.get_by_id(file_id)
+        assert stored_file.leased_by == claimant_id
+        assert stored_file.times_claimed == 1
+
+
+async def test_claim_file_without_lease_fields(joint_fixture: JointFixture):
+    """A file stored before FIS kept leases, with no lease fields at all, can be
+    claimed, so the lease fields need no migration.
+    """
+    file = create_file_under_interrogation(HUB1)
+    await joint_fixture.file_dao.insert(file)
+    with ConfiguredMongoClient(config=joint_fixture.config) as client:
+        client[joint_fixture.config.db_name][FILES_COLLECTION].update_one(
+            {"_id": file.id},
+            {
+                "$unset": dict.fromkeys(
+                    ["leased_until", "leased_by", "claimed_at", "times_claimed"], ""
+                )
+            },
+        )
+
+    claimant_id = uuid4()
+    claimed_file = await joint_fixture.interrogation_handler.claim_file(
+        storage_alias=HUB1, claimant_id=claimant_id
+    )
+
+    assert claimed_file
+    assert claimed_file.id == file.id
+    stored_file = await joint_fixture.file_dao.get_by_id(file.id)
+    assert stored_file.leased_by == claimant_id
+    assert stored_file.times_claimed == 1
+
+
+async def test_fill_box_id_without_lease_fields(joint_fixture: JointFixture):
+    """A file stored before FIS kept the box ID or leases, with none of those fields,
+    gets its box ID filled in, despite the precondition on that write.
+    """
+    file = create_file_under_interrogation(HUB1)
+    await joint_fixture.file_dao.insert(file)
+    with ConfiguredMongoClient(config=joint_fixture.config) as client:
+        client[joint_fixture.config.db_name][FILES_COLLECTION].update_one(
+            {"_id": file.id},
+            {
+                "$unset": dict.fromkeys(
+                    [
+                        "box_id",
+                        "leased_until",
+                        "leased_by",
+                        "claimed_at",
+                        "times_claimed",
+                    ],
+                    "",
+                )
+            },
+        )
+
+    # Outdated, so the box ID write is the only write
+    republished_file = file.model_copy(
+        update={
+            "state": "archived",
+            "state_updated": file.state_updated - timedelta(hours=1),
+        }
+    )
+    await joint_fixture.interrogation_handler.process_file_upload(file=republished_file)
+
+    stored_file = await joint_fixture.file_dao.get_by_id(file.id)
+    assert stored_file.box_id == file.box_id

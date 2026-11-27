@@ -16,6 +16,7 @@
 """Unit tests for the API"""
 
 import logging
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -23,6 +24,7 @@ from jwcrypto.jwk import JWK
 
 from fis.constants import DHFS_USER_AGENT_PREFIX, GHGA, OLD_DHFS_USER_AGENT_PREFIX
 from fis.core import models
+from fis.ports.inbound.interrogation import InterrogationHandlerPort
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from hexkit.utils import now_utc_ms_prec
@@ -214,6 +216,94 @@ async def test_validate_version(
 
     # Verify that the file is untouched
     assert (await rig.file_dao.get_by_id(file.id)).model_dump() == file.model_dump()
+
+
+async def test_claim_upload(
+    rest_client: AsyncTestClient,
+    rig: JointRig,
+    jwt_factory: JWTTestFactory,
+    caplog: pytest.LogCaptureFixture,
+):
+    """Test the POST /rpc/storages/{storage_alias}/uploads/claim endpoint"""
+    url = f"/rpc/storages/{HUB1}/uploads/claim"
+    claimant_id = uuid4()
+    body = {"claimant_id": str(claimant_id)}
+
+    # Assert no auth returns a 401
+    response = await rest_client.post(
+        url, json=body, headers={"User-Agent": TEST_USER_AGENT}
+    )
+    assert response.status_code == 401
+
+    # Assert improper auth returns a 403
+    wrong_hub_headers = {**jwt_factory.auth_header(HUB2), "User-Agent": TEST_USER_AGENT}
+    response = await rest_client.post(url, json=body, headers=wrong_hub_headers)
+    assert response.status_code == 403
+
+    # Verify wrong DHFS version but right auth header returns 426
+    right_auth_headers = {
+        **jwt_factory.auth_header(HUB1),
+        "User-Agent": WRONG_USER_AGENT,
+    }
+    response = await rest_client.post(url, json=body, headers=right_auth_headers)
+    assert response.status_code == 426
+
+    # Verify that a body without a valid claimant ID returns a 422
+    correct_headers = {**jwt_factory.auth_header(HUB1), "User-Agent": TEST_USER_AGENT}
+    for bad_body in [None, {}, {"claimant_id": "not-a-uuid"}]:
+        response = await rest_client.post(url, json=bad_body, headers=correct_headers)
+        assert response.status_code == 422
+
+    # Verify that a claim with no waiting file returns an empty 204
+    response = await rest_client.post(url, json=body, headers=correct_headers)
+    assert response.status_code == 204
+    assert not response.content
+
+    # Verify that a claim serves the waiting file and leases it to the caller
+    file = create_file_under_interrogation(HUB1)
+    await rig.file_dao.insert(file)
+    with caplog.at_level(logging.INFO, logger=ROUTES_LOGGER):
+        response = await rest_client.post(url, json=body, headers=correct_headers)
+    assert response.status_code == 200
+    expected_file = models.BaseFileInformation(**file.model_dump())
+    assert models.BaseFileInformation(**response.json()) == expected_file
+    assert (await rig.file_dao.get_by_id(file.id)).leased_by == claimant_id
+    assert "claim_upload endpoint" in caplog.text
+    assert HUB1 in caplog.text
+
+    # Verify that the leased file isn't served again
+    response = await rest_client.post(url, json=body, headers=correct_headers)
+    assert response.status_code == 204
+
+
+@pytest.mark.parametrize(
+    "error, status_code",
+    [
+        (InterrogationHandlerPort.FileClaimError(storage_alias=HUB1), 503),
+        (RuntimeError("Unexpected"), 500),
+    ],
+    ids=["claim_error", "unexpected_error"],
+)
+async def test_claim_upload_errors(
+    rest_client: AsyncTestClient,
+    rig: JointRig,
+    jwt_factory: JWTTestFactory,
+    monkeypatch: pytest.MonkeyPatch,
+    error: Exception,
+    status_code: int,
+):
+    """Test that the claim endpoint returns 503 when the claim keeps losing races,
+    and 500 for any other error.
+    """
+    monkeypatch.setattr(
+        rig.interrogation_handler, "claim_file", AsyncMock(side_effect=error)
+    )
+    response = await rest_client.post(
+        f"/rpc/storages/{HUB1}/uploads/claim",
+        json={"claimant_id": str(uuid4())},
+        headers={**jwt_factory.auth_header(HUB1), "User-Agent": TEST_USER_AGENT},
+    )
+    assert response.status_code == status_code
 
 
 async def test_get_removable_files(
@@ -419,24 +509,30 @@ async def test_post_interrogation_report(
 
 
 @pytest.mark.parametrize(
-    "method, path, body",
+    "method, url, body",
     [
-        ("GET", "uploads", None),
-        ("GET", "validate-version", None),
-        ("POST", "uploads/can_remove", []),
-        ("POST", "interrogation-reports", {}),
+        ("GET", "/storages/UNKNOWN/uploads", None),
+        ("GET", "/storages/UNKNOWN/validate-version", None),
+        ("POST", "/storages/UNKNOWN/uploads/can_remove", []),
+        ("POST", "/storages/UNKNOWN/interrogation-reports", {}),
+        ("POST", "/rpc/storages/UNKNOWN/uploads/claim", {"claimant_id": str(uuid4())}),
     ],
-    ids=["list_uploads", "validate_version", "can_remove", "interrogation_reports"],
+    ids=[
+        "list_uploads",
+        "validate_version",
+        "can_remove",
+        "interrogation_reports",
+        "claim_upload",
+    ],
 )
 async def test_unknown_storage_alias(
     rest_client: AsyncTestClient,
     jwt_factory: JWTTestFactory,
     method: str,
-    path: str,
+    url: str,
     body: list | dict | None,
 ):
     """Test that a storage alias without a configured auth key gets a 403, not a 500"""
-    url = f"/storages/UNKNOWN/{path}"
     headers = {**jwt_factory.auth_header(HUB1), "User-Agent": TEST_USER_AGENT}
     response = await rest_client.request(method, url, json=body, headers=headers)
     assert response.status_code == 403

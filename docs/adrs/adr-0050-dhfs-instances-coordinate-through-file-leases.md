@@ -13,13 +13,13 @@ In the context of **a Data Hub running more than one DHFS instance against FIS**
 
 facing **every instance receiving the same waiting files and re-encrypting each of them**
 
-we decided for **a renewable lease per file in FIS, claimed through a new POST endpoint with an atomic find-and-modify in the hexkit DAO: each claim serves one file to one instance, which renews the lease while it works**
+we decided for **a renewable lease per file in FIS, claimed through a new POST endpoint that picks one of the first few waiting files at random and leases it with an optimistic-locking update: each claim serves one file to one instance, which renews the lease while it works**
 
-and neglected **static sharding by `hash(file_id) % n`, leases sized from an assumed throughput, a compare-and-set over candidates and a claim on the existing GET**
+and neglected **static sharding by `hash(file_id) % n`, leases sized from an assumed throughput, a find-and-modify method in the hexkit DAO and a claim on the existing GET**
 
 to achieve **any number of instances sharing one queue without configuration**
 
-accepting that **a new hexkit DAO method, one claim per file plus renewals, a restarted instance losing its lease, and a DHFS that predates leases ignoring them until FIS retires the GET it lists through**.
+accepting that **claims racing for the same file losing and retrying, one claim per file plus renewals, a restarted instance losing its lease, and a DHFS that predates leases ignoring them until FIS retires the GET it lists through**.
 
 ## Details
 
@@ -38,7 +38,7 @@ An *instance* is one running DHFS process; "replica" refers only to `replicaCoun
 
 - **Claim.**
   FIS stores `leased_until` and `leased_by` on each file.
-  A new endpoint, `POST /rpc/storages/{storage_alias}/uploads/claim`, serves at most one waiting file whose lease is null or expired, and leases it to the caller in one atomic find-and-modify.
+  A new endpoint, `POST /rpc/storages/{storage_alias}/uploads/claim`, serves at most one waiting file whose lease is null or expired, and leases it to the caller.
   It serves one file because an instance renews only the file it works on: the rest of a batch would wait unrenewed while DHFS works through it serially, and their leases would expire.
 - **Renewal.**
   A lease is a short constant, 22 minutes, and the instance renews it every 4 minutes while it works on the file.
@@ -55,10 +55,10 @@ An *instance* is one running DHFS process; "replica" refers only to `replicaCoun
   Each instance generates a random claimant ID at startup and sends it in the request body of every claim, renewal and release.
   Renewal and release apply only for the claimant ID stored in `leased_by`.
   Without that check, a release could end another instance's live lease: A's lease expires while A still works, B claims the file, and A's release replaces B's lease with a backoff, after which C claims the file while B still works on it.
-- **Find-and-modify in the hexkit DAO.**
-  A new method, `update_first`, selects, sorts and changes a resource in one call, and changes only the given fields.
-  Changes map model fields to plain values; MongoDB update operators are a documented extension, as in filters, and FIS uses `$inc` for its claim counter.
-  Other backends can implement it too, such as PostgreSQL with `SELECT … FOR UPDATE SKIP LOCKED`.
+- **Optimistic locking with the existing DAO.**
+  FIS writes leases with the DAO's `update`, whose precondition is the whole document as FIS read it, so the write fails if anything changed in between.
+  A claim reads up to five waiting files of the highest-priority box and picks one at random, so claims made at the same time rarely pick the same file.
+  A claim that loses retries with a fresh read, up to three times; if it still loses, FIS answers 503, which the DHFS retry transport retries.
 - **Only an old DHFS uses the GET.**
   `GET /storages/{storage_alias}/uploads` keeps listing every waiting file but doesn't touch leases, so a DHFS that predates leases keeps working unchanged.
   Newer DHFS instances (with leases) never call it.
@@ -79,14 +79,15 @@ An *instance* is one running DHFS process; "replica" refers only to `replicaCoun
   The backoff keeps a file that fails fast from turning this into a hot loop: the file is missing from the next claim, which comes back empty and sends the instance to sleep.
 - The claimant ID is unique without any deployment setting, but a restarted instance gets a new one, so the file it held waits out one lease.
 - The retry transport can repeat a claim, stranding up to three leases until they expire.
-- Lease writes filter on `state` and `interrogated` and change only lease fields, so they cannot overwrite a state the outbox subscriber writes.
+- Lease writes replace the whole document, but only while it still matches what FIS read, so they cannot overwrite a state the outbox subscriber writes.
   FIS runs its API and the subscriber as separate deployments, `fis` and `fis-consumer`, and the subscriber replaces whole documents.
-  A claim that replaced the whole document could overwrite a cancellation written in between and return the file to the inbox, the read-modify-write hazard of [ADR-0005](adr-0005-db-event-consistency.md).
+  Without the precondition, a claim could overwrite a cancellation written in between and return the file to the inbox, the read-modify-write hazard of [ADR-0005](adr-0005-db-event-consistency.md).
   The subscriber overwrites a lease only when it cancels, fails, archives or requeues the file, which ends the lease anyway.
 - A DHFS that predates leases lists through the GET and ignores leases, so as a hub's only instance it behaves as it does today, until FIS removes the GET.
   A hub must run a DHFS that claims before it adds instances.
   During a rolling update, the old pod can still re-encrypt a file the new pod claimed, as two instances do today.
-- Every hexkit DAO provider and `DaoPublisher` implement `update_first`, and providers validate each changed value, since a partial update skips whole-model validation.
+- hexkit needs no change.
+  Claims that pick the same file race, and all but one read again; under heavy contention a claim can lose three times and get a 503.
 
 ### Alternatives
 
@@ -96,9 +97,10 @@ An *instance* is one running DHFS process; "replica" refers only to `replicaCoun
 - **A lease sized once from the file's size and an assumed throughput**, set per hub or derived by FIS from past claims and reports.
   Rejected: throughput differs between hubs and changes with their infrastructure, so the lease either parks a dead instance's file for hours or expires under a working one.
   It also cannot cover a multi-terabyte file.
-- **A compare-and-set with `update(precondition=…)` over a window of candidates.**
-  Needs no hexkit change, but instances that read the same candidates race for the same document and all but one lose.
-  A random pick from the window, retries and re-reads only work around that, and replacing the whole document needs a precondition to avoid overwriting the subscriber's state changes.
+- **A find-and-modify method in the hexkit DAO, `update_first`.**
+  It would select, sort and change a resource in one atomic call and change only the given fields, so claims would never race.
+  Rejected: a partial update skips whole-model validation, so every provider would have to validate each changed value, and every provider and `DaoPublisher` would need the method.
+  The race it avoids is rare at the instance counts a hub runs, and a retry handles it.
 - **Leases in their own collection.**
   The claim could no longer filter on lease state in MongoDB and would fetch every waiting file.
 - **`service_instance_id` as the claimant ID.**

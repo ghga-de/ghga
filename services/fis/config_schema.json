@@ -594,6 +594,13 @@
       "exclusiveMinimum": 0,
       "title": "Claim Backoff Cap Seconds",
       "type": "integer"
+    },
+    "times_claimed_warning_threshold": {
+      "default": 5,
+      "description": "Once a file has been claimed this many times, FIS logs a warning at that claim and at every later one.",
+      "exclusiveMinimum": 0,
+      "title": "Times Claimed Warning Threshold",
+      "type": "integer"
     }
   },
   "required": [

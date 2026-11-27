@@ -189,21 +189,27 @@ The name follows hexkit's terms rather than pymongo's `find_one_and_update`.
 ### The claim itself
 
 ```python
-claimed_file = await self._file_dao.update_first(
-    filter_=filter_,  # the claim query above
-    sort=["leased_until", "state_updated"],
-    changes={
+# The claim query above, limited to the highest-priority box with a waiting file
+candidates = await self._interrogation_queue.get_claimable_files(
+    storage_alias=storage_alias, claim_time=now, limit=CLAIM_CANDIDATE_COUNT
+)
+file = random.choice(candidates)
+claimed_file = file.model_copy(
+    update={
         "leased_until": now + timedelta(seconds=LEASE_SECONDS),
         "leased_by": claimant_id,
         "claimed_at": now,
-        "$inc": {"times_claimed": 1},
-    },
+        "times_claimed": file.times_claimed + 1,
+    }
 )
+await self._file_dao.update(claimed_file, precondition=file.model_dump())
 ```
 
-`NoHitsFoundError` means no file is waiting, and the claim endpoint returns 204.
+An empty candidate list means no file is waiting, and the claim endpoint returns 204.
 
-The filter carries `state` and `interrogated`, and the call changes only the lease fields; [ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#consequences) gives the reason.
+The precondition is the whole document as read, so the update fails if another claim or the outbox subscriber changed the file in between; [ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#consequences) gives the reason.
+The claim runs inside hexkit's `race_condition_retries`: after a lost race it waits about half a second and reads again, and after three lost races it raises `FileClaimError`, which the endpoint answers with 503.
+A file stored before the lease fields existed has no `times_claimed`, which reads as 0 but does not match 0, so its precondition takes `{"$in": [0, None]}` instead.
 
 Two further rules for the claim path:
 
@@ -212,7 +218,7 @@ Two further rules for the claim path:
   A claim that bumped it would make FIS discard the genuine cancelled or archived event that follows, so `can_remove` would never be set and the object would never be cleaned up.
 - **Increment `times_claimed` at claim time, not at release.**
   An instance that is OOM-killed never releases, so a counter advanced only on release would never count a file that keeps crashing its instance.
-  The increment is the `$inc` in the same call.
+  The increment is part of the same update.
 
 ### Only the DHFS instance holding the file may renew or release it
 
@@ -364,7 +370,7 @@ Existing tests that change:
 - The verifier tests move from `fetch_new_uploads()` to `validate_version()`: `test_run_dhfs_verification_pings_central_new_uploads_endpoint` in `unit/test_verifier.py`, and the fixture in `integration/test_verifier.py` that patches it.
 
 The FIS tests of the GET stay as they are until FIS removes it: `test_list_uploads`, `test_get_files_not_yet_interrogated` and `test_list_uploads_records_spans`.
-The claim endpoint gets its own span test next to `test_list_uploads_records_spans`, expecting a `routes.claim_upload` span under the server span and a `test.findAndModify` MongoDB span.
+The claim endpoint gets its own span test next to `test_list_uploads_records_spans`, expecting a `routes.claim_upload` span under the server span, and `test.aggregate` and `test.update` MongoDB spans.
 
 New unit tests, on the `rig` fixture, with the clock frozen rather than slept through:
 

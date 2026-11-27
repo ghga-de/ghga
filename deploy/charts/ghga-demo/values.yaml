@@ -219,6 +219,7 @@ auth-adapter:
       - /api/fis/legacy/*
       - /api/dlqs/*
       - /api/fis/storages/*
+      - /api/fis/rpc/storages/*
       - /api/ucs/boxes/*
     kafka_servers: ["ghga-kafka:9092"]
     service_instance_id: "1"

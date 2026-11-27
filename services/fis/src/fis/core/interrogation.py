@@ -18,13 +18,19 @@ InterrogationReports.
 """
 
 import logging
+import random
 from contextlib import suppress
+from datetime import timedelta
 from typing import cast
 
 from pydantic import UUID4, SecretBytes
 
 from fis.config import Config
-from fis.constants import MAX_FILES_PER_REQUEST
+from fis.constants import (
+    CLAIM_CANDIDATE_COUNT,
+    LEASE_SECONDS,
+    MAX_FILES_PER_REQUEST,
+)
 from fis.core import models
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
 from fis.ports.outbound.dao import (
@@ -39,8 +45,10 @@ from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import (
     MultipleHitsFoundError,
     NoHitsFoundError,
+    PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
+    race_condition_retries,
 )
 from hexkit.utils import now_utc_ms_prec
 
@@ -325,6 +333,10 @@ class InterrogationHandler(InterrogationHandlerPort):
         For a known file without a `box_id`, any event other than 'init' fills it in
         first, even an outdated one. Files stored before FIS kept the `box_id` lack it
         until UCS republishes its events.
+
+        Raises:
+        - FileUpdateError if other writes keep changing the file before its missing
+          box ID is filled in.
         """
         if file.state == "init":
             return
@@ -334,36 +346,48 @@ class InterrogationHandler(InterrogationHandlerPort):
                 return
 
         # If we make it past that block, then it is not new and we must compare.
-        try:
-            local_file = await self._file_dao.get_by_id(file.id)
-        except ResourceNotFoundError:
-            if file.state in ["cancelled", "failed"]:
-                log.info(
-                    "Received event data for a %s FileUpload that FIS doesn't have."
-                    + " This means it probably reached that state before the upload"
-                    + " was finished. Ignoring.",
-                    file.state,
-                    extra={"file_id": file.id},
-                )
-                return
-            log.warning(
-                "Received event for a %s FileUpload that FIS never tracked."
-                + " This is unexpected. Ignoring since there wouldn't be anything"
-                + " for FIS to do anyway.",
-                file.state,
-                extra={"file_id": file.id},
-            )
-            return
+        # A claim between the read and the box ID write would be overwritten, so a
+        #  lost race reads the file again, lease included
+        async for attempt in race_condition_retries(
+            description=f"fill in the box ID of file {file.id}",
+            error_on_failure=lambda: self.FileUpdateError(file_id=file.id),
+            logger=log,
+        ):
+            with attempt:
+                try:
+                    local_file = await self._file_dao.get_by_id(file.id)
+                except ResourceNotFoundError:
+                    if file.state in ["cancelled", "failed"]:
+                        log.info(
+                            "Received event data for a %s FileUpload that FIS doesn't"
+                            + " have. This means it probably reached that state before"
+                            + " the upload was finished. Ignoring.",
+                            file.state,
+                            extra={"file_id": file.id},
+                        )
+                        return
+                    log.warning(
+                        "Received event for a %s FileUpload that FIS never tracked."
+                        + " This is unexpected. Ignoring since there wouldn't be"
+                        + " anything for FIS to do anyway.",
+                        file.state,
+                        extra={"file_id": file.id},
+                    )
+                    return
 
-        # Fill in a missing box ID even from an old event, which a republish sends
-        if local_file.box_id is None and file.box_id is not None:
-            local_file = local_file.model_copy(update={"box_id": file.box_id})
-            await self._file_dao.update(local_file)
-            log.info(
-                "Filled in the missing box ID of file %s.",
-                file.id,
-                extra={"file_id": file.id, "box_id": file.box_id},
-            )
+                # Fill in a missing box ID even from an old event, which a republish
+                #  sends
+                if local_file.box_id is None and file.box_id is not None:
+                    filled_file = local_file.model_copy(update={"box_id": file.box_id})
+                    await self._update_unless_changed(
+                        updated_file=filled_file, read_file=local_file
+                    )
+                    local_file = filled_file
+                    log.info(
+                        "Filled in the missing box ID of file %s.",
+                        file.id,
+                        extra={"file_id": file.id, "box_id": file.box_id},
+                    )
 
         # Ignore if outdated
         if local_file.state_updated >= file.state_updated:
@@ -397,6 +421,33 @@ class InterrogationHandler(InterrogationHandlerPort):
                 file.id,
                 file.state,
             )
+
+    async def _update_unless_changed(
+        self,
+        *,
+        updated_file: models.FileUnderInterrogation,
+        read_file: models.FileUnderInterrogation,
+    ) -> None:
+        """Write `updated_file` only if the stored copy still matches `read_file`.
+
+        Use it inside `race_condition_retries`, so that a lost race reads the file again.
+
+        Raises:
+        - PreconditionFailedError if another write changed the file since the read, or
+          deleted it.
+        """
+        precondition = read_file.model_dump()
+        # A file stored before the lease fields existed lacks times_claimed, which
+        #  reads as 0 but doesn't match 0. None matches a missing field.
+        if read_file.times_claimed == 0:
+            precondition["times_claimed"] = {"$in": [0, None]}
+        try:
+            await self._file_dao.update(updated_file, precondition=precondition)
+        except ResourceNotFoundError as error:
+            # Deleted since the read, which is a lost race too
+            raise PreconditionFailedError(
+                id_=read_file.id, precondition=precondition
+            ) from error
 
     async def _requeue_file(self, *, file: models.FileUnderInterrogation) -> None:
         """Reset a previously failed file so it gets interrogated again.
@@ -453,6 +504,91 @@ class InterrogationHandler(InterrogationHandlerPort):
             "Fetched list of %i files for storage_alias %s.", len(files), storage_alias
         )
         return files
+
+    async def claim_file(
+        self, *, storage_alias: str, claimant_id: UUID4
+    ) -> models.BaseFileInformation | None:
+        """Lease the next waiting file of a Data Hub to the caller.
+
+        Files are claimed in this order:
+        1. By box priority. All files of the top box go first, then the next box's,
+           and so on.
+        2. Within a box, files not yet claimed go first. Then come files whose lease
+           ran out, earliest first.
+
+        Up to `CLAIM_CANDIDATE_COUNT` files of the top box are read, and one is picked
+        at random. That way, claims made at the same time rarely pick the same file.
+        Returns `None` if no file is waiting.
+
+        Optimistic locking is used to carry out the database write. In the case of a
+        conflict, e.g. the file gets leased to another DHFS instance in the gap between
+        read and write, the query is run fresh after a short wait. If this fails
+        multiple times, FileClaimError is raised.
+
+        Raises:
+        - FileClaimError if other claims keep changing the chosen file first.
+        """
+        async for attempt in race_condition_retries(
+            description=f"claim a file for storage alias {storage_alias}",
+            error_on_failure=lambda: self.FileClaimError(storage_alias=storage_alias),
+            logger=log,
+        ):
+            with attempt:
+                # Get the candidate pool
+                claim_time = now_utc_ms_prec()
+                candidates = await self._interrogation_queue.get_claimable_files(
+                    storage_alias=storage_alias,
+                    claim_time=claim_time,
+                    limit=CLAIM_CANDIDATE_COUNT,
+                )
+                if not candidates:
+                    log.debug("No files waiting for storage alias %s.", storage_alias)
+                    return None
+
+                # Pick a random file from the pool to reduce contention
+                file = random.choice(candidates)  # noqa: S311
+
+                # We don't modify `state_updated` here because
+                # A) FIS would then discard the next event and
+                # B) Leasing doesn't constitute a state change
+                claimed_file = file.model_copy(
+                    update={
+                        "leased_until": claim_time + timedelta(seconds=LEASE_SECONDS),
+                        "leased_by": claimant_id,
+                        "claimed_at": claim_time,
+                        "times_claimed": file.times_claimed + 1,
+                    }
+                )
+                await self._update_unless_changed(
+                    updated_file=claimed_file, read_file=file
+                )
+
+                log_extra = {
+                    "file_id": file.id,
+                    "storage_alias": storage_alias,
+                    "claimant_id": claimant_id,
+                    "times_claimed": claimed_file.times_claimed,
+                }
+                log.info(
+                    "Claimed file %s for claimant %s.",
+                    file.id,
+                    claimant_id,
+                    extra=log_extra,
+                )
+                if (
+                    claimed_file.times_claimed
+                    >= self._config.times_claimed_warning_threshold
+                ):
+                    log.warning(
+                        "File %s has been claimed %i times without being interrogated.",
+                        file.id,
+                        claimed_file.times_claimed,
+                        extra=log_extra,
+                    )
+                return models.BaseFileInformation(**claimed_file.model_dump())
+
+        # Not reached, since the loop raises this after the last try, but mypy can't tell
+        raise self.FileClaimError(storage_alias=storage_alias)
 
     async def delete_file(self, *, file_id: UUID4) -> None:
         """Delete a file and its interrogation report (if any) from the database.
