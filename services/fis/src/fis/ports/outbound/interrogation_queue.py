@@ -44,7 +44,7 @@ class InterrogationQueuePort(ABC):
     ) -> list[FileUnderInterrogation]:
         """Return up to `limit` waiting and not leased files for the specified storage
         alias. All of them come from the highest-priority box that has a claimable
-        file.
+        file. While that box has files not yet claimed, only those are returned.
 
         Boxes go by the upload box priority list. Within the box, files not yet claimed
         come first. Then come files whose lease ran out, earliest first. Ties go by

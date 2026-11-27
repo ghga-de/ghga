@@ -71,7 +71,7 @@ class MongoDbInterrogationQueue(InterrogationQueuePort):
     ) -> list[FileUnderInterrogation]:
         """Return up to `limit` waiting and not leased files for the specified storage
         alias. All of them come from the highest-priority box that has a claimable
-        file.
+        file. While that box has files not yet claimed, only those are returned.
 
         Boxes go by the upload box priority list. Within the box, files not yet claimed
         come first. Then come files whose lease ran out, earliest first. Ties go by
@@ -92,12 +92,21 @@ class MongoDbInterrogationQueue(InterrogationQueuePort):
             sort={"leased_until": 1, "state_updated": 1, "_id": 1},
             limit=limit,
         )
+        if not ranked_documents:
+            return []
+
         # Drop lower-ranked files, so that a random pick can't skip a higher-ranked box
-        return [
-            FileUnderInterrogation.model_validate(document)
-            for rank, document in ranked_documents
-            if rank == ranked_documents[0][0]
-        ]
+        top_rank, top_document = ranked_documents[0]
+        top_box = [document for rank, document in ranked_documents if rank == top_rank]
+
+        # Never-claimed files sort first, so the top file shows whether any wait. While
+        #  they do, drop the expired leases too, so a random pick can't skip them either
+        if top_document.get("leased_until") is None:
+            top_box = [
+                document for document in top_box if document.get("leased_until") is None
+            ]
+
+        return [FileUnderInterrogation.model_validate(document) for document in top_box]
 
     async def _rank(
         self, *, match: dict[str, Any], sort: dict[str, int], limit: int

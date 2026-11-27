@@ -186,7 +186,8 @@ async def test_files_after_a_deleted_priority_event(joint_fixture: JointFixture)
 
 async def test_claimable_files_order(joint_fixture: JointFixture):
     """Within a box, files never claimed come first, in `state_updated` order. Files
-    whose lease ran out follow, earliest first. Files still leased are left out.
+    whose lease ran out follow once those are leased, earliest first. Files still
+    leased are left out.
 
     The expired files have the oldest `state_updated`, in reverse, so a sort by
     `state_updated` alone would fail.
@@ -228,13 +229,22 @@ async def test_claimable_files_order(joint_fixture: JointFixture):
             {"_id": older_unclaimed.id}, {"$unset": dict.fromkeys(LEASE_FIELDS, "")}
         )
 
+    # While never-claimed files wait, the expired leases are held back
     claimable_files = await joint_fixture.interrogation_queue.get_claimable_files(
         storage_alias=HUB1, claim_time=claim_time, limit=10
     )
+    assert _ids(claimable_files) == _ids([older_unclaimed, newer_unclaimed])
 
-    assert _ids(claimable_files) == _ids(
-        [older_unclaimed, newer_unclaimed, long_expired, recently_expired]
+    # Lease the never-claimed files, and the expired leases come up
+    with ConfiguredMongoClient(config=joint_fixture.config) as client:
+        client[joint_fixture.config.db_name][FILES_COLLECTION].update_many(
+            {"_id": {"$in": _ids(claimable_files)}},
+            {"$set": {"leased_until": claim_time + timedelta(minutes=10)}},
+        )
+    claimable_files = await joint_fixture.interrogation_queue.get_claimable_files(
+        storage_alias=HUB1, claim_time=claim_time, limit=10
     )
+    assert _ids(claimable_files) == _ids([long_expired, recently_expired])
 
 
 async def test_claimable_files_come_from_the_top_box(joint_fixture: JointFixture):
