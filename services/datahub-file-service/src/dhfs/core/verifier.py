@@ -83,15 +83,15 @@ async def run_dhfs_verification(config: Config, *, file_size: int):
         credential_note="normal DHFS",
     )
 
-    # Ping the Central API to make sure DHFS version is outdated
+    # Ask the Central API whether it accepts this DHFS version
     async with get_configured_httpx_client(config=config) as httpx_client:
         # Verify claims no file, so any claimant ID will do
         central_client = CentralClient(
             config=config, httpx_client=httpx_client, claimant_id=uuid4()
         )
         log.debug("Checking if DHFS version is accepted by Central.")
-        _ = await central_client.fetch_new_uploads()
-    log.info("Verified that DFHS version is accepted by Central.")
+        await central_client.validate_version()
+    log.info("Verified that DHFS version is accepted by Central.")
 
     log.info("Checking for lingering data from any prior runs.")
     try:
@@ -112,14 +112,14 @@ async def run_dhfs_verification(config: Config, *, file_size: int):
         return
 
     # Patch uuid4 so the re-encrypted object ID is set to INTERROGATION_OBJECT_ID. That
-    #  lets us find it more easily. Central hands out the dummy file as a batch of one,
+    #  lets us find it more easily. The claim hands out the dummy file, not a real one,
     #  and the report DHFS would send it is kept by the mock instead.
     with (
         patch.object(
             CentralClient,
-            "fetch_new_uploads",
+            "claim_file",
             new_callable=AsyncMock,
-            return_value=[file_upload],
+            return_value=file_upload,
         ),
         patch.object(
             CentralClient, "submit_interrogation_report", new_callable=AsyncMock
@@ -148,7 +148,9 @@ async def run_dhfs_verification(config: Config, *, file_size: int):
 
 
 def _escalate(step: Callable[..., Awaitable[None]]) -> Callable[..., Awaitable[None]]:
-    """Re-raise an inconclusive error of `step` as one the batch loop does not catch."""
+    """Re-raise an inconclusive error of `step` as one `interrogate_new_files` does
+    not catch.
+    """
 
     async def escalated(*args, **kwargs) -> None:
         try:

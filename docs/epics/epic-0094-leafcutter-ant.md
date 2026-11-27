@@ -271,13 +271,13 @@ Remove `fetch_new_uploads()`, since DHFS no longer calls the GET.
 
 `run_dhfs_verification` checks that FIS accepts the DHFS version with `fetch_new_uploads()`.
 Replace that call with a `CentralClient.validate_version()` method that calls the validate-version endpoint and raises `UpgradeRequiredError` on 426, so a verify run claims no file.
-Verify then calls `interrogate_file` directly on a dummy file that FIS does not know.
+Verify then runs `interrogate_new_files()` with `claim_file` patched to hand out a dummy file that FIS does not know, so the inbox check runs too.
 Patch the renew and release calls there with `AsyncMock`, as `submit_interrogation_report` already is, so verify sends no lease calls for the dummy file.
 
 ### Poll pacing
 
 `run_interrogator` sleeps out the remainder of `min_run_interval_seconds` after every round, whether or not the round did work.
-Have `interrogate_new_files()` return whether it processed a file, and sleep only when it did not ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#consequences)).
+Have `interrogate_new_files()` return whether it claimed a file, whatever became of it, and sleep only when it did not ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#consequences)).
 The `except Exception` round in `run_interrogator` counts as a round that processed nothing, so an unhandled error reaches the same sleep.
 
 ### Every path that ends without a report must release the file

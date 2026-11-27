@@ -110,8 +110,9 @@ class Config(
         default=60,
         description=(
             "The minimum number of seconds to wait before asking the CentralAPI"
-            + " about new files for interrogation. DHFS asks again immediately"
-            + " after a round that concluded at least one file, though."
+            + " about new files for interrogation. DHFS adds up to 10% at random, so"
+            + " instances started together drift apart, and asks again immediately"
+            + " after a round that claimed a file."
         ),
     )
 

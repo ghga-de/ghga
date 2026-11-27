@@ -196,51 +196,37 @@ class Interrogator(InterrogatorPort):
         )
 
     async def interrogate_new_files(self) -> bool:
-        """Query the GHGA Central API for new files that need to be re-encrypted.
+        """Claim the next waiting file from the GHGA Central API and re-encrypt it.
 
         This method handles InterrogationError exceptions by reporting failures to the
         Central API. CantCompleteError exceptions propagate up to the caller.
 
-        Returns `True` if the Central API accepted the report of at least one file, a
-        success or a failure, and `False` if there were no files, every file was
-        inconclusive, or the Central API rejected every report. A file whose report
-        was rejected stays waiting, so the next request returns it again.
+        Returns `True` if a file was claimed, and `False` if there wasn't any file
+        waiting or the claim attempt failed.
 
         Raises:
         - CantCompleteError if an error prevents interrogation from completing (e.g., network issues, S3 unavailable).
         """
-        new_files = await self._fetch_batch()
-        if new_files is None:
+        file = await self._claim_file()
+        if file is None:
             return False
 
-        log.info("Received a batch of %i file(s) to process.", len(new_files))
-
-        # One file at a time. A CriticalError is left uncaught so that it abandons
-        #  the rest of the batch, which is the point of that severity.
-        concluded_a_file = False
-        for file in new_files:
-            try:
-                await self._check_file_is_in_inbox(file=file)
-                report_accepted = await self.interrogate_file(file)
-            except self.ConclusiveError as err:
-                reason = getattr(err, "reason", None) or "Unexpected error"
-                # Errors in .report_failure() are logged without re-raising, because
-                #  the solution to the error is simply to move on to the next file
-                report_accepted = await self.report_failure(
-                    file_id=file.id, reason=reason
-                )
-            except self.InconclusiveError as err:
-                log.warning(
-                    "File %s: Unable to conclusively process file - will retry later. Reason: %s",
-                    file.id,
-                    err,
-                )
-                continue
-            if report_accepted:
-                concluded_a_file = True
-
-        log.info("Finished processing current file batch.")
-        return concluded_a_file
+        # A CriticalError is left uncaught, so that it stops DHFS (intentionally)
+        try:
+            await self._check_file_is_in_inbox(file=file)
+            await self.interrogate_file(file)
+        except self.ConclusiveError as err:
+            reason = getattr(err, "reason", None) or "Unexpected error"
+            # Errors in .report_failure() are logged without re-raising, because
+            #  the solution to the error is simply to move on to the next file
+            await self.report_failure(file_id=file.id, reason=reason)
+        except self.InconclusiveError as err:
+            log.warning(
+                "File %s: Unable to conclusively process file - will retry later. Reason: %s",
+                file.id,
+                err,
+            )
+        return True
 
     async def _check_file_is_in_inbox(self, *, file: FileUpload) -> None:
         """Verify that the file exists in the inbox before processing it.
@@ -260,17 +246,17 @@ class Interrogator(InterrogatorPort):
                 + " found in the inbox"
             )
 
-    async def _fetch_batch(self) -> list[FileUpload] | None:
-        """Fetch the next batch of files to process.
+    async def _claim_file(self) -> FileUpload | None:
+        """Claim the next waiting file.
 
-        Returns None if the batch could not be fetched for a reason that simply calls
-        for trying again on the next run.
+        Returns None if no file is waiting, or if the claim failed for a reason that
+        simply calls for trying again on the next run.
 
         Raises:
         - CriticalError if the Central API rejects this version of DHFS.
         """
         try:
-            return await self._central_client.fetch_new_uploads()
+            return await self._central_client.claim_file()
         except CentralClientPort.UpgradeRequiredError as err:
             raise self.CriticalError(err) from err
         except ConnectionFailedError as err:

@@ -70,7 +70,7 @@ async def verifier_fixture(
 ) -> AsyncGenerator[VerifierFixture]:
     """Extends the base Config with verifier-specific settings and creates both buckets.
 
-    The version check via Central API (fetch_new_uploads) is mocked.
+    The version check via Central API (validate_version) is mocked.
     """
     patched = config.model_dump()
     patched.update(s3.config.model_dump())
@@ -87,7 +87,7 @@ async def verifier_fixture(
     await s3.storage.create_bucket(INBOX_BUCKET_ID)
     await s3.storage.create_bucket(verifier_config.interrogation_bucket_id)
 
-    with patch.object(CentralClient, "fetch_new_uploads", AsyncMock(return_value=[])):
+    with patch.object(CentralClient, "validate_version", AsyncMock(return_value=None)):
         yield VerifierFixture(config=verifier_config, s3=s3)
 
 

@@ -35,7 +35,6 @@ from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 log = logging.getLogger(__name__)
 
 # Paths of the Central API endpoints, relative to the configured base URL.
-UPLOADS_PATH = "/storages/{storage_alias}/uploads"
 REMOVABLE_FILES_PATH = "/storages/{storage_alias}/uploads/can_remove"
 INTERROGATION_REPORTS_PATH = "/storages/{storage_alias}/interrogation-reports"
 VALIDATE_VERSION_PATH = "/storages/{storage_alias}/validate-version"
@@ -145,20 +144,6 @@ class CentralClient(CentralClientPort):
         except (JSONDecodeError, TypeError) as err:
             raise self.ResponseFormatError(str(response.url)) from err
         return body
-
-    def _response_to_file_upload_list(
-        self, response: httpx2.Response
-    ) -> list[models.FileUpload]:
-        """Extract a list of FileUploads from an httpx2 Response.
-
-        Raises:
-        - ResponseFormatError if response body parsing fails.
-        """
-        try:
-            body = response.json()
-            return list(map(models.FileUpload.model_validate, body))
-        except (JSONDecodeError, ValidationError, TypeError) as err:
-            raise self.ResponseFormatError(str(response.url)) from err
 
     def _response_to_file_upload(self, response: httpx2.Response) -> models.FileUpload:
         """Extract a single FileUpload from an httpx2 Response.
@@ -304,31 +289,6 @@ class CentralClient(CentralClientPort):
             self._claimant_id,
             extra=extra,
         )
-
-    async def fetch_new_uploads(self) -> list[models.FileUpload]:
-        """Fetch a list of files that need to be interrogated and re-encrypted.
-
-        Raises:
-        - CentralAPIError if the request to the central API fails.
-        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
-        - ResponseFormatError if response body parsing fails.
-        """
-        url = self._make_url_for(UPLOADS_PATH)
-        log.debug("Fetching new uploads from %s.", url)
-        try:
-            response = await self._httpx_client.get(
-                url=url, headers=self._auth_headers()
-            )
-        except RetryError as retry_error:
-            check_for_request_errors(retry_error, url)
-            response = retry_error.last_attempt.result()
-
-        if (status_code := response.status_code) != 200:
-            if status_code == 426:
-                raise self.UpgradeRequiredError()
-            raise self.CentralAPIError(url=url, status_code=status_code)
-
-        return self._response_to_file_upload_list(response)
 
     async def get_removable_files(self, *, object_ids: list[str]) -> list[str]:
         """Ask the GHGA Central API if the objects corresponding to the given object IDs

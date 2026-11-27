@@ -22,7 +22,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from dhfs.adapters.outbound.central import UPLOADS_PATH
+from dhfs.adapters.outbound.central import VALIDATE_VERSION_PATH
 from dhfs.config import Config
 from dhfs.core.verifier import (
     INTERROGATION_OBJECT_ID,
@@ -86,9 +86,9 @@ async def test_run_dhfs_verification_raises_when_required_bucket_missing(
 
 
 @pytest.mark.asyncio
-async def test_run_dhfs_verification_pings_central_new_uploads_endpoint(config: Config):
-    """Make sure that verification pings Central's 'new uploads' endpoint to confirm
-    the DHFS version is good to go.
+async def test_run_dhfs_verification_only_validates_the_version(config: Config):
+    """Verification checks the DHFS version with Central's 'validate-version' endpoint,
+    and calls no other endpoint before the dummy run, so it claims no real file.
     """
     verifier_config = config.model_copy(
         update={
@@ -99,7 +99,7 @@ async def test_run_dhfs_verification_pings_central_new_uploads_endpoint(config: 
         }
     )
     base_url = str(verifier_config.central_api_url).rstrip("/")
-    expected_url = base_url + UPLOADS_PATH.format(
+    expected_url = base_url + VALIDATE_VERSION_PATH.format(
         storage_alias=verifier_config.storage_alias
     )
     central_api = CentralApiMock(config=verifier_config)

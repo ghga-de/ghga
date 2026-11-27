@@ -29,11 +29,11 @@ from dhfs.adapters.outbound.central import (
     RELEASE_PATH,
     REMOVABLE_FILES_PATH,
     RENEW_PATH,
-    UPLOADS_PATH,
     VALIDATE_VERSION_PATH,
     CentralClientConfig,
 )
 from dhfs.adapters.outbound.http import HttpClientConfig, get_configured_httpx_client
+from dhfs.core.models import FileUpload
 from ghga_service_commons.http.mock_api import MockApi, ResponseHandler, respond
 
 
@@ -42,20 +42,29 @@ class CentralApiMock(MockApi):
 
     def __init__(self, *, config: CentralClientConfig) -> None:
         super().__init__(str(config.central_api_url))
-        self.on_fetch_new_uploads: ResponseHandler = respond(200, json=[])
         self.on_get_removable_files: ResponseHandler = respond(200, json=[])
         self.on_submit_report: ResponseHandler = respond(201, json={})
         self.on_validate_version: ResponseHandler = respond(204)
         self.on_claim_file: ResponseHandler = respond(204)
         self.on_renew_lease: ResponseHandler = respond(204)
         self.on_release_file: ResponseHandler = respond(204)
-        self.route("GET", UPLOADS_PATH, "on_fetch_new_uploads")
         self.route("POST", REMOVABLE_FILES_PATH, "on_get_removable_files")
         self.route("POST", INTERROGATION_REPORTS_PATH, "on_submit_report")
         self.route("GET", VALIDATE_VERSION_PATH, "on_validate_version")
         self.route("POST", CLAIM_PATH, "on_claim_file")
         self.route("POST", RENEW_PATH, "on_renew_lease")
         self.route("POST", RELEASE_PATH, "on_release_file")
+
+    def serve_claims(self, file_uploads: list[FileUpload]) -> None:
+        """Hand out the files one per claim, in order, then answer 204."""
+        waiting = [file_upload.model_dump(mode="json") for file_upload in file_uploads]
+
+        def claim(_: httpx2.Request) -> httpx2.Response:
+            if not waiting:
+                return httpx2.Response(204)
+            return httpx2.Response(200, json=waiting.pop(0))
+
+        self.on_claim_file = claim
 
     @property
     def submitted_reports(self) -> list[dict]:

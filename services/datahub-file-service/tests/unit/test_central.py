@@ -119,9 +119,6 @@ async def test_central_api_unavailable(config: Config):
 
         # Test the different public methods exposed by the CentralClient
         with pytest.raises(ConnectionFailedError):
-            await central_client.fetch_new_uploads()
-
-        with pytest.raises(ConnectionFailedError):
             await central_client.get_removable_files(object_ids=["abc123"])
 
         with pytest.raises(ConnectionFailedError):
@@ -149,7 +146,6 @@ async def test_jwt_formation(
     )
 
     # Exercise the different methods from the CentralClient
-    await central_client.fetch_new_uploads()
     await central_client.get_removable_files(object_ids=[])
     report = make_interrogation_success_report(config.storage_alias)
     await central_client.submit_interrogation_report(report=report)
@@ -159,7 +155,7 @@ async def test_jwt_formation(
     await central_client.release_file(file_id=uuid4())
 
     # Inspect the bearer token of every request that reached the Central API
-    assert len(central_api.requests) == 7
+    assert len(central_api.requests) == 6
     for request in central_api.requests:
         token = request.headers["Authorization"].removeprefix("Bearer ")
         context = await auth_context_provider.get_context(token)
@@ -173,13 +169,8 @@ async def test_responses_with_bad_format(
 ):
     """Test how the CentralClient handles responses that don't have the proper format.
 
-    This affects the .fetch_new_uploads(), .get_removable_files() and .claim_file()
-    methods.
+    This affects the .get_removable_files() and .claim_file() methods.
     """
-    central_api.on_fetch_new_uploads = respond(200, json={"Not correct": "At all"})
-    with pytest.raises(CentralClient.ResponseFormatError):
-        await central_client.fetch_new_uploads()
-
     central_api.on_get_removable_files = respond(200, json={"Not correct": "At all"})
     with pytest.raises(CentralClient.ResponseFormatError):
         await central_client.get_removable_files(object_ids=[])
@@ -193,16 +184,12 @@ async def test_500_response_handling(
     config: Config, central_client: CentralClient, central_api: CentralApiMock
 ):
     """Test that "500" status codes trigger a `CentralAPIError`"""
-    central_api.on_fetch_new_uploads = respond(500)
     central_api.on_get_removable_files = respond(500)
     central_api.on_submit_report = respond(500)
     central_api.on_validate_version = respond(500)
     central_api.on_claim_file = respond(500)
     central_api.on_renew_lease = respond(500)
     central_api.on_release_file = respond(500)
-
-    with pytest.raises(CentralClient.CentralAPIError):
-        await central_client.fetch_new_uploads()
 
     with pytest.raises(CentralClient.CentralAPIError):
         await central_client.get_removable_files(object_ids=[])
@@ -228,16 +215,12 @@ async def test_426_response_handling(
     config: Config, central_client: CentralClient, central_api: CentralApiMock
 ):
     """Test that 426 responses trigger a CentralAPIError and log the upgrade message."""
-    central_api.on_fetch_new_uploads = respond(426)
     central_api.on_get_removable_files = respond(426)
     central_api.on_submit_report = respond(426)
     central_api.on_validate_version = respond(426)
     central_api.on_claim_file = respond(426)
     central_api.on_renew_lease = respond(426)
     central_api.on_release_file = respond(426)
-
-    with pytest.raises(CentralClient.UpgradeRequiredError):
-        await central_client.fetch_new_uploads()
 
     with pytest.raises(CentralClient.UpgradeRequiredError):
         await central_client.get_removable_files(object_ids=[])
