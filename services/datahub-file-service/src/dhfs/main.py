@@ -15,11 +15,13 @@
 """Service configuration and execution"""
 
 import logging
+import random
 from asyncio import sleep
 from uuid import uuid4
 
 from dhfs import __version__
 from dhfs.config import Config
+from dhfs.constants import RUN_INTERVAL_JITTER
 from dhfs.core.interrogator import InterrogatorPort
 from dhfs.core.verifier import run_dhfs_verification
 from dhfs.inject import prepare_interrogation_bucket_cleaner, prepare_interrogator
@@ -83,8 +85,11 @@ async def run_interrogator(forever: bool = True):
                 stop = now_utc_ms_prec()
                 # .seconds would drop whole days and the sub-second remainder
                 elapsed = (stop - start).total_seconds()
-                if elapsed < config.min_run_interval_seconds:
-                    sleep_duration = config.min_run_interval_seconds - elapsed
+                run_interval = config.min_run_interval_seconds + random.uniform(  # noqa: S311
+                    0, config.min_run_interval_seconds * RUN_INTERVAL_JITTER
+                )
+                if elapsed < run_interval:
+                    sleep_duration = run_interval - elapsed
                     log.info(
                         "Waiting %.1f seconds before beginning the next round of file"
                         + " processing because the minimum run interval is set to"

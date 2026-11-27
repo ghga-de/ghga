@@ -27,13 +27,10 @@ from tests.fixtures.config import get_config
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.mark.parametrize(
-    "claimed_a_file, waits",
-    [(True, False), (False, True)],
-    ids=["claimed_a_file", "claimed_nothing"],
-)
-async def test_wait_after_a_round(claimed_a_file: bool, waits: bool):
-    """DHFS waits out the minimum run interval only after a round that claimed nothing."""
+async def _run_one_round(*, claimed_a_file: bool) -> tuple[AsyncMock, AsyncMock]:
+    """Run the interrogation loop for one round, and return the mocked interrogator
+    and `sleep`.
+    """
     interrogator = AsyncMock(spec=InterrogatorPort)
     # The CriticalError in the second round ends the loop
     interrogator.interrogate_new_files.side_effect = [
@@ -52,9 +49,31 @@ async def test_wait_after_a_round(claimed_a_file: bool, waits: bool):
         patch("dhfs.main.sleep", sleep),
     ):
         await run_interrogator()
+    return interrogator, sleep
+
+
+@pytest.mark.parametrize(
+    "claimed_a_file, waits",
+    [(True, False), (False, True)],
+    ids=["claimed_a_file", "claimed_nothing"],
+)
+async def test_wait_after_a_round(claimed_a_file: bool, waits: bool):
+    """DHFS waits out the minimum run interval only after a round that claimed nothing."""
+    interrogator, sleep = await _run_one_round(claimed_a_file=claimed_a_file)
 
     assert interrogator.interrogate_new_files.await_count == 2
     assert sleep.await_count == (1 if waits else 0)
+
+
+async def test_wait_has_up_to_ten_percent_jitter():
+    """The wait after a round lasts up to 10% longer than the minimum run interval."""
+    # Draw the largest jitter allowed
+    with patch("dhfs.main.random.uniform", lambda low, high: high):
+        _, sleep = await _run_one_round(claimed_a_file=False)
+
+    min_run_interval_seconds = get_config().min_run_interval_seconds
+    sleep_duration = sleep.await_args_list[0].args[0]
+    assert sleep_duration == pytest.approx(min_run_interval_seconds * 1.1, abs=0.5)
 
 
 async def test_new_claimant_id_per_process():

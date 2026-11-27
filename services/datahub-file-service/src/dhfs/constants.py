@@ -25,6 +25,7 @@ __all__ = [
     "JWT_AUD",
     "JWT_ISS",
     "NONCE_LENGTH",
+    "RUN_INTERVAL_JITTER",
     "SEGMENT_OVERHEAD",
     "SQUASHED_LOGGERS",
     "TAG_LENGTH",
@@ -43,6 +44,7 @@ ENCRYPTION_SECRET_LENGTH = 32
 DOWNLOAD_URL_LIFESPAN = 300  # five minutes
 DOWNLOAD_URL_CACHE_TIME = DOWNLOAD_URL_LIFESPAN - 5
 URL_CACHE_SIZE = 250
+RUN_INTERVAL_JITTER = 0.1
 
 # Number of bytes to read at once from a file part when streaming the httpx2.put request
 # This does not change the overall amount of bytes sent
