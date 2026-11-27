@@ -21,6 +21,7 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from functools import partial
 from unittest.mock import patch
+from uuid import uuid4
 
 import pytest_asyncio
 
@@ -61,7 +62,9 @@ async def joint_fixture(s3: S3Fixture, config: Config) -> AsyncGenerator[JointFi
     with patch("dhfs.inject.get_configured_httpx_client", mocked_client_factory):
         async with (
             prepare_interrogation_bucket_cleaner(config=patched_config) as s3_cleaner,
-            prepare_interrogator(config=patched_config) as interrogator,
+            prepare_interrogator(
+                config=patched_config, claimant_id=uuid4()
+            ) as interrogator,
         ):
             yield JointFixture(
                 config=patched_config,

@@ -42,7 +42,7 @@ async def test_wait_after_a_round(concluded_a_file: bool, waits: bool):
     ]
 
     @asynccontextmanager
-    async def prepare_mock_interrogator(*, config):
+    async def prepare_mock_interrogator(*, config, claimant_id):
         yield interrogator
 
     sleep = AsyncMock()
@@ -55,3 +55,29 @@ async def test_wait_after_a_round(concluded_a_file: bool, waits: bool):
 
     assert interrogator.interrogate_new_files.await_count == 2
     assert sleep.await_count == (1 if waits else 0)
+
+
+async def test_new_claimant_id_per_process():
+    """Every DHFS process claims files with its own claimant ID."""
+    interrogator = AsyncMock(spec=InterrogatorPort)
+    interrogator.interrogate_new_files.side_effect = InterrogatorPort.CriticalError(
+        "end the loop"
+    )
+    claimant_ids = []
+
+    @asynccontextmanager
+    async def prepare_mock_interrogator(*, config, claimant_id):
+        claimant_ids.append(claimant_id)
+        yield interrogator
+
+    with (
+        patch("dhfs.main.Config", get_config),
+        patch("dhfs.main.prepare_interrogator", prepare_mock_interrogator),
+    ):
+        # Each run stands in for one process
+        await run_interrogator()
+        await run_interrogator()
+
+    assert len(claimant_ids) == 2
+    assert claimant_ids[0] != claimant_ids[1]
+    assert all(claimant_id.version == 4 for claimant_id in claimant_ids)

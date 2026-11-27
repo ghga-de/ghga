@@ -21,7 +21,7 @@ from json import JSONDecodeError
 
 import httpx2
 from jwcrypto.jwk import JWK
-from pydantic import Field, HttpUrl, SecretStr, ValidationError
+from pydantic import UUID4, Field, HttpUrl, SecretStr, ValidationError
 from pydantic_settings import BaseSettings
 from tenacity import RetryError
 
@@ -38,6 +38,10 @@ log = logging.getLogger(__name__)
 UPLOADS_PATH = "/storages/{storage_alias}/uploads"
 REMOVABLE_FILES_PATH = "/storages/{storage_alias}/uploads/can_remove"
 INTERROGATION_REPORTS_PATH = "/storages/{storage_alias}/interrogation-reports"
+VALIDATE_VERSION_PATH = "/storages/{storage_alias}/validate-version"
+CLAIM_PATH = "/rpc/storages/{storage_alias}/uploads/claim"
+RENEW_PATH = "/rpc/storages/{storage_alias}/uploads/{file_id}/renew"
+RELEASE_PATH = "/rpc/storages/{storage_alias}/uploads/{file_id}/release"
 
 
 class CentralClientConfig(BaseSettings):
@@ -75,9 +79,15 @@ class CentralClient(CentralClientPort):
         *,
         config: CentralClientConfig,
         httpx_client: httpx2.AsyncClient,
+        claimant_id: UUID4,
     ) -> None:
-        """Initialize the CentralClient instance"""
+        """Initialize the CentralClient instance.
+
+        `claimant_id` is tied to each claim, renewal, and release, so FIS can
+        tell the difference between multiple instances of a given Data Hub.
+        """
         self._httpx_client = httpx_client
+        self._claimant_id = claimant_id
         self._storage_alias = config.storage_alias
         self._central_public_key = config.central_api_crypt4gh_public_key
         self._base_url = str(config.central_api_url).rstrip("/")
@@ -89,9 +99,22 @@ class CentralClient(CentralClientPort):
             log.error(value_error)
             raise value_error
 
-    def _url_for(self, path: str) -> str:
-        """Build the full URL for one of the Central API path templates above."""
-        return self._base_url + path.format(storage_alias=self._storage_alias)
+    def _make_url_for(self, path: str, *, file_id: UUID4 | None = None) -> str:
+        """Build the full URL for one of the Central API path templates above.
+
+        Pass `file_id` for the paths that name a file. With base URL
+        `https://central.example` and storage alias `HD01`:
+
+            _url_for(RENEW_PATH, file_id="1234")
+            -> "https://central.example/rpc/storages/HD01/uploads/1234/renew"
+        """
+        return self._base_url + path.format(
+            storage_alias=self._storage_alias, file_id=file_id
+        )
+
+    def _build_claimant_body(self) -> dict[str, str]:
+        """Build the JSON body sent with every claim, renewal and release"""
+        return {"claimant_id": str(self._claimant_id)}
 
     def _make_jwt(self) -> str:
         claims: dict[str, str] = {
@@ -137,6 +160,151 @@ class CentralClient(CentralClientPort):
         except (JSONDecodeError, ValidationError, TypeError) as err:
             raise self.ResponseFormatError(str(response.url)) from err
 
+    def _response_to_file_upload(self, response: httpx2.Response) -> models.FileUpload:
+        """Extract a single FileUpload from an httpx2 Response.
+
+        Raises:
+        - ResponseFormatError if response body parsing fails.
+        """
+        try:
+            return models.FileUpload.model_validate(response.json())
+        except (JSONDecodeError, ValidationError) as err:
+            raise self.ResponseFormatError(str(response.url)) from err
+
+    async def validate_version(self) -> None:
+        """Check that the central API accepts this DHFS version and its auth token.
+
+        Raises:
+        - CentralAPIError if the request to the central API fails.
+        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
+        """
+        url = self._make_url_for(VALIDATE_VERSION_PATH)
+        log.debug("Checking with %s that this DHFS version is accepted.", url)
+        try:
+            response = await self._httpx_client.get(
+                url=url, headers=self._auth_headers()
+            )
+        except RetryError as retry_error:
+            check_for_request_errors(retry_error, url)
+            response = retry_error.last_attempt.result()
+
+        if (status_code := response.status_code) != 204:
+            if status_code == 426:
+                raise self.UpgradeRequiredError()
+            raise self.CentralAPIError(url=url, status_code=status_code)
+
+    async def claim_file(self) -> models.FileUpload | None:
+        """Lease the next waiting file to this DHFS instance.
+
+        Returns the file, or None if no file is waiting.
+
+        Raises:
+        - CentralAPIError if the request to the central API fails.
+        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
+        - ResponseFormatError if response body parsing fails.
+        """
+        url = self._make_url_for(CLAIM_PATH)
+        extra = {"claimant_id": self._claimant_id, "url": url}
+        log.debug(
+            "Claiming a file from %s as claimant %s.",
+            url,
+            self._claimant_id,
+            extra=extra,
+        )
+        try:
+            response = await self._httpx_client.post(
+                url=url, json=self._build_claimant_body(), headers=self._auth_headers()
+            )
+        except RetryError as retry_error:
+            check_for_request_errors(retry_error, url)
+            response = retry_error.last_attempt.result()
+
+        if (status_code := response.status_code) == 204:
+            log.debug(
+                "No file is waiting to be claimed by claimant %s.",
+                self._claimant_id,
+                extra=extra,
+            )
+            return None
+        if status_code != 200:
+            if status_code == 426:
+                raise self.UpgradeRequiredError()
+            raise self.CentralAPIError(url=url, status_code=status_code)
+
+        file_upload = self._response_to_file_upload(response)
+        log.info(
+            "File %s: Claimed by claimant %s.",
+            file_upload.id,
+            self._claimant_id,
+            extra={**extra, "file_id": file_upload.id},
+        )
+        return file_upload
+
+    async def renew_lease(self, *, file_id: UUID4) -> None:
+        """Extend this DHFS instance's lease on a file it has claimed.
+
+        Raises:
+        - RenewalRefusedError if this instance must stop working on the file.
+        - CentralAPIError if the request to the central API fails.
+        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
+        """
+        url = self._make_url_for(RENEW_PATH, file_id=file_id)
+        log.debug(
+            "File %s: Renewing the lease of claimant %s.",
+            file_id,
+            self._claimant_id,
+            extra={"claimant_id": self._claimant_id, "file_id": file_id, "url": url},
+        )
+        try:
+            response = await self._httpx_client.post(
+                url=url, json=self._build_claimant_body(), headers=self._auth_headers()
+            )
+        except RetryError as retry_error:
+            check_for_request_errors(retry_error, url)
+            response = retry_error.last_attempt.result()
+
+        if (status_code := response.status_code) != 204:
+            if status_code == 409:
+                raise self.RenewalRefusedError(file_id=file_id)
+            if status_code == 426:
+                raise self.UpgradeRequiredError()
+            raise self.CentralAPIError(url=url, status_code=status_code)
+
+    async def release_file(self, *, file_id: UUID4) -> None:
+        """Hand a claimed file back to GHGA Central before its lease expires.
+
+        Raises:
+        - CentralAPIError if the request to the central API fails.
+        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
+        """
+        url = self._make_url_for(RELEASE_PATH, file_id=file_id)
+        extra = {"claimant_id": self._claimant_id, "file_id": file_id, "url": url}
+        log.debug(
+            "File %s: Releasing the file as claimant %s.",
+            file_id,
+            self._claimant_id,
+            extra=extra,
+        )
+        try:
+            response = await self._httpx_client.post(
+                url=url, json=self._build_claimant_body(), headers=self._auth_headers()
+            )
+        except RetryError as retry_error:
+            check_for_request_errors(retry_error, url)
+            response = retry_error.last_attempt.result()
+
+        if (status_code := response.status_code) != 204:
+            if status_code == 426:
+                raise self.UpgradeRequiredError()
+            raise self.CentralAPIError(url=url, status_code=status_code)
+
+        log.info(
+            "File %s: Released by claimant %s.",
+            file_id,
+            self._claimant_id,
+            extra=extra,
+        )
+
     async def fetch_new_uploads(self) -> list[models.FileUpload]:
         """Fetch a list of files that need to be interrogated and re-encrypted.
 
@@ -145,7 +313,7 @@ class CentralClient(CentralClientPort):
         - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
         - ResponseFormatError if response body parsing fails.
         """
-        url = self._url_for(UPLOADS_PATH)
+        url = self._make_url_for(UPLOADS_PATH)
         log.debug("Fetching new uploads from %s.", url)
         try:
             response = await self._httpx_client.get(
@@ -172,7 +340,7 @@ class CentralClient(CentralClientPort):
         - CentralAPIError if the request to the central API fails.
         - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
         """
-        url = self._url_for(REMOVABLE_FILES_PATH)
+        url = self._make_url_for(REMOVABLE_FILES_PATH)
         log.debug(
             "Querying GHGA Central API about removability of %i files (URL is %s).",
             len(object_ids),
@@ -205,7 +373,7 @@ class CentralClient(CentralClientPort):
         - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
         """
         body = report.model_dump(mode="json")
-        url = self._url_for(INTERROGATION_REPORTS_PATH)
+        url = self._make_url_for(INTERROGATION_REPORTS_PATH)
         msg = (
             "was successfully re-encrypted"
             if report.passed

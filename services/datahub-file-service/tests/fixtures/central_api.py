@@ -24,9 +24,13 @@ from contextlib import asynccontextmanager
 import httpx2
 
 from dhfs.adapters.outbound.central import (
+    CLAIM_PATH,
     INTERROGATION_REPORTS_PATH,
+    RELEASE_PATH,
     REMOVABLE_FILES_PATH,
+    RENEW_PATH,
     UPLOADS_PATH,
+    VALIDATE_VERSION_PATH,
     CentralClientConfig,
 )
 from dhfs.adapters.outbound.http import HttpClientConfig, get_configured_httpx_client
@@ -41,9 +45,17 @@ class CentralApiMock(MockApi):
         self.on_fetch_new_uploads: ResponseHandler = respond(200, json=[])
         self.on_get_removable_files: ResponseHandler = respond(200, json=[])
         self.on_submit_report: ResponseHandler = respond(201, json={})
+        self.on_validate_version: ResponseHandler = respond(204)
+        self.on_claim_file: ResponseHandler = respond(204)
+        self.on_renew_lease: ResponseHandler = respond(204)
+        self.on_release_file: ResponseHandler = respond(204)
         self.route("GET", UPLOADS_PATH, "on_fetch_new_uploads")
         self.route("POST", REMOVABLE_FILES_PATH, "on_get_removable_files")
         self.route("POST", INTERROGATION_REPORTS_PATH, "on_submit_report")
+        self.route("GET", VALIDATE_VERSION_PATH, "on_validate_version")
+        self.route("POST", CLAIM_PATH, "on_claim_file")
+        self.route("POST", RENEW_PATH, "on_renew_lease")
+        self.route("POST", RELEASE_PATH, "on_release_file")
 
     @property
     def submitted_reports(self) -> list[dict]:
