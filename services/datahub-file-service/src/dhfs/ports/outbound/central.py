@@ -111,17 +111,6 @@ class CentralClientPort(ABC):
         ...
 
     @abstractmethod
-    async def fetch_new_uploads(self) -> list[FileUpload]:
-        """Fetch a list of files that need to be interrogated and re-encrypted.
-
-        Raises:
-        - CentralAPIError if the request to the central API fails.
-        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
-        - ResponseFormatError if response body parsing fails.
-        """
-        ...
-
-    @abstractmethod
     async def get_removable_files(self, *, object_ids: list[str]) -> list[str]:
         """Ask the GHGA Central API if the objects corresponding to the given object IDs
         can be removed from `interrogation` bucket.
