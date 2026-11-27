@@ -21,7 +21,7 @@ from collections.abc import Mapping
 from datetime import timedelta
 from typing import Any
 from unittest.mock import AsyncMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -307,6 +307,43 @@ async def test_process_file_upload_fills_box_id_after_losing_a_race(
     db_file = await rig.file_dao.get_by_id(local_file.id)
     assert db_file.box_id == republished_file.box_id
     assert get_lease(db_file) == get_lease(claimed_files[0])
+
+
+async def test_process_file_upload_after_deletion_before_box_id_write(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a file deleted between the read and the box ID write ends the event
+    handling quietly: the retry reads the file again and finds it gone.
+    """
+    monkeypatch.setattr("hexkit.protocols.dao.sleep", AsyncMock())
+    local_file = create_file_under_interrogation(HUB1)
+    local_file.box_id = None
+    await rig.file_dao.insert(local_file)
+
+    update = rig.file_dao.update
+
+    async def update_after_deletion(
+        dto: models.FileUnderInterrogation,
+        *,
+        precondition: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Delete the file just before the box ID write, once"""
+        monkeypatch.setattr(rig.file_dao, "update", update)
+        await rig.file_dao.delete(dto.id)
+        await update(dto, precondition=precondition)
+
+    monkeypatch.setattr(rig.file_dao, "update", update_after_deletion)
+    republished_file = create_file_under_interrogation(HUB1).model_copy(
+        update={
+            "id": local_file.id,
+            "state": "archived",
+            "state_updated": local_file.state_updated - timedelta(hours=1),
+        }
+    )
+    await rig.interrogation_handler.process_file_upload(file=republished_file)
+
+    with pytest.raises(ResourceNotFoundError):
+        await rig.file_dao.get_by_id(local_file.id)
 
 
 async def test_process_file_upload_updates(
@@ -832,6 +869,42 @@ async def test_claim_file_after_losing_a_race(
     }
     assert holders[claimed_file.id] == claimant_id
     assert set(holders.values()) == {claimant_id, rival_claimant_id}
+
+
+async def test_claim_file_after_its_file_is_deleted(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a claim whose chosen file is deleted before the write runs the query
+    again and leases the file that is left.
+    """
+    monkeypatch.setattr("hexkit.protocols.dao.sleep", AsyncMock())
+    files = [create_file_under_interrogation(HUB1) for _ in range(2)]
+    for file in files:
+        await rig.file_dao.insert(file)
+
+    deleted_ids: list[UUID] = []
+    update = rig.file_dao.update
+
+    async def update_after_deletion(
+        dto: models.FileUnderInterrogation,
+        *,
+        precondition: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Delete the chosen file just before the write, once"""
+        monkeypatch.setattr(rig.file_dao, "update", update)
+        await rig.file_dao.delete(dto.id)
+        deleted_ids.append(dto.id)
+        await update(dto, precondition=precondition)
+
+    monkeypatch.setattr(rig.file_dao, "update", update_after_deletion)
+    claimant_id = uuid4()
+    claimed_file = await rig.interrogation_handler.claim_file(
+        storage_alias=HUB1, claimant_id=claimant_id
+    )
+
+    assert claimed_file
+    assert claimed_file.id not in deleted_ids
+    assert (await rig.file_dao.get_by_id(claimed_file.id)).leased_by == claimant_id
 
 
 async def test_claim_file_gives_up(rig: JointRig, monkeypatch: pytest.MonkeyPatch):

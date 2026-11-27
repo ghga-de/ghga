@@ -21,7 +21,7 @@ import logging
 import random
 from contextlib import suppress
 from datetime import timedelta
-from typing import Any, cast
+from typing import cast
 
 from pydantic import UUID4, SecretBytes
 
@@ -45,6 +45,7 @@ from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import (
     MultipleHitsFoundError,
     NoHitsFoundError,
+    PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     race_condition_retries,
@@ -56,18 +57,6 @@ log = logging.getLogger(__name__)
 
 # DHFS sets these afresh on every submission, so they don't tell reports apart.
 _TIMING_FIELDS = {"interrogated_at", "wall_time_seconds", "stage_seconds"}
-
-
-def _precondition_for(file: models.FileUnderInterrogation) -> dict[str, Any]:
-    """Build a precondition that matches only the stored copy `file` was read from.
-
-    A file stored before the lease fields existed lacks `times_claimed`, which reads
-    as 0 but doesn't match 0. None matches a missing field.
-    """
-    precondition = file.model_dump()
-    if file.times_claimed == 0:
-        precondition["times_claimed"] = {"$in": [0, None]}
-    return precondition
 
 
 class InterrogationHandler(InterrogationHandlerPort):
@@ -390,8 +379,8 @@ class InterrogationHandler(InterrogationHandlerPort):
                 #  sends
                 if local_file.box_id is None and file.box_id is not None:
                     filled_file = local_file.model_copy(update={"box_id": file.box_id})
-                    await self._file_dao.update(
-                        filled_file, precondition=_precondition_for(local_file)
+                    await self._update_unless_changed(
+                        updated_file=filled_file, read_file=local_file
                     )
                     local_file = filled_file
                     log.info(
@@ -432,6 +421,33 @@ class InterrogationHandler(InterrogationHandlerPort):
                 file.id,
                 file.state,
             )
+
+    async def _update_unless_changed(
+        self,
+        *,
+        updated_file: models.FileUnderInterrogation,
+        read_file: models.FileUnderInterrogation,
+    ) -> None:
+        """Write `updated_file` only if the stored copy still matches `read_file`.
+
+        Use it inside `race_condition_retries`, so that a lost race reads the file again.
+
+        Raises:
+        - PreconditionFailedError if another write changed the file since the read, or
+          deleted it.
+        """
+        precondition = read_file.model_dump()
+        # A file stored before the lease fields existed lacks times_claimed, which
+        #  reads as 0 but doesn't match 0. None matches a missing field.
+        if read_file.times_claimed == 0:
+            precondition["times_claimed"] = {"$in": [0, None]}
+        try:
+            await self._file_dao.update(updated_file, precondition=precondition)
+        except ResourceNotFoundError as error:
+            # Deleted since the read, which is a lost race too
+            raise PreconditionFailedError(
+                id_=read_file.id, precondition=precondition
+            ) from error
 
     async def _requeue_file(self, *, file: models.FileUnderInterrogation) -> None:
         """Reset a previously failed file so it gets interrogated again.
@@ -543,8 +559,8 @@ class InterrogationHandler(InterrogationHandlerPort):
                         "times_claimed": file.times_claimed + 1,
                     }
                 )
-                await self._file_dao.update(
-                    claimed_file, precondition=_precondition_for(file)
+                await self._update_unless_changed(
+                    updated_file=claimed_file, read_file=file
                 )
 
                 log_extra = {
