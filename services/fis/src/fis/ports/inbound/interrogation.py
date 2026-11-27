@@ -68,6 +68,16 @@ class InterrogationHandlerPort(ABC):
             )
             super().__init__(msg)
 
+    class FileUpdateError(RuntimeError):
+        """Raised when other writes keep changing a file before FIS can update it."""
+
+        def __init__(self, *, file_id: UUID4):
+            msg = (
+                f"Failed to update file {file_id} because other writes kept changing"
+                + " it first."
+            )
+            super().__init__(msg)
+
     @abstractmethod
     async def check_if_removable(self, *, object_id: UUID4) -> bool:
         """Return `True` if an object can be removed from the interrogation bucket and
@@ -112,6 +122,10 @@ class InterrogationHandlerPort(ABC):
         interest of the FIS and has no functional difference from 'interrogated' from
         the perspective of the FIS. Therefore, the only states of interest in this
         method are 'cancelled', 'failed', and 'archived'.
+
+        Raises:
+        - FileUpdateError if other writes keep changing the file before its missing
+          box ID is filled in.
         """
 
     @abstractmethod

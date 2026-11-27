@@ -267,6 +267,48 @@ async def test_process_file_upload_fills_box_id(rig: JointRig):
     assert db_file == local_file.model_copy(update={"box_id": republished_file.box_id})
 
 
+async def test_process_file_upload_fills_box_id_after_losing_a_race(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a claim landing between the read and the box ID write is kept: the
+    write fails its precondition, and the retry reads the file again, lease included.
+    """
+    monkeypatch.setattr("hexkit.protocols.dao.sleep", AsyncMock())
+    local_file = create_file_under_interrogation(HUB1)
+    local_file.box_id = None
+    await rig.file_dao.insert(local_file)
+
+    claimed_files: list[models.FileUnderInterrogation] = []
+    update = rig.file_dao.update
+
+    async def update_after_claim(
+        dto: models.FileUnderInterrogation,
+        *,
+        precondition: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Lease the file just before the box ID write, once"""
+        monkeypatch.setattr(rig.file_dao, "update", update)
+        claimed_file = await rig.file_dao.get_by_id(dto.id)
+        give_lease(claimed_file)
+        await update(claimed_file)
+        claimed_files.append(claimed_file)
+        await update(dto, precondition=precondition)
+
+    monkeypatch.setattr(rig.file_dao, "update", update_after_claim)
+    republished_file = create_file_under_interrogation(HUB1).model_copy(
+        update={
+            "id": local_file.id,
+            "state": "archived",
+            "state_updated": local_file.state_updated - timedelta(hours=1),
+        }
+    )
+    await rig.interrogation_handler.process_file_upload(file=republished_file)
+
+    db_file = await rig.file_dao.get_by_id(local_file.id)
+    assert db_file.box_id == republished_file.box_id
+    assert get_lease(db_file) == get_lease(claimed_files[0])
+
+
 async def test_process_file_upload_updates(
     rig: JointRig, caplog: pytest.LogCaptureFixture
 ):

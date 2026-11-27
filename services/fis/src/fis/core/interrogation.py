@@ -21,7 +21,7 @@ import logging
 import random
 from contextlib import suppress
 from datetime import timedelta
-from typing import cast
+from typing import Any, cast
 
 from pydantic import UUID4, SecretBytes
 
@@ -56,6 +56,18 @@ log = logging.getLogger(__name__)
 
 # DHFS sets these afresh on every submission, so they don't tell reports apart.
 _TIMING_FIELDS = {"interrogated_at", "wall_time_seconds", "stage_seconds"}
+
+
+def _precondition_for(file: models.FileUnderInterrogation) -> dict[str, Any]:
+    """Build a precondition that matches only the stored copy `file` was read from.
+
+    A file stored before the lease fields existed lacks `times_claimed`, which reads
+    as 0 but doesn't match 0. None matches a missing field.
+    """
+    precondition = file.model_dump()
+    if file.times_claimed == 0:
+        precondition["times_claimed"] = {"$in": [0, None]}
+    return precondition
 
 
 class InterrogationHandler(InterrogationHandlerPort):
@@ -332,6 +344,10 @@ class InterrogationHandler(InterrogationHandlerPort):
         For a known file without a `box_id`, any event other than 'init' fills it in
         first, even an outdated one. Files stored before FIS kept the `box_id` lack it
         until UCS republishes its events.
+
+        Raises:
+        - FileUpdateError if other writes keep changing the file before its missing
+          box ID is filled in.
         """
         if file.state == "init":
             return
@@ -341,36 +357,48 @@ class InterrogationHandler(InterrogationHandlerPort):
                 return
 
         # If we make it past that block, then it is not new and we must compare.
-        try:
-            local_file = await self._file_dao.get_by_id(file.id)
-        except ResourceNotFoundError:
-            if file.state in ["cancelled", "failed"]:
-                log.info(
-                    "Received event data for a %s FileUpload that FIS doesn't have."
-                    + " This means it probably reached that state before the upload"
-                    + " was finished. Ignoring.",
-                    file.state,
-                    extra={"file_id": file.id},
-                )
-                return
-            log.warning(
-                "Received event for a %s FileUpload that FIS never tracked."
-                + " This is unexpected. Ignoring since there wouldn't be anything"
-                + " for FIS to do anyway.",
-                file.state,
-                extra={"file_id": file.id},
-            )
-            return
+        # A claim between the read and the box ID write would be overwritten, so a
+        #  lost race reads the file again, lease included
+        async for attempt in race_condition_retries(
+            description=f"fill in the box ID of file {file.id}",
+            error_on_failure=lambda: self.FileUpdateError(file_id=file.id),
+            logger=log,
+        ):
+            with attempt:
+                try:
+                    local_file = await self._file_dao.get_by_id(file.id)
+                except ResourceNotFoundError:
+                    if file.state in ["cancelled", "failed"]:
+                        log.info(
+                            "Received event data for a %s FileUpload that FIS doesn't"
+                            + " have. This means it probably reached that state before"
+                            + " the upload was finished. Ignoring.",
+                            file.state,
+                            extra={"file_id": file.id},
+                        )
+                        return
+                    log.warning(
+                        "Received event for a %s FileUpload that FIS never tracked."
+                        + " This is unexpected. Ignoring since there wouldn't be"
+                        + " anything for FIS to do anyway.",
+                        file.state,
+                        extra={"file_id": file.id},
+                    )
+                    return
 
-        # Fill in a missing box ID even from an old event, which a republish sends
-        if local_file.box_id is None and file.box_id is not None:
-            local_file = local_file.model_copy(update={"box_id": file.box_id})
-            await self._file_dao.update(local_file)
-            log.info(
-                "Filled in the missing box ID of file %s.",
-                file.id,
-                extra={"file_id": file.id, "box_id": file.box_id},
-            )
+                # Fill in a missing box ID even from an old event, which a republish
+                #  sends
+                if local_file.box_id is None and file.box_id is not None:
+                    filled_file = local_file.model_copy(update={"box_id": file.box_id})
+                    await self._file_dao.update(
+                        filled_file, precondition=_precondition_for(local_file)
+                    )
+                    local_file = filled_file
+                    log.info(
+                        "Filled in the missing box ID of file %s.",
+                        file.id,
+                        extra={"file_id": file.id, "box_id": file.box_id},
+                    )
 
         # Ignore if outdated
         if local_file.state_updated >= file.state_updated:
@@ -515,12 +543,9 @@ class InterrogationHandler(InterrogationHandlerPort):
                         "times_claimed": file.times_claimed + 1,
                     }
                 )
-                precondition = file.model_dump()
-                # A file stored before the lease fields existed lacks times_claimed,
-                #  which reads as 0 but doesn't match 0. None matches a missing field.
-                if file.times_claimed == 0:
-                    precondition["times_claimed"] = {"$in": [0, None]}
-                await self._file_dao.update(claimed_file, precondition=precondition)
+                await self._file_dao.update(
+                    claimed_file, precondition=_precondition_for(file)
+                )
 
                 log_extra = {
                     "file_id": file.id,

@@ -17,6 +17,7 @@
 
 import asyncio
 import logging
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
@@ -257,3 +258,39 @@ async def test_claim_file_without_lease_fields(joint_fixture: JointFixture):
     stored_file = await joint_fixture.file_dao.get_by_id(file.id)
     assert stored_file.leased_by == claimant_id
     assert stored_file.times_claimed == 1
+
+
+async def test_fill_box_id_without_lease_fields(joint_fixture: JointFixture):
+    """A file stored before FIS kept the box ID or leases, with none of those fields,
+    gets its box ID filled in, despite the precondition on that write.
+    """
+    file = create_file_under_interrogation(HUB1)
+    await joint_fixture.file_dao.insert(file)
+    with ConfiguredMongoClient(config=joint_fixture.config) as client:
+        client[joint_fixture.config.db_name][FILES_COLLECTION].update_one(
+            {"_id": file.id},
+            {
+                "$unset": dict.fromkeys(
+                    [
+                        "box_id",
+                        "leased_until",
+                        "leased_by",
+                        "claimed_at",
+                        "times_claimed",
+                    ],
+                    "",
+                )
+            },
+        )
+
+    # Outdated, so the box ID write is the only write
+    republished_file = file.model_copy(
+        update={
+            "state": "archived",
+            "state_updated": file.state_updated - timedelta(hours=1),
+        }
+    )
+    await joint_fixture.interrogation_handler.process_file_upload(file=republished_file)
+
+    stored_file = await joint_fixture.file_dao.get_by_id(file.id)
+    assert stored_file.box_id == file.box_id
