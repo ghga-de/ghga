@@ -28,16 +28,16 @@ pytestmark = pytest.mark.asyncio
 
 
 @pytest.mark.parametrize(
-    "concluded_a_file, waits",
+    "claimed_a_file, waits",
     [(True, False), (False, True)],
-    ids=["concluded_a_file", "inconclusive"],
+    ids=["claimed_a_file", "claimed_nothing"],
 )
-async def test_wait_after_a_round(concluded_a_file: bool, waits: bool):
-    """DHFS waits out the minimum run interval only after an inconclusive round."""
+async def test_wait_after_a_round(claimed_a_file: bool, waits: bool):
+    """DHFS waits out the minimum run interval only after a round that claimed nothing."""
     interrogator = AsyncMock(spec=InterrogatorPort)
     # The CriticalError in the second round ends the loop
     interrogator.interrogate_new_files.side_effect = [
-        concluded_a_file,
+        claimed_a_file,
         InterrogatorPort.CriticalError("end the loop"),
     ]
 

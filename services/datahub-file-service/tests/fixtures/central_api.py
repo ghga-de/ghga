@@ -34,6 +34,7 @@ from dhfs.adapters.outbound.central import (
     CentralClientConfig,
 )
 from dhfs.adapters.outbound.http import HttpClientConfig, get_configured_httpx_client
+from dhfs.core.models import FileUpload
 from ghga_service_commons.http.mock_api import MockApi, ResponseHandler, respond
 
 
@@ -56,6 +57,17 @@ class CentralApiMock(MockApi):
         self.route("POST", CLAIM_PATH, "on_claim_file")
         self.route("POST", RENEW_PATH, "on_renew_lease")
         self.route("POST", RELEASE_PATH, "on_release_file")
+
+    def serve_claims(self, file_uploads: list[FileUpload]) -> None:
+        """Hand out the files one per claim, in order, then answer 204."""
+        waiting = [file_upload.model_dump(mode="json") for file_upload in file_uploads]
+
+        def claim(_: httpx2.Request) -> httpx2.Response:
+            if not waiting:
+                return httpx2.Response(204)
+            return httpx2.Response(200, json=waiting.pop(0))
+
+        self.on_claim_file = claim
 
     @property
     def submitted_reports(self) -> list[dict]:

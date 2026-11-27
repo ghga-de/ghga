@@ -111,7 +111,7 @@ class Config(
         description=(
             "The minimum number of seconds to wait before asking the CentralAPI"
             + " about new files for interrogation. DHFS asks again immediately"
-            + " after a round that concluded at least one file, though."
+            + " after a round that claimed a file, though."
         ),
     )
 
